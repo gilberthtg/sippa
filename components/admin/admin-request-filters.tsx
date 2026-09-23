@@ -5,6 +5,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -90,17 +91,19 @@ export function AdminRequestFilters({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel>Filter Status</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {statusOptions.map((option) => (
-            <DropdownMenuCheckboxItem
-              key={option.value}
-              checked={statusFilter.includes(option.value)}
-              onCheckedChange={() => handleStatusToggle(option.value)}
-            >
-              {option.label}
-            </DropdownMenuCheckboxItem>
-          ))}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Filter Status</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {statusOptions.map((option) => (
+              <DropdownMenuCheckboxItem
+                key={option.value}
+                checked={statusFilter.includes(option.value)}
+                onCheckedChange={() => handleStatusToggle(option.value)}
+              >
+                {option.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -117,17 +120,19 @@ export function AdminRequestFilters({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel>Filter Priority</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {priorities.map((priority) => (
-            <DropdownMenuCheckboxItem
-              key={priority.id}
-              checked={priorityFilter.includes(priority.id)}
-              onCheckedChange={() => handlePriorityToggle(priority.id)}
-            >
-              {priority.name}
-            </DropdownMenuCheckboxItem>
-          ))}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Filter Priority</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {priorities.map((priority) => (
+              <DropdownMenuCheckboxItem
+                key={priority.id}
+                checked={priorityFilter.includes(priority.id)}
+                onCheckedChange={() => handlePriorityToggle(priority.id)}
+              >
+                {priority.name}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -144,17 +149,19 @@ export function AdminRequestFilters({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel>Filter Tipe Request</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {typeOptions.map((option) => (
-            <DropdownMenuCheckboxItem
-              key={option.value}
-              checked={typeFilter.includes(option.value)}
-              onCheckedChange={() => handleTypeToggle(option.value)}
-            >
-              {option.label}
-            </DropdownMenuCheckboxItem>
-          ))}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Filter Tipe Request</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {typeOptions.map((option) => (
+              <DropdownMenuCheckboxItem
+                key={option.value}
+                checked={typeFilter.includes(option.value)}
+                onCheckedChange={() => handleTypeToggle(option.value)}
+              >
+                {option.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 

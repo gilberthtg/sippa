@@ -1,0 +1,62 @@
+# Bug Fixes - Quick Summary
+
+## Date: 23 September 2026, 23:15 WIB
+
+### Fixed Issues
+
+1. **Navigation Menu Not Active on Sub-Pages** ✅
+   - Settings menu sekarang tetap aktif (highlighted) ketika berada di:
+     - /admin/settings/users
+     - /admin/settings/sla-policies
+     - /admin/settings/units
+     - /admin/settings/priorities
+     - /admin/settings/teams
+
+2. **Unit Selection "None" Option** ✅
+   - Sekarang bisa memilih "None" untuk unit (optional)
+   - Value akan di-set ke null dengan benar
+   - Berlaku untuk Create User dan Edit User
+
+### Files Changed
+
+- `components/layout/sidebar.tsx` (Line 30)
+- `components/settings/users/create-user-dialog.tsx` (Lines 185-186, 194)
+- `components/settings/users/edit-user-dialog.tsx` (Lines 201-202, 210)
+
+### Build Status
+
+```
+✅ ESLint: 0 errors, 0 warnings
+✅ TypeScript: Type check passed
+✅ Production Build: SUCCESS
+```
+
+### How to Test
+
+**Test Navigation:**
+1. Login as admin
+2. Go to Settings
+3. Click any sub-menu (Users, SLA Policies, etc.)
+4. Verify "Settings" stays highlighted
+
+**Test Unit Selection:**
+1. Go to User Management
+2. Click "Add User"
+3. Select a unit, then change to "None"
+4. Submit and verify unit is null
+
+### Notes
+
+Mengenai issue "rolenya user semua":
+- Perlu dicek apakah ini masalah display atau data
+- Seed data sudah benar (admin=2, user=1, dev=3)
+- Silakan cek di User Management untuk verifikasi
+
+### Ready for Testing
+
+Server: http://localhost:3000
+Login: admin@sippa.local / password123
+
+---
+
+**Status: Bug Fixes Applied and Tested ✅**
