@@ -1,108 +1,53 @@
-import { auth } from '@/lib/auth/config';
-import { redirect } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
+import { DashboardStats } from '@/components/admin/dashboard-stats';
+import { SLAAttentionWidget } from '@/components/admin/sla-attention-widget';
+import { RecentActivityWidget } from '@/components/admin/recent-activity-widget';
+import { 
+  getAdminDashboardStats, 
+  getSLAAttentionRequests, 
+  getRecentActivity 
+} from '@/app/actions/admin-requests';
+import { redirect } from 'next/navigation';
 
 export default async function AdminDashboardPage() {
-  const session = await auth();
+  const statsResult = await getAdminDashboardStats();
+  const slaResult = await getSLAAttentionRequests();
+  const activityResult = await getRecentActivity(10);
 
-  if (!session) {
+  if (!statsResult.success) {
     redirect('/login');
   }
+
+  const stats = statsResult.data || {
+    submitted: 0,
+    verification: 0,
+    approved: 0,
+    assigned: 0,
+    inProgress: 0,
+    completed: 0,
+    rejected: 0,
+    total: 0,
+  };
+
+  const slaRequests = slaResult.success && slaResult.data ? slaResult.data : [];
+  const activities = activityResult.success && activityResult.data ? activityResult.data : [];
 
   return (
     <PageContainer>
       <PageHeader
-        title="Admin Dashboard"
-        description={`Selamat datang, ${session.user.name}`}
+        title="Dashboard Admin"
+        description="Kelola dan monitor semua request pengembangan aplikasi"
       />
 
-      <div className="grid gap-6 md:grid-cols-5 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Submitted</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-          </CardContent>
-        </Card>
+      <div className="space-y-6">
+        <DashboardStats stats={stats} />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Verification</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Approved</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-red-800">At Risk</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-800">0</div>
-          </CardContent>
-        </Card>
+        <div className="grid gap-6 md:grid-cols-2">
+          <SLAAttentionWidget requests={slaRequests} />
+          <RecentActivityWidget activities={activities} />
+        </div>
       </div>
-
-      <div className="grid gap-6 md:grid-cols-2 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Verification Queue</CardTitle>
-            <CardDescription>
-              Request yang perlu diverifikasi
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Tidak ada request pending</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Assignment Queue</CardTitle>
-            <CardDescription>
-              Request yang sudah approved, perlu di-assign
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">Tidak ada request pending</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>SLA Compliance</CardTitle>
-          <CardDescription>
-            Bulan ini
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-primary">-</div>
-          <p className="text-sm text-muted-foreground mt-2">Belum ada data</p>
-        </CardContent>
-      </Card>
     </PageContainer>
   );
 }

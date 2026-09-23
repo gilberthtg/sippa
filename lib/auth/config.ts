@@ -65,7 +65,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           .where(eq(users.id, user.id));
         
         return {
-          id: user.id.toString(),
+          id: user.id,
           name: user.name,
           email: user.email,
           roleId: user.roleId,
@@ -88,12 +88,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.roleId = token.roleId as number;
-        session.user.roleCode = token.roleCode as string;
-        session.user.roleName = token.roleName as string;
-        session.user.unitId = token.unitId as number | null;
+      if (session.user && token) {
+        // Type assertion needed due to NextAuth type limitations
+        Object.assign(session.user, {
+          id: token.id as number,
+          roleId: token.roleId as number,
+          roleCode: token.roleCode as string,
+          roleName: token.roleName as string,
+          unitId: token.unitId as number | null,
+        });
       }
       return session;
     },
