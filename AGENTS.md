@@ -1,9 +1,29 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# SIPPA AI Working Rules
 
-# This is NOT the Next.js you know
+## Mandatory first step for every new session
+Before reading or changing application code, read these files in order:
+1. `.ai/PROJECT_CONTEXT.md`
+2. `.ai/BUSINESS_RULES.md`
+3. `.ai/ARCHITECTURE.md`
+4. `.ai/DATABASE.md`
+5. `.ai/UX_GUIDELINES.md`
+6. `.ai/DECISIONS.md`
+7. `.ai/SESSION_LOG.md`
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+## Rules
+- Do not invent requirements, fields, roles, statuses, workflows, or business rules that are not documented.
+- When a requirement is missing, mark it as `[NEEDS_DECISION]` instead of guessing.
+- Before changing existing behavior, inspect the related code and the context files first.
+- Keep the domain terminology consistent: Request Baru, New Application, RFC, DevTI Request, Laptri, Pencapaian SLA, User, Admin, Developer.
+- Any database/schema change must be reflected in `.ai/DATABASE.md`.
+- Any architectural decision must be recorded in `.ai/DECISIONS.md`.
+- Any meaningful implementation change must be summarized in `.ai/SESSION_LOG.md`.
+- Prefer small, reversible changes and preserve existing behavior unless the task explicitly changes it.
+- Do not silently add dependencies. Record important dependency decisions in `.ai/DECISIONS.md`.
+- Do not assume a feature is complete until its acceptance criteria are checked.
 
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
+## Session close-out
+At the end of a meaningful session:
+- Update `.ai/SESSION_LOG.md`.
+- Update relevant context/schema/decision documents.
+- Add unresolved items under `Open Questions` rather than guessing.
