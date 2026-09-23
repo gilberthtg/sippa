@@ -43,10 +43,52 @@ Format:
 - Impact: Admin processing time included in SLA
 - Alternatives considered: Start from approved_at
 
+## ADR-0006 — Reporting Library Choice
+- Status: Confirmed
+- Date: 2026-09-23
+- Decision: Recharts for chart visualization with abstraction layer
+- Reason: React-friendly, good Next.js SSR support, widely adopted
+- Impact: Chart components wrapped in abstraction layer (lib/utils/chart-adapter.tsx) allowing library replacement without affecting business logic
+- Alternatives considered: Chart.js, Victory, Nivo
+- Future: Library can be swapped by rewriting adapter layer only
+
+## ADR-0007 — Report Date Defaults
+- Status: Confirmed
+- Date: 2026-09-23
+- Decision: Both Laptri and SLA reports default to current year with flexible filters
+- Reason: Most relevant time period for quarterly and annual reporting
+- Impact: Users can override with custom date ranges or specific quarters
+- Alternatives considered: Last 30 days, Last quarter, All time
+
+## ADR-0008 — Report Metrics Scope
+- Status: Confirmed
+- Date: 2026-09-23
+- Decision: Include average completion time by type/priority and month-over-month trends; exclude developer performance metrics
+- Reason: Focus on organizational metrics, avoid individual performance tracking in v1.0
+- Impact: Reports show aggregate data only, no per-developer breakdowns
+- Deferred: Developer performance metrics (v1.1+)
+- Alternatives considered: Full developer performance dashboard
+
+## ADR-0009 — Excel Export Format
+- Status: Confirmed
+- Date: 2026-09-23
+- Decision: Summary data + raw tables, no embedded charts
+- Reason: Simpler implementation, sufficient for v1.0, standard business reporting format
+- Impact: Excel files contain 3 sheets: Summary, Monthly Trend, Details
+- Alternatives considered: Chart embedding, PDF export
+- Future: PDF export and chart embedding can be added in v1.1
+
+## ADR-0010 — Seed Data Strategy
+- Status: Confirmed
+- Date: 2026-09-23
+- Decision: Development-only seed with 20-30 diverse requests
+- Reason: Comprehensive testing coverage without production data mixing
+- Impact: Seed script includes 8 SLA policies and 25 completed requests spanning all quarters of 2026
+- Data distribution: Multiple types, priorities, units, quarters, SLA results
+
 ## Open Decisions
 - Notification provider (deferred to v1.1)
 - Priority calculation rules (manual admin decision for v1.0)
 - User & unit master source (internal database for v1.0)
-- Exact SLA target hours per request type + priority
-- Laptri exact layout and data points
 - User management UI in v1.0 scope
+- Developer performance metrics in reports (deferred to v1.1+)

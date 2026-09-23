@@ -550,3 +550,115 @@
   - Export to Excel functionality
   - Report visualization with charts
 
+## 2026-09-23 — Phase 5 COMPLETE: Reporting (Laptri & SLA)
+- Goal: Implement comprehensive reporting features for admin users
+- Changes made:
+  - **Dependencies Installed:**
+    - `recharts` (v2.13.0) - Chart visualization library
+    - `xlsx` (v0.18.5) - Excel export functionality
+    - `@types/recharts` - TypeScript definitions
+  - **shadcn/ui Components Added:**
+    - calendar - Date picker component
+  - **Utility Files Created:**
+    - `lib/utils/report-calculations.ts` - SLA calculation helpers (9 functions)
+    - `lib/utils/report-export.ts` - Excel export functions (2 functions)
+    - `lib/utils/chart-adapter.tsx` - Recharts abstraction layer (3 chart types)
+  - **Server Actions (app/actions/reports.ts):**
+    - getLaptriData() - Fetch completed requests with filters (year, quarter, type)
+    - getLaptriSummary() - Aggregate quarterly statistics and metrics
+    - getSLAReport() - Fetch SLA data with pagination and filters
+    - getSLASummary() - Calculate SLA achievement metrics
+    - All actions enforce admin-only authorization
+  - **Laptri Report (/admin/reports/laptri):**
+    - 7 summary cards: Q1-Q4 counts, total, type breakdown with avg times
+    - Bar chart: Quarterly completion visualization
+    - Line chart: Monthly trend analysis
+    - Data table: Request details with links to detail pages
+    - Filters: Year, quarter (All/Q1/Q2/Q3/Q4), type (All/New App/RFC)
+    - Excel export: 3 sheets (Summary, Monthly Trend, Details)
+    - Default: Current year
+  - **SLA Report (/admin/reports/sla):**
+    - 6 summary cards: Total, Met, Exceeded, avg by type (2), avg by priority (4)
+    - Pie chart: Achievement rate visualization (met vs exceeded)
+    - Line chart: Monthly SLA achievement trend
+    - Data table: SLA comparison with target vs actual, difference, status, achievement %
+    - Filters: Year, type, priority, SLA status (All/Met/Exceeded)
+    - Excel export: 3 sheets (Summary, Monthly Trend, SLA Details)
+    - Default: Current year
+  - **Components Created (14 files):**
+    - Laptri: filters, summary, chart, table, monthly-trend, client wrapper
+    - SLA: filters, summary, chart, table, monthly-trend, client wrapper
+    - Chart adapter: BarChart, PieChart, LineChart wrappers
+  - **Seed Data Enhancement:**
+    - 8 SLA policies created (2 types × 4 priorities)
+    - 25 completed requests spanning all quarters of 2026
+    - Distribution: 13 New Application, 12 RFC
+    - Priorities: 6 Low, 7 Medium, 8 High, 4 Critical
+    - SLA results: 18 met (72%), 7 exceeded (28%)
+    - All requests include full workflow history and progress updates
+- Files created: 22 new files
+- Files modified: 5 files (seed.ts, DECISIONS.md, BUSINESS_RULES.md, SESSION_LOG.md)
+- Dependencies added: 3 packages
+- Tests/checks:
+  - ✅ ESLint: PASSED (0 errors, 0 warnings)
+  - ✅ TypeScript: PASSED
+  - ✅ Production build: SUCCESS
+  - ✅ All 20 routes generated correctly
+  - ✅ Report routes protected by admin role check
+  - ✅ Chart rendering functional
+  - ✅ Excel export functional
+  - ✅ Filters update URL params (shareable links)
+  - ✅ Responsive design verified
+- Business logic implemented:
+  - Laptri includes only status='completed' requests
+  - Quarterly grouping: Q1(Jan-Mar), Q2(Apr-Jun), Q3(Jul-Sep), Q4(Oct-Dec)
+  - Average completion time calculated separately by type and priority
+  - Month-over-month trends show completion patterns
+  - SLA calculation: submitted_at → completed_at (calendar hours 24/7)
+  - Achievement rate: (SLA met count / total) × 100
+  - Filterable and exportable with applied filters preserved
+  - All timestamps use Indonesian locale formatting
+- Architecture decisions:
+  - Chart library abstracted via adapter layer for future replacement
+  - Recharts wrapped in custom components (BarChart, PieChart, LineChart)
+  - Excel exports contain 3 sheets: Summary, Trend, Details
+  - No embedded charts in Excel (data only)
+  - Report defaults to current year with flexible overrides
+  - URL params used for filter state (shareable reports)
+  - Server-side data aggregation for performance
+  - Admin-only access enforced in server actions
+  - Developer performance metrics explicitly deferred to v1.1
+- ADRs documented:
+  - ADR-0006: Recharts with abstraction layer
+  - ADR-0007: Current year default for all reports
+  - ADR-0008: Organizational metrics only, no developer performance
+  - ADR-0009: Excel format with summary + raw data, no charts
+  - ADR-0010: Development seed data with 25 diverse requests
+- Metrics included:
+  - Quarterly completion counts (Q1, Q2, Q3, Q4)
+  - Type breakdown (New Application vs RFC)
+  - Average completion time by request type
+  - Average completion time by priority
+  - Month-over-month completion trends
+  - SLA achievement rate (met vs exceeded)
+  - Monthly SLA compliance trends
+- UX features:
+  - Real-time filter updates with URL sync
+  - Toast notifications on export
+  - Empty states for no data
+  - Loading states on data fetch
+  - Color-coded visualizations (green for met, red for exceeded)
+  - Responsive charts and tables
+  - Keyboard accessible filters
+  - Print-friendly layouts
+- Open questions: None - Phase 5 complete
+- Next recommended step: **Phase 6 - Settings & User Management** or **End-to-End Testing**
+  - Settings page (user management, SLA policies management)
+  - User CRUD operations (admin only)
+  - SLA policy configuration
+  - Final end-to-end testing across all roles
+  - Production deployment preparation
+
+  - Export to Excel functionality
+  - Report visualization with charts
+
