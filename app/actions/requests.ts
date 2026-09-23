@@ -150,8 +150,36 @@ export async function getRequestsByUserId(params?: {
       limit,
     };
   } catch (error) {
-    console.error('Get requests error:', error);
+    console.error('Get request by id error:', error);
     return { success: false, error: 'Terjadi kesalahan saat mengambil data' };
+  }
+}
+
+export async function getRequestStatusHistories(requestId: number) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const histories = await db
+      .select({
+        id: requestStatusHistories.id,
+        fromStatus: requestStatusHistories.fromStatus,
+        toStatus: requestStatusHistories.toStatus,
+        note: requestStatusHistories.note,
+        changedBy: requestStatusHistories.changedBy,
+        changedByName: requestStatusHistories.changedByName,
+        createdAt: requestStatusHistories.createdAt,
+      })
+      .from(requestStatusHistories)
+      .where(eq(requestStatusHistories.requestId, requestId))
+      .orderBy(desc(requestStatusHistories.createdAt));
+
+    return { success: true, data: histories };
+  } catch (error) {
+    console.error('Get request status histories error:', error);
+    return { success: false, error: 'Gagal mengambil riwayat status' };
   }
 }
 
