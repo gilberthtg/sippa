@@ -83,3 +83,81 @@
   - ⚠️ Manual testing needs execution
   - ⚠️ Production environment setup needed
   - ⚠️ Initial admin user creation process documented
+
+## 2026-09-24 — Logout Functionality Enhancement
+- Goal: Enhance logout functionality with audit logging
+- Changes made:
+  - **Auth Actions Created**:
+    - Created `app/actions/auth.ts` with `logout()` server action
+    - Integrated audit logging for logout events
+    - Captures user session info before logout (email, roleCode)
+    - Graceful error handling - ensures logout succeeds even if audit fails
+  - **UserMenu Component Updated**:
+    - Replaced direct `signOut()` call with server action `logout()`
+    - Added loading state with `isLoggingOut` flag
+    - Disabled logout button during logout process
+    - Shows "Logging out..." feedback during logout
+- Files changed:
+  - `app/actions/auth.ts` (created)
+  - `components/layout/user-menu.tsx` (updated)
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+- Benefits:
+  - ✅ Logout events now tracked in audit logs
+  - ✅ Better UX with loading state
+  - ✅ Consistent with audit logging pattern used throughout app
+  - ✅ Server-side audit logging before session termination
+- Next recommended step: **Test logout functionality and verify audit log entry**
+
+## 2026-09-24 — Custom Error Pages (404 & 500)
+- Goal: Replace default Next.js error pages with SIPPA UI-compliant error pages
+- Changes made:
+  - **Shared Error Component Created**:
+    - Created `components/shared/error-state.tsx` - reusable error display component
+    - Supports 404, 500, and generic error types
+    - Consistent with SIPPA design system (green primary, card-based layout)
+    - Features: icon display, customizable messages, reset button, navigation button
+    - Responsive design with proper spacing and typography per UX Guidelines
+  - **Role-Specific Error Pages Updated**:
+    - Updated `app/(user)/error.tsx` - User role error boundary
+    - Updated `app/(user)/not-found.tsx` - User role 404 page
+    - Updated `app/(admin)/error.tsx` - Admin role error boundary
+    - Updated `app/(admin)/not-found.tsx` - Admin role 404 page
+    - Updated `app/(developer)/error.tsx` - Developer role error boundary
+    - Updated `app/(developer)/not-found.tsx` - Developer role 404 page
+  - **Root-Level Error Pages Created**:
+    - Created `app/not-found.tsx` - Global 404 handler
+    - Created `app/error.tsx` - Global error boundary
+    - Created `app/global-error.tsx` - Fatal error handler (full HTML replacement)
+- Files changed:
+  - `components/shared/error-state.tsx` (created)
+  - `app/not-found.tsx` (created)
+  - `app/error.tsx` (created)
+  - `app/global-error.tsx` (created)
+  - `app/(user)/error.tsx` (updated)
+  - `app/(user)/not-found.tsx` (updated)
+  - `app/(admin)/error.tsx` (updated)
+  - `app/(admin)/not-found.tsx` (updated)
+  - `app/(developer)/error.tsx` (updated)
+  - `app/(developer)/not-found.tsx` (updated)
+- Design alignment:
+  - ✅ Uses primary green color from UX Guidelines
+  - ✅ Card-based layout with proper shadows and borders
+  - ✅ Soft, calm visual language with rounded corners
+  - ✅ Clear hierarchy and readable typography (Inter font)
+  - ✅ Proper spacing (p-8, gap-6, space-y-3)
+  - ✅ Accessible with proper color contrast
+  - ✅ Responsive with mobile-friendly sizing
+  - ✅ Icon-based status indication (AlertCircle for errors, FileQuestion for 404)
+- Benefits:
+  - ✅ Consistent error experience across all application areas
+  - ✅ Role-aware navigation (returns to appropriate dashboard)
+  - ✅ Reusable component reduces code duplication
+  - ✅ Professional appearance maintains brand consistency
+  - ✅ User-friendly Indonesian language messages
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Production Build: SUCCESS (24 routes compiled)
+  - Fixed: `request-list-client.tsx` updated to use correct ErrorState props
+- Documentation: Created `.ai/ERROR_PAGES.md` with comprehensive error pages guide
+- Next recommended step: **Manual testing of error pages across all roles**

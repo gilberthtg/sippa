@@ -41,7 +41,14 @@ export function RequestListClient({ initialRequests }: RequestListClientProps) {
   }, [filter, search, router]);
 
   if (error) {
-    return <ErrorState message={error} retry={() => window.location.reload()} />;
+    return (
+      <ErrorState 
+        type="error"
+        message={error} 
+        showReset 
+        onReset={() => window.location.reload()} 
+      />
+    );
   }
 
   return (

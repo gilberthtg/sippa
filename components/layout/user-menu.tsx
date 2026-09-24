@@ -1,7 +1,7 @@
 'use client';
 
 import { LogOut } from 'lucide-react';
-import { signOut } from 'next-auth/react';
+import { logout } from '@/app/actions/auth';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useState } from 'react';
 
 interface UserMenuProps {
   user: {
@@ -40,8 +41,16 @@ function getRoleLabel(roleCode?: string): string {
 }
 
 export function UserMenu({ user }: UserMenuProps) {
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = async () => {
-    await signOut({ callbackUrl: '/login' });
+    try {
+      setIsLoggingOut(true);
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -70,9 +79,9 @@ export function UserMenu({ user }: UserMenuProps) {
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
+        <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Logout</span>
+          <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -99,19 +99,20 @@ function LoginForm() {
                     required
                     disabled={isLoading}
                     autoComplete="current-password"
-                    className="h-11 pr-10"
+                    className="h-11 pr-12"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-0 top-0 h-full px-3 flex items-center justify-center text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm disabled:opacity-50 disabled:cursor-not-allowed z-10"
+                    aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                    tabIndex={0}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                      <EyeOff className="h-5 w-5" />
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-5 w-5" />
                     )}
                   </button>
                 </div>
