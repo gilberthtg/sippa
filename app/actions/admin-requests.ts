@@ -13,9 +13,11 @@ import {
   units,
   slaPolicies
 } from '@/lib/db/schema';
-import { REQUEST_STATUSES, ROLES } from '@/lib/constants';
+import { REQUEST_STATUSES, ROLES, AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
 import { eq, and, desc, or, like, sql, gte, lte, inArray, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { logAudit } from '@/lib/utils/audit';
+import { notifyRequestApproved, notifyRequestRejected, notifyDeveloperAssigned } from '@/lib/notifications/templates';
 
 async function checkAdminAuth() {
   const session = await auth();
@@ -321,6 +323,17 @@ export async function verifyRequest(requestId: number, note?: string) {
       note: note || 'Request diverifikasi oleh admin',
     });
 
+    logAudit({
+      actorUserId: authCheck.session!.user.id,
+      actorName: authCheck.session!.user.name,
+      module: AUDIT_MODULES.REQUESTS,
+      entityType: 'request',
+      entityId: String(requestId),
+      action: AUDIT_ACTIONS.VERIFY,
+      beforeData: { status: request.status },
+      afterData: { status: REQUEST_STATUSES.VERIFICATION, note },
+    });
+
     revalidatePath('/admin/requests');
     revalidatePath(`/admin/requests/${requestId}`);
     return { success: true };
@@ -367,6 +380,24 @@ export async function approveRequest(requestId: number, note?: string) {
       changedBy: authCheck.session!.user.id,
       changedByName: authCheck.session!.user.name,
       note: note || 'Request disetujui',
+    });
+
+    logAudit({
+      actorUserId: authCheck.session!.user.id,
+      actorName: authCheck.session!.user.name,
+      module: AUDIT_MODULES.REQUESTS,
+      entityType: 'request',
+      entityId: String(requestId),
+      action: AUDIT_ACTIONS.APPROVE,
+      beforeData: { status: request.status },
+      afterData: { status: REQUEST_STATUSES.APPROVED, note },
+    });
+
+    notifyRequestApproved({
+      requestId,
+      requestNo: request.requestNo,
+      title: request.title,
+      requesterId: request.requesterId,
     });
 
     revalidatePath('/admin/requests');
@@ -420,6 +451,25 @@ export async function rejectRequest(requestId: number, reason: string) {
       changedBy: authCheck.session!.user.id,
       changedByName: authCheck.session!.user.name,
       note: `Request ditolak: ${reason}`,
+    });
+
+    logAudit({
+      actorUserId: authCheck.session!.user.id,
+      actorName: authCheck.session!.user.name,
+      module: AUDIT_MODULES.REQUESTS,
+      entityType: 'request',
+      entityId: String(requestId),
+      action: AUDIT_ACTIONS.REJECT,
+      beforeData: { status: request.status },
+      afterData: { status: REQUEST_STATUSES.REJECTED, reason },
+    });
+
+    notifyRequestRejected({
+      requestId,
+      requestNo: request.requestNo,
+      title: request.title,
+      requesterId: request.requesterId,
+      reason,
     });
 
     revalidatePath('/admin/requests');
@@ -492,6 +542,17 @@ export async function setPriority(requestId: number, priorityId: number) {
       changedBy: authCheck.session!.user.id,
       changedByName: authCheck.session!.user.name,
       note: `Priority diubah menjadi ${priority.name}`,
+    });
+
+    logAudit({
+      actorUserId: authCheck.session!.user.id,
+      actorName: authCheck.session!.user.name,
+      module: AUDIT_MODULES.REQUESTS,
+      entityType: 'request',
+      entityId: String(requestId),
+      action: AUDIT_ACTIONS.SET_PRIORITY,
+      beforeData: { priorityId: request.priorityId, targetSlaHours: request.targetSlaHours },
+      afterData: { priorityId, targetSlaHours, priorityName: priority.name },
     });
 
     revalidatePath('/admin/requests');
@@ -587,6 +648,26 @@ export async function assignRequest(params: {
       changedByName: authCheck.session!.user.name,
       note: assignmentNote,
     });
+
+    logAudit({
+      actorUserId: authCheck.session!.user.id,
+      actorName: authCheck.session!.user.name,
+      module: AUDIT_MODULES.REQUESTS,
+      entityType: 'request',
+      entityId: String(requestId),
+      action: AUDIT_ACTIONS.ASSIGN,
+      beforeData: { status: request.status },
+      afterData: { status: REQUEST_STATUSES.ASSIGNED, teamId, developerId, note },
+    });
+
+    if (developerId) {
+      notifyDeveloperAssigned({
+        requestId,
+        requestNo: request.requestNo,
+        title: request.title,
+        developerId,
+      });
+    }
 
     revalidatePath('/admin/requests');
     revalidatePath(`/admin/requests/${requestId}`);

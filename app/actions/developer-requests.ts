@@ -4,6 +4,9 @@ import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
 import { requests, requestAssignments, requestProgress, requestStatusHistories, users, priorities, units } from '@/lib/db/schema';
 import { eq, and, or, desc, sql, inArray } from 'drizzle-orm';
+import { logAudit } from '@/lib/utils/audit';
+import { AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
+import { notifyProgressUpdated, notifyRequestCompleted } from '@/lib/notifications/templates';
 
 async function checkDeveloperAuth() {
   const session = await auth();
@@ -293,6 +296,17 @@ export async function startRequest(params: { requestId: number; note?: string })
       updatedByName: session?.user?.name || 'Developer',
     });
 
+    logAudit({
+      actorUserId: authCheck.userId!,
+      actorName: session?.user?.name || 'Developer',
+      module: AUDIT_MODULES.REQUESTS,
+      entityType: 'request',
+      entityId: String(requestId),
+      action: AUDIT_ACTIONS.START,
+      beforeData: { status: request.status },
+      afterData: { status: 'in_progress', note },
+    });
+
     return { success: true, message: 'Request berhasil dimulai' };
   } catch (error) {
     console.error('Start request error:', error);
@@ -343,6 +357,25 @@ export async function updateProgress(params: {
       updateNote: note.trim(),
       updatedBy: authCheck.userId!,
       updatedByName: session?.user?.name || 'Developer',
+    });
+
+    logAudit({
+      actorUserId: authCheck.userId!,
+      actorName: session?.user?.name || 'Developer',
+      module: AUDIT_MODULES.REQUESTS,
+      entityType: 'request',
+      entityId: String(requestId),
+      action: AUDIT_ACTIONS.PROGRESS,
+      afterData: { progressPercent, note: note.trim() },
+    });
+
+    notifyProgressUpdated({
+      requestId,
+      requestNo: request.requestNo,
+      title: request.title,
+      requesterId: request.requesterId,
+      percent: progressPercent,
+      note: note.trim(),
     });
 
     return { success: true, message: 'Progress berhasil diupdate' };
@@ -403,6 +436,24 @@ export async function completeRequest(params: { requestId: number; finalNote: st
       updateNote: finalNote.trim(),
       updatedBy: authCheck.userId!,
       updatedByName: session?.user?.name || 'Developer',
+    });
+
+    logAudit({
+      actorUserId: authCheck.userId!,
+      actorName: session?.user?.name || 'Developer',
+      module: AUDIT_MODULES.REQUESTS,
+      entityType: 'request',
+      entityId: String(requestId),
+      action: AUDIT_ACTIONS.COMPLETE,
+      beforeData: { status: request.status },
+      afterData: { status: 'completed', finalNote: finalNote.trim() },
+    });
+
+    notifyRequestCompleted({
+      requestId,
+      requestNo: request.requestNo,
+      title: request.title,
+      requesterId: request.requesterId,
     });
 
     return { success: true, message: 'Request berhasil diselesaikan' };

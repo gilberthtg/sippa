@@ -5,6 +5,8 @@ import { slaPolicies, priorities } from '@/lib/db/schema';
 import { eq, and, or, desc, count, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth/config';
 import { revalidatePath } from 'next/cache';
+import { logAudit } from '@/lib/utils/audit';
+import { AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
 
 async function checkAdminAuth() {
   const session = await auth();
@@ -112,9 +114,8 @@ export async function createSLAPolicy(data: {
   effectiveFrom?: string | null;
   effectiveTo?: string | null;
 }) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
-  // Check for overlapping policies
   const overlap = await checkSLAPolicyOverlap(
     data.requestType,
     data.priorityId,
@@ -135,6 +136,16 @@ export async function createSLAPolicy(data: {
     isActive: true,
   });
 
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SLA,
+    entityType: 'sla_policy',
+    entityId: String(result[0].insertId),
+    action: AUDIT_ACTIONS.CREATE,
+    afterData: { requestType: data.requestType, priorityId: data.priorityId, targetHours: data.targetHours },
+  });
+
   revalidatePath('/admin/settings/sla-policies');
 
   return { success: true, id: result[0].insertId };
@@ -151,9 +162,8 @@ export async function updateSLAPolicy(
     isActive?: boolean;
   }
 ) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
-  // If changing type, priority, or dates, check for overlaps
   if (data.requestType || data.priorityId || data.effectiveFrom !== undefined || data.effectiveTo !== undefined) {
     const current = await getSLAPolicyById(id);
     if (current) {
@@ -185,18 +195,38 @@ export async function updateSLAPolicy(
     .set(updateData)
     .where(eq(slaPolicies.id, id));
 
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SLA,
+    entityType: 'sla_policy',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.UPDATE,
+    afterData: data,
+  });
+
   revalidatePath('/admin/settings/sla-policies');
 
   return { success: true };
 }
 
 export async function toggleSLAPolicyActive(id: number, isActive: boolean) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
   await db
     .update(slaPolicies)
     .set({ isActive, updatedAt: new Date() })
     .where(eq(slaPolicies.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SLA,
+    entityType: 'sla_policy',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.TOGGLE_ACTIVE,
+    afterData: { isActive },
+  });
 
   revalidatePath('/admin/settings/sla-policies');
 

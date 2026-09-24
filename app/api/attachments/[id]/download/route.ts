@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
-import { requestAttachments, requests } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { requestAttachments, requests, requestAssignments } from '@/lib/db/schema';
+import { eq, and, isNull } from 'drizzle-orm';
 import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
 import { join } from 'path';
@@ -39,7 +39,26 @@ export async function GET(
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    if (attachment.requesterId !== session.user.id) {
+    const isRequester = attachment.requesterId === session.user.id;
+    const isAdmin = session.user.roleCode === 'admin';
+    let isDeveloperAssigned = false;
+
+    if (session.user.roleCode === 'developer') {
+      const [assignment] = await db
+        .select({ id: requestAssignments.id })
+        .from(requestAssignments)
+        .where(
+          and(
+            eq(requestAssignments.requestId, attachment.requestId),
+            eq(requestAssignments.developerId, session.user.id),
+            isNull(requestAssignments.unassignedAt)
+          )
+        )
+        .limit(1);
+      isDeveloperAssigned = !!assignment;
+    }
+
+    if (!isRequester && !isAdmin && !isDeveloperAssigned) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -65,6 +84,7 @@ export async function GET(
         'Content-Type': attachment.mimeType,
         'Content-Disposition': `attachment; filename="${encodeURIComponent(attachment.originalName)}"`,
         'Content-Length': attachment.sizeBytes.toString(),
+        'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch (error) {

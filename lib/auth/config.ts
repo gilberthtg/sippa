@@ -5,6 +5,8 @@ import { users, roles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { logAudit } from '@/lib/utils/audit';
+import { AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -27,7 +29,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         
         const { email, password } = parsed.data;
         
-        // Find user with role
         const result = await db
           .select({
             id: users.id,
@@ -48,21 +49,47 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const user = result[0];
         
         if (!user || !user.isActive) {
+          logAudit({
+            actorUserId: null,
+            actorName: 'anonymous',
+            module: AUDIT_MODULES.AUTH,
+            entityType: 'session',
+            entityId: '0',
+            action: AUDIT_ACTIONS.LOGIN_FAILED,
+            afterData: { attemptedEmail: email, reason: !user ? 'user_not_found' : 'user_inactive' },
+          });
           return null;
         }
         
-        // Verify password
         const passwordMatch = await bcrypt.compare(password, user.passwordHash);
         
         if (!passwordMatch) {
+          logAudit({
+            actorUserId: null,
+            actorName: 'anonymous',
+            module: AUDIT_MODULES.AUTH,
+            entityType: 'session',
+            entityId: '0',
+            action: AUDIT_ACTIONS.LOGIN_FAILED,
+            afterData: { attemptedEmail: email, reason: 'invalid_password' },
+          });
           return null;
         }
         
-        // Update last login
         await db
           .update(users)
           .set({ lastLoginAt: new Date() })
           .where(eq(users.id, user.id));
+
+        logAudit({
+          actorUserId: user.id,
+          actorName: user.name,
+          module: AUDIT_MODULES.AUTH,
+          entityType: 'session',
+          entityId: String(user.id),
+          action: AUDIT_ACTIONS.LOGIN_SUCCESS,
+          afterData: { email: user.email, roleCode: user.roleCode },
+        });
         
         return {
           id: user.id,
@@ -89,7 +116,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user && token) {
-        // Type assertion needed due to NextAuth type limitations
         Object.assign(session.user, {
           id: token.id as number,
           roleId: token.roleId as number,
@@ -106,6 +132,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: 'jwt',
-    maxAge: 24 * 60 * 60, // 24 hours
+    maxAge: 24 * 60 * 60,
   },
 });

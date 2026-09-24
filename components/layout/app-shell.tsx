@@ -8,6 +8,7 @@ import type { Role } from '@/lib/constants';
 
 interface AppShellProps {
   user: {
+    id?: number;
     name?: string | null;
     email?: string | null;
     roleCode?: string;

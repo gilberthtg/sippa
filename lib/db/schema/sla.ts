@@ -20,8 +20,9 @@ export const slaPolicies = mysqlTable('sla_policies', {
 
 export const auditLogs = mysqlTable('audit_logs', {
   id: bigint('id', { mode: 'number' }).primaryKey().autoincrement(),
-  actorUserId: int('actor_user_id').notNull().references(() => users.id),
+  actorUserId: int('actor_user_id').references(() => users.id),
   actorName: varchar('actor_name', { length: 200 }).notNull(),
+  module: varchar('module', { length: 50 }).notNull(),
   entityType: varchar('entity_type', { length: 100 }).notNull(),
   entityId: varchar('entity_id', { length: 100 }).notNull(),
   action: varchar('action', { length: 100 }).notNull(),
@@ -32,6 +33,7 @@ export const auditLogs = mysqlTable('audit_logs', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({
   actorIdx: index('actor_user_id_idx').on(table.actorUserId),
+  moduleIdx: index('module_idx').on(table.module),
   entityTypeIdx: index('entity_type_idx').on(table.entityType),
   entityIdIdx: index('entity_id_idx').on(table.entityId),
   actionIdx: index('action_idx').on(table.action),

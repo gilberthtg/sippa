@@ -7,9 +7,11 @@ import { createRequestSchema } from '@/lib/validations/request';
 import { generateRequestNumber } from '@/lib/utils/request-number';
 import { generateStorageKey } from '@/lib/utils/file-upload';
 import { saveFile } from '@/lib/utils/file-storage';
-import { REQUEST_STATUSES } from '@/lib/constants';
+import { REQUEST_STATUSES, FILE_UPLOAD, AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
 import { eq, and, desc, or, like, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { logAudit } from '@/lib/utils/audit';
+import { notifyRequestSubmitted } from '@/lib/notifications/templates';
 
 export async function createRequest(formData: FormData) {
   try {
@@ -32,6 +34,20 @@ export async function createRequest(formData: FormData) {
     const validation = createRequestSchema.safeParse(data);
     if (!validation.success) {
       return { success: false, error: validation.error.issues[0].message };
+    }
+
+    const files = formData.getAll('files') as File[];
+    const validFiles = files.filter((f) => f.size > 0);
+    if (validFiles.length > FILE_UPLOAD.MAX_FILES) {
+      return { success: false, error: `Maksimal ${FILE_UPLOAD.MAX_FILES} file` };
+    }
+    for (const file of validFiles) {
+      if (file.size > FILE_UPLOAD.MAX_FILE_SIZE) {
+        return { success: false, error: `File "${file.name}" melebihi batas 10MB` };
+      }
+      if (!FILE_UPLOAD.ALLOWED_TYPES.includes(file.type as typeof FILE_UPLOAD.ALLOWED_TYPES[number])) {
+        return { success: false, error: `Tipe file "${file.name}" tidak diizinkan` };
+      }
     }
 
     const requestNo = await generateRequestNumber();
@@ -65,26 +81,36 @@ export async function createRequest(formData: FormData) {
       note: 'Request dibuat',
     });
 
-    const files = formData.getAll('files') as File[];
-    if (files.length > 0) {
-      for (const file of files) {
-        if (file.size > 0) {
-          const buffer = Buffer.from(await file.arrayBuffer());
-          const storageKey = generateStorageKey(file.name);
-          
-          await saveFile(buffer, storageKey);
-
-          await db.insert(requestAttachments).values({
-            requestId: Number(requestId),
-            originalName: file.name,
-            storageKey,
-            mimeType: file.type,
-            sizeBytes: file.size,
-            uploadedBy: session.user.id,
-          });
-        }
-      }
+    for (const file of validFiles) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const storageKey = generateStorageKey(file.name);
+      await saveFile(buffer, storageKey);
+      await db.insert(requestAttachments).values({
+        requestId: Number(requestId),
+        originalName: file.name,
+        storageKey,
+        mimeType: file.type,
+        sizeBytes: file.size,
+        uploadedBy: session.user.id,
+      });
     }
+
+    logAudit({
+      actorUserId: session.user.id,
+      actorName: session.user.name,
+      module: AUDIT_MODULES.REQUESTS,
+      entityType: 'request',
+      entityId: String(requestId),
+      action: AUDIT_ACTIONS.CREATE,
+      afterData: { requestNo, requestType: validation.data.requestType, title: validation.data.title },
+    });
+
+    notifyRequestSubmitted({
+      requestId: Number(requestId),
+      requestNo,
+      title: validation.data.title,
+      requesterName: session.user.name,
+    });
 
     revalidatePath('/requests');
     return { success: true, requestId: Number(requestId), requestNo };

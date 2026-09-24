@@ -1,8 +1,9 @@
 'use client';
 
-import { Menu, Bell } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import Link from 'next/link';
 import { UserMenu } from './user-menu';
+import { NotificationBell } from './notification-bell';
 import { Button } from '@/components/ui/button';
 import {
   Breadcrumb,
@@ -15,6 +16,7 @@ import {
 
 interface TopNavProps {
   user: {
+    id?: number;
     name?: string | null;
     email?: string | null;
     roleCode?: string;
@@ -67,15 +69,10 @@ export function TopNav({ user, onMenuClick, breadcrumbs }: TopNavProps) {
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Notification bell - placeholder */}
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="relative"
-        aria-label="Notifications"
-      >
-        <Bell className="h-5 w-5" />
-      </Button>
+      {/* Notification bell */}
+      {user.id && user.roleCode && (
+        <NotificationBell userId={user.id} roleCode={user.roleCode} />
+      )}
 
       {/* User menu */}
       <UserMenu user={user} />

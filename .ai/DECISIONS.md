@@ -86,6 +86,20 @@ Format:
 - Impact: Seed script includes 8 SLA policies and 25 completed requests spanning all quarters of 2026
 - Data distribution: Multiple types, priorities, units, quarters, SLA results
 
+## ADR-0011 — In-App Notifications
+- Status: Confirmed
+- Date: 2026-09-24
+- Decision: Implement in-app notifications with a bell icon and polling, deferring email/push
+- Reason: Lightweight implementation for v1 that fulfills the requirement without external dependencies
+- Impact: Client polls every 30s. Channel abstraction (`NotificationChannel`) allows plugging in email later.
+
+## ADR-0012 — Audit Logging Strategy
+- Status: Confirmed
+- Date: 2026-09-24
+- Decision: Write audit logs inline during server actions (fire-and-forget), capturing IP/UA and sanitizing secrets
+- Reason: Provides required security trail without blocking business logic or requiring a message queue
+- Impact: `audit_logs` table schema expanded with `module`. `actorUserId` made nullable to support failed login tracking.
+
 ## Open Decisions
 - Notification provider (deferred to v1.1)
 - Priority calculation rules (manual admin decision for v1.0)

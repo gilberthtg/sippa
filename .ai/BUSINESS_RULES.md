@@ -58,6 +58,15 @@ If the institution uses different status names, update this file before implemen
 - Filterable by: year, request type, priority, SLA status
 - Exportable to Excel with summary and detail sheets
 
+## Notification Events
+In-app notifications are triggered automatically on the following transitions:
+- `REQUEST_SUBMITTED`: Sent to all active admins
+- `REQUEST_APPROVED`: Sent to the requester
+- `REQUEST_REJECTED`: Sent to the requester
+- `DEVELOPER_ASSIGNED`: Sent to the assigned developer
+- `PROGRESS_UPDATED`: Sent to the requester
+- `REQUEST_COMPLETED`: Sent to the requester and all active admins
+
 ## Deferred Requirements (v1.1+)
 - Developer performance metrics in reports
   - Individual completion rates

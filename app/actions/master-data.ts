@@ -5,6 +5,8 @@ import { units, priorities, teams } from '@/lib/db/schema';
 import { eq, and, or, like, desc, asc, count, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth/config';
 import { revalidatePath } from 'next/cache';
+import { logAudit } from '@/lib/utils/audit';
+import { AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
 
 async function checkAdminAuth() {
   const session = await auth();
@@ -61,7 +63,7 @@ export async function getUnits(params?: {
 }
 
 export async function createUnit(data: { code: string; name: string }) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
   const existing = await db
     .select({ id: units.id })
@@ -79,13 +81,23 @@ export async function createUnit(data: { code: string; name: string }) {
     isActive: true,
   });
 
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'unit',
+    entityId: String(result[0].insertId),
+    action: AUDIT_ACTIONS.CREATE,
+    afterData: { code: data.code, name: data.name },
+  });
+
   revalidatePath('/admin/settings/units');
 
   return { success: true, id: result[0].insertId };
 }
 
 export async function updateUnit(id: number, data: { code?: string; name?: string; isActive?: boolean }) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
   if (data.code) {
     const existing = await db
@@ -109,15 +121,35 @@ export async function updateUnit(id: number, data: { code?: string; name?: strin
     })
     .where(eq(units.id, id));
 
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'unit',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.UPDATE,
+    afterData: data,
+  });
+
   revalidatePath('/admin/settings/units');
 
   return { success: true };
 }
 
 export async function toggleUnitActive(id: number, isActive: boolean) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
   await db.update(units).set({ isActive, updatedAt: new Date() }).where(eq(units.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'unit',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.TOGGLE_ACTIVE,
+    afterData: { isActive },
+  });
 
   revalidatePath('/admin/settings/units');
 
@@ -171,7 +203,7 @@ export async function getPriorities(params?: {
 }
 
 export async function createPriority(data: { code: string; name: string; sortOrder?: number }) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
   const existing = await db
     .select({ id: priorities.id })
@@ -183,7 +215,6 @@ export async function createPriority(data: { code: string; name: string; sortOrd
     throw new Error('Priority code already exists');
   }
 
-  // If no sort order provided, use max + 1
   let sortOrder = data.sortOrder || 0;
   if (!data.sortOrder) {
     const maxResult = await db
@@ -199,6 +230,16 @@ export async function createPriority(data: { code: string; name: string; sortOrd
     isActive: true,
   });
 
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'priority',
+    entityId: String(result[0].insertId),
+    action: AUDIT_ACTIONS.CREATE,
+    afterData: { code: data.code, name: data.name, sortOrder },
+  });
+
   revalidatePath('/admin/settings/priorities');
 
   return { success: true, id: result[0].insertId };
@@ -208,7 +249,7 @@ export async function updatePriority(
   id: number,
   data: { code?: string; name?: string; sortOrder?: number; isActive?: boolean }
 ) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
   if (data.code) {
     const existing = await db
@@ -232,6 +273,16 @@ export async function updatePriority(
     })
     .where(eq(priorities.id, id));
 
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'priority',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.UPDATE,
+    afterData: data,
+  });
+
   revalidatePath('/admin/settings/priorities');
 
   return { success: true };
@@ -254,9 +305,19 @@ export async function reorderPriorities(reorderedIds: number[]) {
 }
 
 export async function togglePriorityActive(id: number, isActive: boolean) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
   await db.update(priorities).set({ isActive }).where(eq(priorities.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'priority',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.TOGGLE_ACTIVE,
+    afterData: { isActive },
+  });
 
   revalidatePath('/admin/settings/priorities');
 
@@ -310,7 +371,7 @@ export async function getTeams(params?: {
 }
 
 export async function createTeam(data: { code: string; name: string }) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
   const existing = await db
     .select({ id: teams.id })
@@ -328,13 +389,23 @@ export async function createTeam(data: { code: string; name: string }) {
     isActive: true,
   });
 
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'team',
+    entityId: String(result[0].insertId),
+    action: AUDIT_ACTIONS.CREATE,
+    afterData: { code: data.code, name: data.name },
+  });
+
   revalidatePath('/admin/settings/teams');
 
   return { success: true, id: result[0].insertId };
 }
 
 export async function updateTeam(id: number, data: { code?: string; name?: string; isActive?: boolean }) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
   if (data.code) {
     const existing = await db
@@ -358,15 +429,35 @@ export async function updateTeam(id: number, data: { code?: string; name?: strin
     })
     .where(eq(teams.id, id));
 
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'team',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.UPDATE,
+    afterData: data,
+  });
+
   revalidatePath('/admin/settings/teams');
 
   return { success: true };
 }
 
 export async function toggleTeamActive(id: number, isActive: boolean) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
   await db.update(teams).set({ isActive, updatedAt: new Date() }).where(eq(teams.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'team',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.TOGGLE_ACTIVE,
+    afterData: { isActive },
+  });
 
   revalidatePath('/admin/settings/teams');
 

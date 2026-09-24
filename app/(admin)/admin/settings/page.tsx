@@ -3,13 +3,16 @@ import { redirect } from 'next/navigation';
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Building2, Flag, UsersRound, Target } from 'lucide-react';
+import { Users, Building2, Flag, UsersRound, Target, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/db';
-import { users, units, priorities, teams, slaPolicies } from '@/lib/db/schema';
-import { count, eq } from 'drizzle-orm';
+import { users, units, priorities, teams, slaPolicies, auditLogs } from '@/lib/db/schema';
+import { count, eq, gte } from 'drizzle-orm';
 
 async function getSettingsStats() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const [
     totalUsers,
     activeUsers,
@@ -17,6 +20,8 @@ async function getSettingsStats() {
     totalPriorities,
     totalTeams,
     activeSLAPolicies,
+    totalAuditLogs,
+    todayAuditLogs,
   ] = await Promise.all([
     db.select({ count: count() }).from(users),
     db.select({ count: count() }).from(users).where(eq(users.isActive, true)),
@@ -24,6 +29,8 @@ async function getSettingsStats() {
     db.select({ count: count() }).from(priorities),
     db.select({ count: count() }).from(teams),
     db.select({ count: count() }).from(slaPolicies).where(eq(slaPolicies.isActive, true)),
+    db.select({ count: count() }).from(auditLogs),
+    db.select({ count: count() }).from(auditLogs).where(gte(auditLogs.createdAt, today)),
   ]);
 
   return {
@@ -33,6 +40,8 @@ async function getSettingsStats() {
     totalPriorities: totalPriorities[0].count,
     totalTeams: totalTeams[0].count,
     activeSLAPolicies: activeSLAPolicies[0].count,
+    totalAuditLogs: totalAuditLogs[0].count,
+    todayAuditLogs: todayAuditLogs[0].count,
   };
 }
 
@@ -82,6 +91,16 @@ export default async function SettingsPage() {
       icon: Target,
       href: '/admin/settings/sla-policies',
       stats: [{ label: 'Active Policies', value: stats.activeSLAPolicies }],
+    },
+    {
+      title: 'Audit Logs',
+      description: 'View system activity and security events',
+      icon: Shield,
+      href: '/admin/settings/audit-logs',
+      stats: [
+        { label: 'Total Events', value: stats.totalAuditLogs },
+        { label: 'Today', value: stats.todayAuditLogs },
+      ],
     },
   ];
 

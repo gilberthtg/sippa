@@ -55,3 +55,39 @@ export const FILE_UPLOAD = {
 } as const;
 
 export type Role = typeof ROLES[keyof typeof ROLES];
+
+export const NOTIFICATION_EVENTS = {
+  REQUEST_SUBMITTED: 'request_submitted',
+  REQUEST_APPROVED: 'request_approved',
+  REQUEST_REJECTED: 'request_rejected',
+  DEVELOPER_ASSIGNED: 'developer_assigned',
+  PROGRESS_UPDATED: 'progress_updated',
+  REQUEST_COMPLETED: 'request_completed',
+} as const;
+
+export const AUDIT_MODULES = {
+  REQUESTS: 'requests',
+  USERS: 'users',
+  SETTINGS: 'settings',
+  AUTH: 'auth',
+  SLA: 'sla',
+} as const;
+
+export const AUDIT_ACTIONS = {
+  CREATE: 'create',
+  UPDATE: 'update',
+  DELETE: 'delete',
+  VERIFY: 'verify',
+  APPROVE: 'approve',
+  REJECT: 'reject',
+  ASSIGN: 'assign',
+  START: 'start',
+  COMPLETE: 'complete',
+  PROGRESS: 'progress',
+  LOGIN_SUCCESS: 'login_success',
+  LOGIN_FAILED: 'login_failed',
+  LOGOUT: 'logout',
+  TOGGLE_ACTIVE: 'toggle_active',
+  CHANGE_PASSWORD: 'change_password',
+  SET_PRIORITY: 'set_priority',
+} as const;

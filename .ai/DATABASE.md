@@ -103,12 +103,27 @@
 
 ### audit_logs
 - id
-- actor_user_id
+- actor_user_id (nullable)
+- actor_name
+- module
 - entity_type
 - entity_id
 - action
 - before_data
 - after_data
+- ip_address
+- user_agent
+- created_at
+
+### notifications
+- id
+- user_id
+- type
+- title
+- message
+- entity_type
+- entity_id
+- is_read
 - created_at
 
 ## Notes

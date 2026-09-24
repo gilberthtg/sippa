@@ -6,6 +6,8 @@ import { eq, and, or, like, desc, asc, sql, count } from 'drizzle-orm';
 import { auth } from '@/lib/auth/config';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
+import { logAudit } from '@/lib/utils/audit';
+import { AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
 
 async function checkAdminAuth() {
   const session = await auth();
@@ -148,7 +150,7 @@ export async function createUser(data: {
   unitId?: number | null;
   phone?: string | null;
 }) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
   const existingUser = await db
     .select({ id: users.id })
@@ -170,6 +172,16 @@ export async function createUser(data: {
     unitId: data.unitId || null,
     phone: data.phone || null,
     isActive: true,
+  });
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.USERS,
+    entityType: 'user',
+    entityId: String(result[0].insertId),
+    action: AUDIT_ACTIONS.CREATE,
+    afterData: { name: data.name, email: data.email, roleId: data.roleId, unitId: data.unitId },
   });
 
   revalidatePath('/admin/settings/users');
@@ -210,6 +222,8 @@ export async function updateUser(
     }
   }
 
+  const [currentUser] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+
   await db
     .update(users)
     .set({
@@ -222,6 +236,17 @@ export async function updateUser(
       updatedAt: new Date(),
     })
     .where(eq(users.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.USERS,
+    entityType: 'user',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.UPDATE,
+    beforeData: { name: currentUser.name, email: currentUser.email, roleId: currentUser.roleId, isActive: currentUser.isActive },
+    afterData: data,
+  });
 
   revalidatePath('/admin/settings/users');
 
@@ -237,13 +262,23 @@ export async function toggleUserActive(id: number, isActive: boolean) {
 
   await db.update(users).set({ isActive, updatedAt: new Date() }).where(eq(users.id, id));
 
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.USERS,
+    entityType: 'user',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.TOGGLE_ACTIVE,
+    afterData: { isActive },
+  });
+
   revalidatePath('/admin/settings/users');
 
   return { success: true };
 }
 
 export async function changePassword(id: number, newPassword: string) {
-  await checkAdminAuth();
+  const adminUser = await checkAdminAuth();
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
 
@@ -251,6 +286,16 @@ export async function changePassword(id: number, newPassword: string) {
     .update(users)
     .set({ passwordHash, updatedAt: new Date() })
     .where(eq(users.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.USERS,
+    entityType: 'user',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.CHANGE_PASSWORD,
+    afterData: { userId: id },
+  });
 
   revalidatePath('/admin/settings/users');
 
