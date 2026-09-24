@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RequestTable } from '@/components/requests/request-table';
 import { RequestFilters } from '@/components/requests/request-filters';
 import { RequestSearch } from '@/components/requests/request-search';
 import { ErrorState } from '@/components/shared/error-state';
+import { LoadingState } from '@/components/shared/loading-state';
 
 interface Request {
   id: number;
@@ -25,11 +26,17 @@ interface RequestListClientProps {
 export function RequestListClient({ initialRequests }: RequestListClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [requests] = useState(initialRequests);
+  const [isPending, startTransition] = useTransition();
+  const [requests, setRequests] = useState(initialRequests);
   const [error] = useState<string | null>(null);
   
   const [filter, setFilter] = useState(searchParams.get('status') || 'all');
   const [search, setSearch] = useState(searchParams.get('search') || '');
+
+  // Update requests when initialRequests changes (after router.refresh)
+  useEffect(() => {
+    setRequests(initialRequests);
+  }, [initialRequests]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -37,7 +44,11 @@ export function RequestListClient({ initialRequests }: RequestListClientProps) {
     if (search) params.set('search', search);
     
     const query = params.toString();
-    router.push(`/requests${query ? `?${query}` : ''}`);
+    
+    startTransition(() => {
+      router.push(`/requests${query ? `?${query}` : ''}`);
+      router.refresh();
+    });
   }, [filter, search, router]);
 
   if (error) {
@@ -61,7 +72,11 @@ export function RequestListClient({ initialRequests }: RequestListClientProps) {
 
       <RequestFilters activeFilter={filter} onFilterChange={setFilter} />
 
-      <RequestTable requests={requests} />
+      {isPending ? (
+        <LoadingState message="Memuat data..." />
+      ) : (
+        <RequestTable requests={requests} />
+      )}
     </div>
   );
 }

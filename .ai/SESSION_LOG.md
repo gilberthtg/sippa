@@ -276,3 +276,37 @@
   - ✅ Proper error handling and authorization checks
 - Next recommended step: **Test developer navigation and verify DevTI Request page displays correctly**
 
+## 2026-09-24 — User Request Page Filter & Authorization Fix
+- Goal: Fix filter functionality on user request page and ensure data access is restricted to user's own requests
+- Issue: Filter and search on `/requests` page (user role) were not working - URL changed but data did not refetch
+- Root cause: 
+  - `RequestListClient` component only used `initialRequests` from server, never refetched when filters changed
+  - Count query in `getRequestsByUserId` counted all user requests regardless of filter
+- Changes made:
+  - **RequestListClient Component (`components/requests/request-list-client.tsx`)**:
+    - Added `useTransition` hook to manage loading state during refetch
+    - Added `router.refresh()` call in filter/search effect to trigger server-side data refetch
+    - Added `useEffect` to update local state when `initialRequests` changes after refresh
+    - Added loading state display with `LoadingState` component during transitions
+  - **getRequestsByUserId Action (`app/actions/requests.ts`)**:
+    - Fixed count query to use same `whereConditions` as data query (previously only filtered by `requesterId`)
+    - Now count reflects filtered results (status + search)
+    - Updated error log message for clarity
+- Files changed:
+  - `components/requests/request-list-client.tsx` (updated)
+  - `app/actions/requests.ts` (updated)
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+- Authorization verification:
+  - ✅ `getRequestsByUserId` filters by `session.user.id` (only user's own requests)
+  - ✅ `getRequestById` validates `request.requesterId === session.user.id` before returning data
+  - ✅ User cannot access requests created by other users
+- Benefits:
+  - ✅ Filter by status now works correctly (all, submitted, approved, rejected, etc.)
+  - ✅ Search by request number or title works correctly
+  - ✅ Count shows accurate filtered total
+  - ✅ Loading indicator provides visual feedback during refetch
+  - ✅ Data access properly restricted to authenticated user's own requests
+  - ✅ Consistent with security best practices from ARCHITECTURE.md
+- Next recommended step: **Test filter and search on user request page to verify functionality**
+

@@ -163,10 +163,11 @@ export async function getRequestsByUserId(params?: {
       .limit(limit)
       .offset(offset);
 
+    // Count with the same filter conditions
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(requests)
-      .where(eq(requests.requesterId, session.user.id));
+      .where(whereConditions);
 
     return {
       success: true,
@@ -176,7 +177,7 @@ export async function getRequestsByUserId(params?: {
       limit,
     };
   } catch (error) {
-    console.error('Get request by id error:', error);
+    console.error('Get requests by user error:', error);
     return { success: false, error: 'Terjadi kesalahan saat mengambil data' };
   }
 }
