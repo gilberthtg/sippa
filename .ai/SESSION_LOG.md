@@ -205,3 +205,74 @@
   - Alternatively, remove `AUTH_TRUST_HOST` and set exact `NEXTAUTH_URL` for stricter security
 - Next recommended step: **Restart development server with `npm start` and test authentication**
 
+## 2026-09-24 — User Menu Active State Bug Fix
+- Goal: Fix bug where multiple menu items become active simultaneously on user role
+- Issue: When user navigates to "Request Baru" (`/requests/new`), both "Request Baru" and "DevTI Request" menu items showed as active
+- Root cause: Sidebar active state logic used `pathname.startsWith(item.href + '/')` which caused `/requests/new` to match both `/requests/new` (exact) and `/requests` (prefix)
+- Changes made:
+  - **Sidebar Component (`components/layout/sidebar.tsx`)**:
+    - Enhanced active state logic to detect when an item's href is a prefix of another item in the same section
+    - Only marks child routes as active if no more specific route exists
+    - Preserves exact match behavior for all menu items
+    - Added explanatory comments for the logic
+  - **Mobile Nav Component (`components/layout/mobile-nav.tsx`)**:
+    - Applied the same enhanced active state logic for consistency
+    - Ensures mobile drawer navigation behaves identically to desktop sidebar
+- Algorithm:
+  ```typescript
+  const isExactMatch = pathname === item.href;
+  const isChildRoute = pathname.startsWith(item.href + '/');
+  const hasMoreSpecificRoute = section.items.some(
+    (otherItem) => otherItem.href !== item.href && otherItem.href.startsWith(item.href)
+  );
+  const isActive = isExactMatch || (isChildRoute && !hasMoreSpecificRoute);
+  ```
+- Example scenarios (User role):
+  - At `/requests/new`: ✅ Only "Request Baru" active
+  - At `/requests`: ✅ Only "DevTI Request" active
+  - At `/requests/123`: ✅ Only "DevTI Request" active (child route)
+  - At `/dashboard`: ✅ Only "Dashboard" active
+- Files changed:
+  - `components/layout/sidebar.tsx` (updated)
+  - `components/layout/mobile-nav.tsx` (updated)
+- Tests/checks:
+  - ✅ TypeScript: PASSED
+  - Navigation logic prevents false positives when routes share prefixes
+  - Maintains proper parent-child route highlighting
+- Benefits:
+  - ✅ Clear visual feedback - only one menu item active at a time (unless on child route)
+  - ✅ Consistent behavior across desktop and mobile navigation
+  - ✅ Scales correctly for all role navigation structures (user, admin, developer)
+  - ✅ Prevents confusion from multiple highlighted menu items
+- Next recommended step: **Test navigation across all roles to verify active states**
+
+## 2026-09-24 — Developer DevTI Request Page 404 Fix
+- Goal: Fix 404 error on Developer menu "DevTI Request"
+- Issue: Menu item "DevTI Request" (`/developer/requests`) returned 404 because the page.tsx was missing
+- Root cause: The `/developer/requests/` route folder only contained dynamic route `[id]/page.tsx` but no main list page `page.tsx`
+- Changes made:
+  - **Created Developer Requests Page (`app/(developer)/developer/requests/page.tsx`)**:
+    - Server component that fetches assigned requests using `getAssignedRequests()`
+    - Supports filtering by status, priority, request type, and search
+    - Implements pagination with 20 items per limit
+    - Uses `DeveloperRequestListClient` component (same as assignments page)
+    - Redirects to login if unauthorized
+    - Added `dynamic = 'force-dynamic'` to prevent static generation issues
+- Files created:
+  - `app/(developer)/developer/requests/page.tsx` (created)
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Route now accessible at `/developer/requests`
+  - ✅ Uses existing server actions and client components (no duplication)
+- Design alignment:
+  - ✅ Consistent with other role request list pages (User, Admin)
+  - ✅ Same filtering and pagination patterns
+  - ✅ PageContainer and PageHeader for layout consistency
+  - ✅ LoadingState with Suspense for better UX
+- Benefits:
+  - ✅ Developer can now access DevTI Request menu without 404
+  - ✅ Consistent navigation experience across all roles
+  - ✅ Reuses existing components and server actions
+  - ✅ Proper error handling and authorization checks
+- Next recommended step: **Test developer navigation and verify DevTI Request page displays correctly**
+

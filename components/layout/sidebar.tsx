@@ -27,7 +27,19 @@ export function Sidebar({ role }: SidebarProps) {
             )}
             <div className="space-y-1">
               {section.items.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                // More precise active state logic:
+                // 1. Exact match OR
+                // 2. Pathname starts with href + '/' (but href must not be a prefix of another href in the same section)
+                const isExactMatch = pathname === item.href;
+                const isChildRoute = pathname.startsWith(item.href + '/');
+                
+                // Check if current item.href is a prefix of any other item in this section
+                const hasMoreSpecificRoute = section.items.some(
+                  (otherItem) => otherItem.href !== item.href && otherItem.href.startsWith(item.href)
+                );
+                
+                // Only consider child route active if there's no more specific route
+                const isActive = isExactMatch || (isChildRoute && !hasMoreSpecificRoute);
                 const Icon = item.icon;
 
                 return (
