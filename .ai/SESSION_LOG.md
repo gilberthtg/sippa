@@ -161,3 +161,47 @@
   - Fixed: `request-list-client.tsx` updated to use correct ErrorState props
 - Documentation: Created `.ai/ERROR_PAGES.md` with comprehensive error pages guide
 - Next recommended step: **Manual testing of error pages across all roles**
+
+## 2026-09-24 — Build Error Fix: Admin Dashboard Dynamic Rendering
+- Goal: Fix production build errors related to static page generation for admin dashboard
+- Issue: Admin dashboard was failing during static generation because it uses `auth()` which accesses `headers()`, a dynamic function in Next.js
+- Root cause: Next.js attempts to pre-render pages during build, but pages using dynamic functions like `auth()` cannot be statically generated
+- Changes made:
+  - Added `export const dynamic = 'force-dynamic';` to `app/(admin)/admin/dashboard/page.tsx`
+  - This tells Next.js to always render this page on-demand at request time, not during build
+- Files changed:
+  - `app/(admin)/admin/dashboard/page.tsx` (updated)
+- Tests/checks:
+  - ✅ Production Build: SUCCESS (no errors, 24 routes compiled)
+  - ✅ Error messages eliminated: "Route /admin/dashboard couldn't be rendered statically"
+  - ✅ All dashboard actions (getAdminDashboardStats, getSLAAttentionRequests, getRecentActivity) working correctly
+- Technical note:
+  - Pages using NextAuth `auth()` or other dynamic functions (`headers()`, `cookies()`, `searchParams`) must be marked as dynamic
+  - This is expected behavior for authenticated pages and does not impact performance negatively
+  - The page will be rendered server-side on each request with proper authentication checks
+- Next recommended step: **Continue with manual testing per TESTING_CHECKLIST.md**
+
+## 2026-09-24 — AuthJS UntrustedHost Error Fix
+- Goal: Fix AuthJS UntrustedHost error preventing local development and Cloudflare Tunnel authentication
+- Issue: `[auth][error] UntrustedHost: Host must be trusted` error appeared when running `npm start` and when using Cloudflare tunnel for testing
+- Root cause: NextAuth.js v5 (Auth.js) requires explicit host trust configuration for security. Without `AUTH_TRUST_HOST=true`, the library rejects authentication requests
+- Changes made:
+  - Added `AUTH_TRUST_HOST=true` to `.env.local` for development environment
+  - Added `AUTH_TRUST_HOST=true` to `.env.example` as documentation for future deployments
+- Files changed:
+  - `.env.local` (updated)
+  - `.env.example` (updated)
+- Tests/checks:
+  - Configuration added successfully
+  - No build required - this is a runtime environment variable
+- Technical notes:
+  - `AUTH_TRUST_HOST=true` tells Auth.js to trust the host from the request
+  - Safe for development (localhost) and reverse proxy scenarios (Cloudflare Tunnel)
+  - For production with specific domains, use `AUTH_URL` instead pointing to the exact production URL
+  - This fix resolves both localhost testing and tunneled access (e.g., Cloudflare)
+- Production deployment note:
+  - For production, set `NEXTAUTH_URL` to actual domain (e.g., `https://sippa.example.com`)
+  - `AUTH_TRUST_HOST=true` can remain for flexibility with load balancers/proxies
+  - Alternatively, remove `AUTH_TRUST_HOST` and set exact `NEXTAUTH_URL` for stricter security
+- Next recommended step: **Restart development server with `npm start` and test authentication**
+

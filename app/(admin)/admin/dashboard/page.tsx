@@ -10,6 +10,8 @@ import {
 } from '@/app/actions/admin-requests';
 import { redirect } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminDashboardPage() {
   const statsResult = await getAdminDashboardStats();
   const slaResult = await getSLAAttentionRequests();
