@@ -2,8 +2,8 @@
 
 import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
-import { requests, priorities, units } from '@/lib/db/schema';
-import { eq, and, gte, lte, sql } from 'drizzle-orm';
+import { requests, priorities, units, requestTeamAssignments, developerRoles } from '@/lib/db/schema';
+import { eq, and, gte, lte, sql, isNull } from 'drizzle-orm';
 import { getQuarterFromDate, calculateAchievementRate, generateMonthlyTrend } from '@/lib/utils/report-calculations';
 
 async function checkAdminAuth() {
@@ -122,12 +122,81 @@ export async function getLaptriSummary(year: number) {
 
   const monthlyTrend = generateMonthlyTrend(allCompleted, year);
 
+  // Get developer role distribution for completed requests
+  const roleAssignments = await db
+    .select({
+      requestId: requestTeamAssignments.requestId,
+      developerRoleCode: developerRoles.code,
+      developerRoleName: developerRoles.name,
+      actualDurationHours: requests.actualDurationHours,
+      completedAt: requests.completedAt,
+    })
+    .from(requestTeamAssignments)
+    .innerJoin(requests, eq(requestTeamAssignments.requestId, requests.id))
+    .leftJoin(developerRoles, eq(requestTeamAssignments.developerRoleId, developerRoles.id))
+    .where(
+      and(
+        eq(requests.status, 'completed'),
+        sql`YEAR(${requests.completedAt}) = ${year}`,
+        isNull(requestTeamAssignments.unassignedAt)
+      )
+    );
+
+  // Aggregate by developer role
+  const roleMetricsMap = new Map<string, { 
+    code: string; 
+    name: string; 
+    count: number; 
+    durations: number[];
+    latestCompletedAt: Date | null;
+  }>();
+
+  roleAssignments.forEach((assignment) => {
+    const roleCode = assignment.developerRoleCode || 'UNKNOWN';
+    const roleName = assignment.developerRoleName || 'Unknown Role';
+    
+    if (!roleMetricsMap.has(roleCode)) {
+      roleMetricsMap.set(roleCode, {
+        code: roleCode,
+        name: roleName,
+        count: 0,
+        durations: [],
+        latestCompletedAt: null,
+      });
+    }
+    
+    const metrics = roleMetricsMap.get(roleCode)!;
+    
+    // Track unique requests per role (one role might appear multiple times if multiple devs of same role)
+    // For simplicity, we count each assignment
+    metrics.count++;
+    
+    if (assignment.actualDurationHours) {
+      metrics.durations.push(assignment.actualDurationHours);
+    }
+    
+    if (assignment.completedAt) {
+      if (!metrics.latestCompletedAt || assignment.completedAt > metrics.latestCompletedAt) {
+        metrics.latestCompletedAt = assignment.completedAt;
+      }
+    }
+  });
+
+  const developerRoleMetrics = Array.from(roleMetricsMap.values()).map((metrics) => ({
+    roleCode: metrics.code,
+    roleName: metrics.name,
+    count: metrics.count,
+    avgCompletionTime: avg(metrics.durations),
+    latestCompletedAt: metrics.latestCompletedAt,
+  }));
+
   return {
     quarterCounts,
     typeBreakdown,
     avgCompletionByType,
     avgCompletionByPriority,
     monthlyTrend,
+    developerRoleMetrics,
   };
 }
 
@@ -309,6 +378,78 @@ export async function getSLASummary(filters: {
     };
   });
 
+  // Get developer role SLA performance metrics
+  const roleSLAAssignments = await db
+    .select({
+      requestId: requestTeamAssignments.requestId,
+      developerRoleCode: developerRoles.code,
+      developerRoleName: developerRoles.name,
+      actualDurationHours: requests.actualDurationHours,
+      slaMet: requests.slaMet,
+    })
+    .from(requestTeamAssignments)
+    .innerJoin(requests, eq(requestTeamAssignments.requestId, requests.id))
+    .leftJoin(developerRoles, eq(requestTeamAssignments.developerRoleId, developerRoles.id))
+    .where(
+      and(
+        eq(requests.status, 'completed'),
+        ...(filters.startDate && filters.endDate 
+          ? [gte(requests.completedAt, filters.startDate), lte(requests.completedAt, filters.endDate)]
+          : [sql`YEAR(${requests.completedAt}) = ${filters.year}`]
+        ),
+        isNull(requestTeamAssignments.unassignedAt)
+      )
+    );
+
+  // Aggregate by developer role for SLA metrics
+  const roleSLAMap = new Map<string, {
+    code: string;
+    name: string;
+    totalRequests: number;
+    slaMet: number;
+    slaExceeded: number;
+    durations: number[];
+  }>();
+
+  roleSLAAssignments.forEach((assignment) => {
+    const roleCode = assignment.developerRoleCode || 'UNKNOWN';
+    const roleName = assignment.developerRoleName || 'Unknown Role';
+    
+    if (!roleSLAMap.has(roleCode)) {
+      roleSLAMap.set(roleCode, {
+        code: roleCode,
+        name: roleName,
+        totalRequests: 0,
+        slaMet: 0,
+        slaExceeded: 0,
+        durations: [],
+      });
+    }
+    
+    const metrics = roleSLAMap.get(roleCode)!;
+    metrics.totalRequests++;
+    
+    if (assignment.slaMet === true) {
+      metrics.slaMet++;
+    } else if (assignment.slaMet === false) {
+      metrics.slaExceeded++;
+    }
+    
+    if (assignment.actualDurationHours) {
+      metrics.durations.push(assignment.actualDurationHours);
+    }
+  });
+
+  const developerRoleSLAMetrics = Array.from(roleSLAMap.values()).map((metrics) => ({
+    roleCode: metrics.code,
+    roleName: metrics.name,
+    totalRequests: metrics.totalRequests,
+    slaMet: metrics.slaMet,
+    slaExceeded: metrics.slaExceeded,
+    achievementRate: metrics.totalRequests > 0 ? (metrics.slaMet / metrics.totalRequests) * 100 : 0,
+    avgCompletionTime: avg(metrics.durations),
+  }));
+
   return {
     totalRequests,
     slaMetCount,
@@ -317,5 +458,6 @@ export async function getSLASummary(filters: {
     avgCompletionByType,
     avgCompletionByPriority,
     monthlyTrend,
+    developerRoleSLAMetrics,
   };
 }

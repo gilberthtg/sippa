@@ -6,6 +6,7 @@ import { LaptriSummary } from '@/components/reports/laptri-summary';
 import { LaptriChart } from '@/components/reports/laptri-chart';
 import { LaptriMonthlyTrend } from '@/components/reports/laptri-monthly-trend';
 import { LaptriTable } from '@/components/reports/laptri-table';
+import { DeveloperRoleMetrics } from '@/components/reports/developer-role-metrics';
 import { exportLaptriToExcel } from '@/lib/utils/report-export';
 import { toast } from 'sonner';
 
@@ -20,12 +21,21 @@ interface LaptriRequest {
   completedAt: Date | null;
 }
 
+interface DeveloperRoleMetric {
+  roleCode: string;
+  roleName: string;
+  count: number;
+  avgCompletionTime: number;
+  latestCompletedAt: Date | null;
+}
+
 interface LaptriSummary {
   quarterCounts: { Q1: number; Q2: number; Q3: number; Q4: number };
   typeBreakdown: { new_application: number; rfc: number };
   avgCompletionByType: { new_application: number; rfc: number };
   avgCompletionByPriority: { low: number; medium: number; high: number; critical: number };
   monthlyTrend: Array<{ month: string; count: number }>;
+  developerRoleMetrics: DeveloperRoleMetric[];
 }
 
 interface LaptriClientProps {
@@ -108,6 +118,8 @@ export function LaptriClient({
         <LaptriChart quarterCounts={summary.quarterCounts} />
         <LaptriMonthlyTrend monthlyTrend={summary.monthlyTrend} />
       </div>
+
+      <DeveloperRoleMetrics metrics={summary.developerRoleMetrics} />
 
       <LaptriTable requests={requests} />
     </div>

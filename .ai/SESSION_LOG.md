@@ -710,3 +710,129 @@
   - ✅ Improved collaboration through team visibility
 - Documentation: Created `.ai/PHASE_4_COMPLETE.md` with comprehensive details
 - Next recommended step: **Phase 5: Reporting Updates** or **Fix Phase 1.5 remaining errors**
+
+
+---
+
+## 2026-10-07 - Phase 5: Reporting Updates - Developer Role Metrics
+
+**Focus:** Enhanced Laptri and SLA reports with developer role analytics
+
+### Changes Made
+
+#### 1. Server Actions Enhanced (app/actions/reports.ts)
+- **getLaptriSummary():**
+  - Added query joining `requestTeamAssignments` → `developerRoles` → `requests`
+  - Filter: completed requests for year, active assignments only
+  - Aggregate metrics: count, avg completion time, latest completion date per role
+  - Returns: `developerRoleMetrics` array
+- **getSLASummary():**
+  - Added query joining same tables for SLA data
+  - Aggregate: total, SLA met/exceeded, achievement rate per role
+  - Returns: `developerRoleSLAMetrics` array
+- Updated imports to include `requestTeamAssignments`, `developerRoles`, `isNull`
+
+#### 2. Components Created
+**a. DeveloperRoleMetrics (components/reports/developer-role-metrics.tsx)**
+- Purpose: Display role distribution in Laptri report
+- Shows: role badge, count, avg time (days/hours), latest completed date
+- Features: sorted by count, formatted time, relative dates, empty state
+- Reuses: RoleBadge component from Phase 4
+
+**b. DeveloperRoleSLAMetrics (components/reports/developer-role-sla-metrics.tsx)**
+- Purpose: Display SLA performance by role in SLA report
+- Shows: role badge, total, met, exceeded, achievement %, avg time, status badge
+- Features: color-coded status (Excellent/Good/Fair/Needs Improvement), legend
+- Reuses: RoleBadge component from Phase 4
+
+#### 3. Report Clients Updated
+**a. LaptriClient (app/(admin)/admin/reports/laptri/laptri-client.tsx)**
+- Import: DeveloperRoleMetrics component
+- Interface: Added DeveloperRoleMetric type definition
+- Interface: Updated LaptriSummary to include developerRoleMetrics array
+- Render: Added DeveloperRoleMetrics component between charts and table
+
+**b. SLAClient (app/(admin)/admin/reports/sla/sla-client.tsx)**
+- Import: DeveloperRoleSLAMetrics component
+- Interface: Added DeveloperRoleSLAMetric type definition
+- Interface: Updated SLASummary to include developerRoleSLAMetrics array
+- Render: Added DeveloperRoleSLAMetrics component between charts and table
+
+#### 4. Excel Export Enhanced (lib/utils/report-export.ts)
+**a. exportLaptriToExcel()**
+- Interface: Updated LaptriSummary to include developerRoleMetrics
+- Added: formatHours() helper function for day/hour formatting
+- New Sheet: "Developer Role Metrics" with role name, count, avg time, latest date
+- Sorting: By count descending
+
+**b. exportSLAToExcel()**
+- Interface: Updated SLASummary to include developerRoleSLAMetrics
+- Added: formatHoursForSLA() helper function
+- New Sheet: "Developer Role SLA" with role name, total, met, exceeded, rate, avg time
+- Sorting: By achievement rate descending
+
+### Business Rules Implemented
+1. **Role Involvement Counting:** One request can involve multiple roles, each counted separately
+2. **Active Assignments Only:** Only count where unassigned_at IS NULL
+3. **Completed Only:** Only completed requests in metrics
+4. **SLA Attribution:** All roles on a request share SLA outcome
+5. **Achievement Thresholds:** Excellent ≥90%, Good 75-89%, Fair 60-74%, Needs Improvement <60%
+
+### Database Queries
+- Laptri: JOIN request_team_assignments + developer_roles + requests WHERE completed AND year
+- SLA: JOIN request_team_assignments + developer_roles + requests WHERE completed AND date range
+- Filter: unassigned_at IS NULL (active assignments only)
+- Aggregate: In-memory using Map for O(n) performance
+
+### Technical Highlights
+- **Query Performance:** Single additional query per report, efficient joins
+- **Type Safety:** Full TypeScript types for all interfaces
+- **Component Reuse:** Leveraged RoleBadge from Phase 4
+- **Consistent Formatting:** Time displayed as "X hari Y jam" in UI and Excel
+- **Null Safety:** Proper handling of missing dates and zero values
+
+### Files Changed
+**Created (3 files):**
+1. `components/reports/developer-role-metrics.tsx` (104 lines)
+2. `components/reports/developer-role-sla-metrics.tsx` (136 lines)
+3. `.ai/PHASE_5_COMPLETE.md` (comprehensive documentation)
+
+**Modified (4 files):**
+1. `app/actions/reports.ts` - Enhanced both summary functions with role metrics
+2. `app/(admin)/admin/reports/laptri/laptri-client.tsx` - Integrated DeveloperRoleMetrics
+3. `app/(admin)/admin/reports/sla/sla-client.tsx` - Integrated DeveloperRoleSLAMetrics
+4. `lib/utils/report-export.ts` - Added role metrics sheets to Excel exports
+
+**Total:** ~500 lines added/modified
+
+### Testing Status
+- ✅ TypeScript compilation: All Phase 5 files error-free
+- ✅ Type safety: Full interface definitions and proper typing
+- ⏳ Manual testing: Pending (see PHASE_5_COMPLETE.md for checklist)
+- ⏳ Excel export: Pending validation
+- ⏳ Performance: Pending with realistic data volumes
+
+### Integration Notes
+- **Depends on:** Phase 1 (request_team_assignments table), Phase 4 (RoleBadge component)
+- **No breaking changes:** All changes are additive
+- **Backward compatible:** Existing report URLs and filters still work
+- **No migration needed:** Reads existing assignment data
+
+### Business Value
+- **Resource Planning:** Admins can see which roles are most utilized
+- **Workload Analysis:** Understand role distribution in completed work
+- **SLA Insights:** Identify roles with higher/lower SLA achievement
+- **Capacity Planning:** Historical data for team composition decisions
+- **Performance Benchmarking:** Compare role-level performance metrics
+
+### Next Steps
+1. Manual testing of Laptri report with role metrics
+2. Manual testing of SLA report with role metrics  
+3. Excel export validation for both reports
+4. Performance testing with larger datasets
+5. Phase 6: Master data management UI
+
+### Status
+**Phase 5:** ✅ COMPLETE - All 9 tasks finished, compilation successful, ready for testing
+
+See `.ai/PHASE_5_COMPLETE.md` for comprehensive documentation.

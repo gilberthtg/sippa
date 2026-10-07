@@ -6,6 +6,13 @@ interface LaptriSummary {
   avgCompletionByType: { new_application: number; rfc: number };
   avgCompletionByPriority: { low: number; medium: number; high: number; critical: number };
   monthlyTrend: Array<{ month: string; count: number }>;
+  developerRoleMetrics: Array<{
+    roleCode: string;
+    roleName: string;
+    count: number;
+    avgCompletionTime: number;
+    latestCompletedAt: Date | null;
+  }>;
 }
 
 interface LaptriRequest {
@@ -70,6 +77,35 @@ export function exportLaptriToExcel(
   const ws2 = XLSX.utils.aoa_to_sheet(trendData);
   XLSX.utils.book_append_sheet(wb, ws2, 'Tren Bulanan');
 
+  // Developer Role Metrics sheet
+  const formatHours = (hours: number) => {
+    if (hours === 0) return '0';
+    const days = Math.floor(hours / 24);
+    const remainingHours = Math.round(hours % 24);
+    if (days > 0) {
+      return `${days} hari ${remainingHours} jam`;
+    }
+    return `${remainingHours} jam`;
+  };
+
+  const roleMetricsData = [
+    ['Developer Role Metrics'],
+    [''],
+    ['Role', 'Jumlah Request', 'Rata-rata Waktu', 'Request Terakhir'],
+    ...summary.developerRoleMetrics
+      .sort((a, b) => b.count - a.count)
+      .map((metric) => [
+        metric.roleName,
+        metric.count,
+        formatHours(metric.avgCompletionTime),
+        metric.latestCompletedAt
+          ? metric.latestCompletedAt.toLocaleDateString('id-ID')
+          : 'N/A',
+      ]),
+  ];
+  const ws2b = XLSX.utils.aoa_to_sheet(roleMetricsData);
+  XLSX.utils.book_append_sheet(wb, ws2b, 'Developer Role Metrics');
+
   const detailsData = [
     ['No. Permintaan', 'Jenis', 'Judul', 'Prioritas', 'Pemohon', 'Unit', 'Tanggal Selesai'],
     ...requests.map((req) => [
@@ -97,6 +133,15 @@ interface SLASummary {
   avgCompletionByType: { new_application: number; rfc: number };
   avgCompletionByPriority: { low: number; medium: number; high: number; critical: number };
   monthlyTrend: Array<{ month: string; total: number; met: number; exceeded: number; rate: number }>;
+  developerRoleSLAMetrics: Array<{
+    roleCode: string;
+    roleName: string;
+    totalRequests: number;
+    slaMet: number;
+    slaExceeded: number;
+    achievementRate: number;
+    avgCompletionTime: number;
+  }>;
 }
 
 interface SLARequest {
@@ -167,6 +212,35 @@ export function exportSLAToExcel(
   ];
   const ws2 = XLSX.utils.aoa_to_sheet(trendData);
   XLSX.utils.book_append_sheet(wb, ws2, 'Tren Bulanan');
+
+  // Developer Role SLA Metrics sheet
+  const formatHoursForSLA = (hours: number) => {
+    if (hours === 0) return '0';
+    const days = Math.floor(hours / 24);
+    const remainingHours = Math.round(hours % 24);
+    if (days > 0) {
+      return `${days} hari ${remainingHours} jam`;
+    }
+    return `${remainingHours} jam`;
+  };
+
+  const roleSLAMetricsData = [
+    ['Developer Role SLA Performance'],
+    [''],
+    ['Role', 'Total Request', 'SLA Met', 'SLA Exceeded', 'Achievement Rate (%)', 'Rata-rata Waktu'],
+    ...summary.developerRoleSLAMetrics
+      .sort((a, b) => b.achievementRate - a.achievementRate)
+      .map((metric) => [
+        metric.roleName,
+        metric.totalRequests,
+        metric.slaMet,
+        metric.slaExceeded,
+        metric.achievementRate.toFixed(1),
+        formatHoursForSLA(metric.avgCompletionTime),
+      ]),
+  ];
+  const ws2b = XLSX.utils.aoa_to_sheet(roleSLAMetricsData);
+  XLSX.utils.book_append_sheet(wb, ws2b, 'Developer Role SLA');
 
   const detailsData = [
     ['No. Permintaan', 'Jenis', 'Prioritas', 'Target (jam)', 'Aktual (jam)', 'Selisih (jam)', 'Status', 'Pencapaian (%)'],

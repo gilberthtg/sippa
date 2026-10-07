@@ -6,6 +6,7 @@ import { SLASummary } from '@/components/reports/sla-summary';
 import { SLAChart } from '@/components/reports/sla-chart';
 import { SLAMonthlyTrend } from '@/components/reports/sla-monthly-trend';
 import { SLATable } from '@/components/reports/sla-table';
+import { DeveloperRoleSLAMetrics } from '@/components/reports/developer-role-sla-metrics';
 import { exportSLAToExcel } from '@/lib/utils/report-export';
 import { toast } from 'sonner';
 
@@ -20,6 +21,16 @@ interface SLARequest {
   achievementRate: number;
 }
 
+interface DeveloperRoleSLAMetric {
+  roleCode: string;
+  roleName: string;
+  totalRequests: number;
+  slaMet: number;
+  slaExceeded: number;
+  achievementRate: number;
+  avgCompletionTime: number;
+}
+
 interface SLASummary {
   totalRequests: number;
   slaMetCount: number;
@@ -28,6 +39,7 @@ interface SLASummary {
   avgCompletionByType: { new_application: number; rfc: number };
   avgCompletionByPriority: { low: number; medium: number; high: number; critical: number };
   monthlyTrend: Array<{ month: string; total: number; met: number; exceeded: number; rate: number }>;
+  developerRoleSLAMetrics: DeveloperRoleSLAMetric[];
 }
 
 interface SLAReportData {
@@ -138,6 +150,8 @@ export function SLAClient({
         />
         <SLAMonthlyTrend monthlyTrend={summary.monthlyTrend} />
       </div>
+
+      <DeveloperRoleSLAMetrics metrics={summary.developerRoleSLAMetrics} />
 
       <SLATable requests={reportData.requests} />
     </div>
