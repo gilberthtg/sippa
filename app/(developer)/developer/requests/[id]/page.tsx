@@ -10,8 +10,10 @@ import { RequestDetailTimeline } from '@/components/requests/request-detail-time
 import { RequestAttachmentsList } from '@/components/requests/request-attachments-list';
 import { ProgressTimeline } from '@/components/requests/progress-timeline';
 import { DeveloperRequestActions } from '@/components/developer/developer-request-actions';
+import { TeamInfoCard } from '@/components/shared/team-info-card';
 import { redirect } from 'next/navigation';
 import { ErrorState } from '@/components/shared/error-state';
+import { auth } from '@/lib/auth/config';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -43,6 +45,7 @@ export default async function DeveloperRequestDetailPage({ params }: PageProps) 
   }
 
   const request = result.data!;
+  const session = await auth();
 
   const [historiesResult, progressResult, attachments] = await Promise.all([
     getRequestStatusHistories(requestId),
@@ -98,6 +101,15 @@ export default async function DeveloperRequestDetailPage({ params }: PageProps) 
           <div className="space-y-6">
             {/* Developer Actions */}
             <DeveloperRequestActions requestId={requestId} status={request.status} />
+            
+            {/* Team Information */}
+            <TeamInfoCard
+              devtiUrusan={request.devtiUrusan}
+              teamLeader={request.teamLeader}
+              technicalWriter={request.technicalWriter}
+              teamMembers={request.teamMembers}
+              currentUserId={session?.user?.id}
+            />
           </div>
         </div>
       </div>

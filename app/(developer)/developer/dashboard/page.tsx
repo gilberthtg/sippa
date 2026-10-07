@@ -18,16 +18,27 @@ export default async function DeveloperDashboardPage() {
     limit: 5,
   });
 
+  // Build description with role if available
+  const description = statsResult.developerRole?.name
+    ? `Monitor request yang di-assign dan progress pekerjaan Anda sebagai ${statsResult.developerRole.name}`
+    : 'Monitor request yang di-assign dan progress pekerjaan Anda';
+
   return (
     <PageContainer>
       <PageHeader
         title="Developer Dashboard"
-        description="Monitor request yang di-assign dan progress pekerjaan Anda"
+        description={description}
       />
 
       <div className="space-y-6">
         {/* Stats Cards */}
-        <DeveloperDashboardStats stats={statsResult.stats!} />
+        <DeveloperDashboardStats 
+          stats={statsResult.stats!} 
+          developerRole={statsResult.developerRole?.code && statsResult.developerRole?.name 
+            ? { code: statsResult.developerRole.code, name: statsResult.developerRole.name }
+            : null
+          }
+        />
 
         {/* Two Column Layout */}
         <div className="grid gap-6 lg:grid-cols-2">

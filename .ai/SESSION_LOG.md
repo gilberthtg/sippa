@@ -658,3 +658,55 @@
   - Notifications: Sent to all team members (leader, writer, developers, requester)
 - Next recommended step: **Manual Testing → Phase 4 (Developer Flow Changes)**
 - Phase Status: **COMPLETE ✅**
+
+
+## 2026-10-07 — Phase 4 COMPLETE: Developer Flow Changes - Role-Specific Views
+- Goal: Implement Phase 4 requirements (Developer role display, team composition visibility)
+- Changes made:
+  - **Role Badge System**:
+    - Created centralized role utilities (getRoleBadgeColor, getRoleName)
+    - Implemented color scheme: SA purple, TW blue, BE green, FE yellow, QA red, DM indigo
+    - Created RoleBadge component with icon, color, and 3 size variants
+    - Applied consistently across all developer interfaces
+  - **Developer Dashboard**:
+    - Enhanced getDeveloperDashboardStats to include developer role from users + developer_roles join
+    - Display role badge prominently at top of dashboard with active assignments count
+    - Updated page header description to include role name
+    - Updated DeveloperDashboardStats component to show role card
+  - **Request List**:
+    - Enhanced getAssignedRequests to include developer's role per request (myRoleCode, myRoleName)
+    - Added "My Role" column in DeveloperRequestTable showing role badge for each request
+    - Updated Request interface across client and table components
+  - **Request Detail**:
+    - Enhanced getRequestByIdDeveloper to return full team composition:
+      - Team leader (name, email)
+      - Technical writer (name, email, role)
+      - All team members (name, email, role, isCurrentUser flag)
+      - DevTI Urusan text
+    - Created TeamInfoCard component for unified team display
+    - Added TeamInfoCard to developer request detail sidebar
+    - Current developer highlighted with "You" indicator and background color
+  - **Server Actions**:
+    - Updated 3 developer server actions with role and team data
+    - Proper null handling for optional role fields
+    - Type-safe queries with left joins to developer_roles
+- Files changed:
+  - Created: lib/utils/role-badge.ts, components/shared/role-badge.tsx, components/shared/team-info-card.tsx
+  - Modified: app/actions/developer-requests.ts, components/developer/developer-dashboard-stats.tsx, components/developer/developer-request-table.tsx, components/developer/developer-request-list-client.tsx, app/(developer)/developer/dashboard/page.tsx, app/(developer)/developer/requests/[id]/page.tsx
+- Decisions:
+  - Role badge color scheme chosen for clarity and accessibility
+  - TeamInfoCard designed to show complete team context without clutter
+  - Current user highlight helps developer identify themselves in team
+  - Null-safe implementation handles missing role data gracefully
+- Tests/checks:
+  - ✅ TypeScript: PASSED for all Phase 4 files (0 errors in Phase 4 code)
+  - ✅ Type safety: Fixed nullable role fields, Request interface consistency
+  - ⚠️ 8 remaining errors from Phase 1.5 (teams & SLA policies - outside Phase 4 scope)
+- Benefits:
+  - ✅ Clear role identity throughout developer interface
+  - ✅ Team awareness - see all team members with roles
+  - ✅ Better coordination - know who's team leader and technical writer
+  - ✅ Visual consistency with color-coded role badges
+  - ✅ Improved collaboration through team visibility
+- Documentation: Created `.ai/PHASE_4_COMPLETE.md` with comprehensive details
+- Next recommended step: **Phase 5: Reporting Updates** or **Fix Phase 1.5 remaining errors**

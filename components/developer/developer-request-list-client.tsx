@@ -17,6 +17,8 @@ interface Request {
   targetSlaHours: number | null;
   requesterName: string | null;
   unitName: string | null;
+  myRoleCode: string | null;
+  myRoleName: string | null;
 }
 
 interface Pagination {

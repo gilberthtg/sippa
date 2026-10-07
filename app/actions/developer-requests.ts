@@ -2,7 +2,7 @@
 
 import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
-import { requests, requestTeamAssignments, requestProgress, requestStatusHistories, users, priorities, units } from '@/lib/db/schema';
+import { requests, requestTeamAssignments, requestProgress, requestStatusHistories, users, priorities, units, developerRoles } from '@/lib/db/schema';
 import { eq, and, or, desc, sql, inArray } from 'drizzle-orm';
 import { logAudit } from '@/lib/utils/audit';
 import { AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
@@ -42,6 +42,18 @@ export async function getDeveloperDashboardStats() {
   }
 
   try {
+    // Get developer role information
+    const [developerInfo] = await db
+      .select({
+        developerRoleId: users.developerRoleId,
+        developerRoleCode: developerRoles.code,
+        developerRoleName: developerRoles.name,
+      })
+      .from(users)
+      .leftJoin(developerRoles, eq(users.developerRoleId, developerRoles.id))
+      .where(eq(users.id, authCheck.userId!))
+      .limit(1);
+
     const [stats] = await db
       .select({
         assigned: sql<number>`SUM(CASE WHEN ${requests.status} = 'assigned' THEN 1 ELSE 0 END)`,
@@ -96,6 +108,10 @@ export async function getDeveloperDashboardStats() {
         total: Number(stats?.total || 0),
         overdue: overdueRequests.length,
       },
+      developerRole: developerInfo ? {
+        code: developerInfo.developerRoleCode,
+        name: developerInfo.developerRoleName,
+      } : null,
       overdueRequests,
     };
   } catch (error) {
@@ -161,12 +177,15 @@ export async function getAssignedRequests(params?: {
         targetSlaHours: requests.targetSlaHours,
         requesterName: users.name,
         unitName: units.name,
+        myRoleCode: developerRoles.code,
+        myRoleName: developerRoles.name,
       })
       .from(requests)
       .innerJoin(requestTeamAssignments, eq(requests.id, requestTeamAssignments.requestId))
       .leftJoin(priorities, eq(requests.priorityId, priorities.id))
       .leftJoin(users, eq(requests.requesterId, users.id))
       .leftJoin(units, eq(requests.requesterUnitId, units.id))
+      .leftJoin(developerRoles, eq(requestTeamAssignments.developerRoleId, developerRoles.id))
       .where(and(...conditions))
       .orderBy(desc(requests.submittedAt))
       .limit(limit)
@@ -231,6 +250,9 @@ export async function getRequestByIdDeveloper(requestId: number) {
         unitId: requests.requesterUnitId,
         unitName: units.name,
         rejectionNote: requests.rejectionNote,
+        devtiUrusan: requests.devtiUrusan,
+        teamLeaderId: requests.teamLeaderId,
+        technicalWriterId: requests.technicalWriterId,
       })
       .from(requests)
       .leftJoin(priorities, eq(requests.priorityId, priorities.id))
@@ -243,7 +265,70 @@ export async function getRequestByIdDeveloper(requestId: number) {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    return { success: true, data: request };
+    // Get team leader info
+    let teamLeader = null;
+    if (request.teamLeaderId) {
+      const [leader] = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        })
+        .from(users)
+        .where(eq(users.id, request.teamLeaderId))
+        .limit(1);
+      teamLeader = leader || null;
+    }
+
+    // Get technical writer info
+    let technicalWriter = null;
+    if (request.technicalWriterId) {
+      const [writer] = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          developerRoleCode: developerRoles.code,
+          developerRoleName: developerRoles.name,
+        })
+        .from(users)
+        .leftJoin(developerRoles, eq(users.developerRoleId, developerRoles.id))
+        .where(eq(users.id, request.technicalWriterId))
+        .limit(1);
+      technicalWriter = writer || null;
+    }
+
+    // Get all team members (developers)
+    const teamMembers = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        developerRoleCode: developerRoles.code,
+        developerRoleName: developerRoles.name,
+        assignedAt: requestTeamAssignments.assignedAt,
+        isCurrentUser: sql<boolean>`${users.id} = ${authCheck.userId!}`,
+      })
+      .from(requestTeamAssignments)
+      .innerJoin(users, eq(requestTeamAssignments.assignedUserId, users.id))
+      .leftJoin(developerRoles, eq(users.developerRoleId, developerRoles.id))
+      .where(
+        and(
+          eq(requestTeamAssignments.requestId, requestId),
+          sql`${requestTeamAssignments.unassignedAt} IS NULL`
+        )
+      )
+      .orderBy(desc(requestTeamAssignments.assignedAt));
+
+    return { 
+      success: true, 
+      data: {
+        ...request,
+        teamLeader,
+        technicalWriter,
+        teamMembers,
+      }
+    };
   } catch (error) {
     console.error('Get request by id error:', error);
     return { success: false, error: 'Gagal mengambil detail request' };

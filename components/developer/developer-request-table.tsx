@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { StatusBadge } from '@/components/requests/status-badge';
 import { PriorityBadge } from '@/components/requests/priority-badge';
+import { RoleBadge } from '@/components/shared/role-badge';
 import { EmptyState } from '@/components/shared/empty-state';
 import { formatDistanceToNow } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -32,6 +33,8 @@ interface Request {
   targetSlaHours: number | null;
   requesterName: string | null;
   unitName: string | null;
+  myRoleCode: string | null;
+  myRoleName: string | null;
 }
 
 interface Pagination {
@@ -90,6 +93,7 @@ export function DeveloperRequestTable({ requests, pagination }: DeveloperRequest
                   <TableHead>Request No</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Title</TableHead>
+                  <TableHead>My Role</TableHead>
                   <TableHead>Requester</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Priority</TableHead>
@@ -114,6 +118,13 @@ export function DeveloperRequestTable({ requests, pagination }: DeveloperRequest
                       </TableCell>
                       <TableCell className="max-w-xs truncate">
                         {request.title}
+                      </TableCell>
+                      <TableCell>
+                        {request.myRoleCode ? (
+                          <RoleBadge roleCode={request.myRoleCode} size="sm" />
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
