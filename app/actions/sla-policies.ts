@@ -58,7 +58,7 @@ export async function getSLAPolicies(params?: {
         priorityId: slaPolicies.priorityId,
         priorityName: priorities.name,
         priorityCode: priorities.code,
-        targetHours: slaPolicies.targetHours,
+        targetBusinessDays: slaPolicies.targetBusinessDays,
         isActive: slaPolicies.isActive,
         effectiveFrom: slaPolicies.effectiveFrom,
         effectiveTo: slaPolicies.effectiveTo,
@@ -92,7 +92,7 @@ export async function getSLAPolicyById(id: number) {
       requestType: slaPolicies.requestType,
       priorityId: slaPolicies.priorityId,
       priorityName: priorities.name,
-      targetHours: slaPolicies.targetHours,
+      targetBusinessDays: slaPolicies.targetBusinessDays,
       isActive: slaPolicies.isActive,
       effectiveFrom: slaPolicies.effectiveFrom,
       effectiveTo: slaPolicies.effectiveTo,
@@ -110,7 +110,7 @@ export async function getSLAPolicyById(id: number) {
 export async function createSLAPolicy(data: {
   requestType: 'new_application' | 'rfc';
   priorityId: number;
-  targetHours: number;
+  targetBusinessDays: number;
   effectiveFrom?: string | null;
   effectiveTo?: string | null;
 }) {
@@ -130,7 +130,7 @@ export async function createSLAPolicy(data: {
   const result = await db.insert(slaPolicies).values({
     requestType: data.requestType as 'new_application' | 'rfc',
     priorityId: data.priorityId,
-    targetHours: data.targetHours,
+    targetBusinessDays: data.targetBusinessDays,
     effectiveFrom: data.effectiveFrom ? new Date(data.effectiveFrom) : null,
     effectiveTo: data.effectiveTo ? new Date(data.effectiveTo) : null,
     isActive: true,
@@ -143,7 +143,7 @@ export async function createSLAPolicy(data: {
     entityType: 'sla_policy',
     entityId: String(result[0].insertId),
     action: AUDIT_ACTIONS.CREATE,
-    afterData: { requestType: data.requestType, priorityId: data.priorityId, targetHours: data.targetHours },
+    afterData: { requestType: data.requestType, priorityId: data.priorityId, targetBusinessDays: data.targetBusinessDays },
   });
 
   revalidatePath('/admin/settings/sla-policies');
@@ -156,7 +156,7 @@ export async function updateSLAPolicy(
   data: {
     requestType?: 'new_application' | 'rfc';
     priorityId?: number;
-    targetHours?: number;
+    targetBusinessDays?: number;
     effectiveFrom?: string | null;
     effectiveTo?: string | null;
     isActive?: boolean;
@@ -185,7 +185,7 @@ export async function updateSLAPolicy(
   
   if (data.requestType) updateData.requestType = data.requestType as 'new_application' | 'rfc';
   if (data.priorityId) updateData.priorityId = data.priorityId;
-  if (data.targetHours) updateData.targetHours = data.targetHours;
+  if (data.targetBusinessDays) updateData.targetBusinessDays = data.targetBusinessDays;
   if (data.effectiveFrom !== undefined) updateData.effectiveFrom = data.effectiveFrom ? new Date(data.effectiveFrom) : null;
   if (data.effectiveTo !== undefined) updateData.effectiveTo = data.effectiveTo ? new Date(data.effectiveTo) : null;
   if (data.isActive !== undefined) updateData.isActive = data.isActive;

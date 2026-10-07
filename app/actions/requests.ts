@@ -2,11 +2,12 @@
 
 import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
-import { requests, requestStatusHistories, requestAttachments } from '@/lib/db/schema';
+import { requests, requestStatusHistories, requestAttachments, requestApplications } from '@/lib/db/schema';
 import { createRequestSchema } from '@/lib/validations/request';
 import { generateRequestNumber } from '@/lib/utils/request-number';
 import { generateStorageKey } from '@/lib/utils/file-upload';
 import { saveFile } from '@/lib/utils/file-storage';
+import { validateVersionProgression } from '@/lib/utils/version';
 import { REQUEST_STATUSES, FILE_UPLOAD, AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
 import { eq, and, desc, or, like, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
@@ -20,9 +21,12 @@ export async function createRequest(formData: FormData) {
       return { success: false, error: 'Unauthorized' };
     }
 
-    const data = {
-      requestType: formData.get('requestType') as string,
-      title: formData.get('title') as string,
+    const requestType = formData.get('requestType') as string;
+    const applicationIdStr = formData.get('applicationId') as string;
+    
+    // Build data object based on request type
+    const data: any = {
+      requestType,
       description: formData.get('description') as string,
       businessNeed: formData.get('businessNeed') as string || undefined,
       objective: formData.get('objective') as string || undefined,
@@ -31,10 +35,51 @@ export async function createRequest(formData: FormData) {
       requesterPhone: formData.get('requesterPhone') as string || undefined,
     };
 
+    // Add type-specific fields
+    if (requestType === 'new_application') {
+      data.title = formData.get('title') as string;
+    } else if (requestType === 'rfc') {
+      data.applicationId = applicationIdStr ? parseInt(applicationIdStr, 10) : undefined;
+      data.requestedVersion = formData.get('requestedVersion') as string;
+    }
+
     const validation = createRequestSchema.safeParse(data);
     if (!validation.success) {
       return { success: false, error: validation.error.issues[0].message };
     }
+
+    const validatedData = validation.data;
+
+    // For RFC: fetch application details and validate version progression
+    let applicationName: string | undefined;
+    if (validatedData.requestType === 'rfc' && validatedData.applicationId) {
+      const [application] = await db
+        .select()
+        .from(requestApplications)
+        .where(eq(requestApplications.id, validatedData.applicationId))
+        .limit(1);
+
+      if (!application) {
+        return { success: false, error: 'Aplikasi tidak ditemukan' };
+      }
+
+      // Validate version progression
+      const versionValidation = validateVersionProgression(
+        application.currentVersion,
+        validatedData.requestedVersion
+      );
+
+      if (!versionValidation.isValid) {
+        return { success: false, error: versionValidation.error };
+      }
+
+      applicationName = application.applicationName;
+    }
+
+    // Determine title based on request type
+    const requestTitle = validatedData.requestType === 'new_application'
+      ? validatedData.title
+      : applicationName || 'RFC';
 
     const files = formData.getAll('files') as File[];
     const validFiles = files.filter((f) => f.size > 0);
@@ -52,23 +97,37 @@ export async function createRequest(formData: FormData) {
 
     const requestNo = await generateRequestNumber();
 
-    const [newRequest] = await db.insert(requests).values({
+    // Build insert values based on request type
+    const insertValues: any = {
       requestNo,
-      requestType: validation.data.requestType,
-      title: validation.data.title,
-      description: validation.data.description,
-      businessNeed: validation.data.businessNeed || null,
-      objective: validation.data.objective || null,
-      expectedOutput: validation.data.expectedOutput || null,
-      urgency: validation.data.urgency || null,
+      requestType: validatedData.requestType,
+      title: requestTitle,
+      description: validatedData.description,
+      businessNeed: validatedData.businessNeed || null,
+      objective: validatedData.objective || null,
+      expectedOutput: validatedData.expectedOutput || null,
+      urgency: validatedData.urgency || null,
       requesterId: session.user.id,
       requesterName: session.user.name,
       requesterEmail: session.user.email,
       requesterUnitId: session.user.unitId || null,
-      requesterPhone: validation.data.requesterPhone || null,
+      requesterPhone: validatedData.requesterPhone || null,
       status: REQUEST_STATUSES.SUBMITTED,
       submittedAt: new Date(),
-    });
+    };
+
+    // Add type-specific fields
+    if (validatedData.requestType === 'new_application') {
+      // For NEW_APPLICATION: set default version, no applicationId yet (will be created on approval)
+      insertValues.requestedVersion = '1.0.0';
+      insertValues.applicationId = null;
+    } else if (validatedData.requestType === 'rfc') {
+      // For RFC: set applicationId and requestedVersion
+      insertValues.applicationId = validatedData.applicationId;
+      insertValues.requestedVersion = validatedData.requestedVersion;
+    }
+
+    const [newRequest] = await db.insert(requests).values(insertValues);
 
     const requestId = newRequest.insertId;
 
@@ -102,13 +161,21 @@ export async function createRequest(formData: FormData) {
       entityType: 'request',
       entityId: String(requestId),
       action: AUDIT_ACTIONS.CREATE,
-      afterData: { requestNo, requestType: validation.data.requestType, title: validation.data.title },
+      afterData: { 
+        requestNo, 
+        requestType: validatedData.requestType, 
+        title: requestTitle,
+        ...(validatedData.requestType === 'rfc' && {
+          applicationId: validatedData.applicationId,
+          requestedVersion: validatedData.requestedVersion,
+        }),
+      },
     });
 
     notifyRequestSubmitted({
       requestId: Number(requestId),
       requestNo,
-      title: validation.data.title,
+      title: requestTitle,
       requesterName: session.user.name,
     });
 
@@ -254,5 +321,42 @@ export async function getRequestById(id: number) {
   } catch (error) {
     console.error('Get request error:', error);
     return { success: false, error: 'Terjadi kesalahan saat mengambil data' };
+  }
+}
+
+/**
+ * Get list of applications for RFC dropdown
+ * Returns all applications created from approved NEW_APPLICATION requests
+ */
+export async function getApplicationList() {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const applications = await db
+      .select({
+        id: requestApplications.id,
+        applicationName: requestApplications.applicationName,
+        description: requestApplications.description,
+        currentVersion: requestApplications.currentVersion,
+      })
+      .from(requestApplications)
+      .orderBy(requestApplications.applicationName);
+
+    return { 
+      success: true, 
+      applications: applications.map(app => ({
+        id: app.id,
+        name: app.applicationName,
+        description: app.description || '',
+        currentVersion: app.currentVersion,
+        label: `${app.applicationName} (v${app.currentVersion})`,
+      }))
+    };
+  } catch (error) {
+    console.error('Get application list error:', error);
+    return { success: false, error: 'Terjadi kesalahan saat mengambil daftar aplikasi' };
   }
 }

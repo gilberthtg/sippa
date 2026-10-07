@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
 import { db } from './index';
-import { roles, priorities, units, teams, users, slaPolicies, requests, requestStatusHistories, requestAssignments, requestProgress, requestAttachments } from './schema';
+import { roles, priorities, units, users, slaPolicies, requests, requestStatusHistories, requestTeamAssignments, requestProgress, requestAttachments } from './schema';
 import bcrypt from 'bcryptjs';
 
 // Load environment variables from .env.local
@@ -12,7 +12,7 @@ async function seed() {
   // Clean up existing test data
   console.log('  → Cleaning up existing test data...');
   await db.delete(requestProgress).execute();
-  await db.delete(requestAssignments).execute();
+  // await db.delete(requestAssignments).execute(); // Deprecated - using requestTeamAssignments
   await db.delete(requestStatusHistories).execute();
   await db.delete(requestAttachments).execute();
   await db.delete(requests).execute();
@@ -44,12 +44,12 @@ async function seed() {
     { id: 4, code: 'OPS', name: 'Operations' },
   ]).onDuplicateKeyUpdate({ set: { name: 'Information Technology' } });
 
-  // Seed Teams
-  console.log('  → Seeding teams...');
-  await db.insert(teams).values([
-    { id: 1, code: 'DEVTI', name: 'Development Team IT' },
-    { id: 2, code: 'INFRA', name: 'Infrastructure Team' },
-  ]).onDuplicateKeyUpdate({ set: { name: 'Development Team IT' } });
+  // Seed Teams - DEPRECATED (Phase 1 restructure - teams replaced by individual assignments)
+  // console.log('  → Seeding teams...');
+  // await db.insert(teams).values([
+  //   { id: 1, code: 'DEVTI', name: 'Development Team IT' },
+  //   { id: 2, code: 'INFRA', name: 'Infrastructure Team' },
+  // ]).onDuplicateKeyUpdate({ set: { name: 'Development Team IT' } });
 
   // Seed Users
   console.log('  → Seeding users...');
@@ -88,15 +88,15 @@ async function seed() {
   // Seed SLA Policies
   console.log('  → Seeding SLA policies...');
   await db.insert(slaPolicies).values([
-    { requestType: 'new_application', priorityId: 1, targetHours: 168 }, // Low: 7 days
-    { requestType: 'new_application', priorityId: 2, targetHours: 120 }, // Medium: 5 days
-    { requestType: 'new_application', priorityId: 3, targetHours: 72 },  // High: 3 days
-    { requestType: 'new_application', priorityId: 4, targetHours: 48 },  // Critical: 2 days
-    { requestType: 'rfc', priorityId: 1, targetHours: 96 },  // Low: 4 days
-    { requestType: 'rfc', priorityId: 2, targetHours: 72 },  // Medium: 3 days
-    { requestType: 'rfc', priorityId: 3, targetHours: 48 },  // High: 2 days
-    { requestType: 'rfc', priorityId: 4, targetHours: 24 },  // Critical: 1 day
-  ]).onDuplicateKeyUpdate({ set: { targetHours: 168 } });
+    { requestType: 'new_application', priorityId: 1, targetBusinessDays: 7 },  // Low: 7 days
+    { requestType: 'new_application', priorityId: 2, targetBusinessDays: 5 },  // Medium: 5 days
+    { requestType: 'new_application', priorityId: 3, targetBusinessDays: 3 },  // High: 3 days
+    { requestType: 'new_application', priorityId: 4, targetBusinessDays: 2 },  // Critical: 2 days
+    { requestType: 'rfc', priorityId: 1, targetBusinessDays: 4 },  // Low: 4 days
+    { requestType: 'rfc', priorityId: 2, targetBusinessDays: 3 },  // Medium: 3 days
+    { requestType: 'rfc', priorityId: 3, targetBusinessDays: 2 },  // High: 2 days
+    { requestType: 'rfc', priorityId: 4, targetBusinessDays: 1 },  // Critical: 1 day
+  ]).onDuplicateKeyUpdate({ set: { targetBusinessDays: 7 } });
 
   // Seed Completed Requests for Testing Reports
   console.log('  → Seeding completed requests...');
@@ -233,14 +233,16 @@ async function seed() {
       },
     ]);
 
-    // Add assignment
-    await db.insert(requestAssignments).values({
+    // Add assignment - TODO: Update to requestTeamAssignments in Phase 2
+    /*
+    await db.insert(requestTeamAssignments).values({
       requestId,
-      teamId: 1,
-      developerId: 3,
+      assignedUserId: 3,
+      developerRoleId: 3, // Backend developer
       assignedBy: 1,
       assignedAt,
     });
+    */
 
     // Add progress updates
     const progressDuration = completedAt.getTime() - startedAt.getTime();

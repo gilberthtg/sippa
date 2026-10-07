@@ -6,9 +6,8 @@ import {
   requests, 
   requestStatusHistories, 
   requestAttachments,
-  requestAssignments,
+  requestTeamAssignments,
   users,
-  teams,
   priorities,
   units,
   slaPolicies
@@ -137,9 +136,26 @@ export async function getAdminDashboardStats() {
       })
       .from(requests);
 
+    // PHASE 3: Additional metrics
+    // Approved but not assigned (approved status with no assignments)
+    const [approvedNotAssignedResult] = await db
+      .select({
+        count: sql<number>`COUNT(DISTINCT ${requests.id})`,
+      })
+      .from(requests)
+      .where(
+        and(
+          eq(requests.status, REQUEST_STATUSES.APPROVED),
+          isNull(requests.assignedAt)
+        )
+      );
+
     return {
       success: true,
-      data: stats,
+      data: {
+        ...stats,
+        approvedNotAssigned: Number(approvedNotAssignedResult.count),
+      },
     };
   } catch (error) {
     console.error('Get dashboard stats error:', error);
@@ -249,26 +265,65 @@ export async function getRequestByIdAdmin(id: number) {
       .where(eq(requestStatusHistories.requestId, id))
       .orderBy(requestStatusHistories.createdAt);
 
-    const [assignment] = await db
+    // PHASE 3: Fetch new assignment structure
+    const { developerRoles } = await import('@/lib/db/schema');
+    
+    const assignments = await db
       .select({
-        id: requestAssignments.id,
-        teamId: requestAssignments.teamId,
-        teamName: teams.name,
-        developerId: requestAssignments.developerId,
-        developerName: users.name,
-        assignedBy: requestAssignments.assignedBy,
-        assignedAt: requestAssignments.assignedAt,
+        id: requestTeamAssignments.id,
+        assignedUserId: requestTeamAssignments.assignedUserId,
+        assignedUserName: users.name,
+        assignedUserEmail: users.email,
+        developerRoleId: requestTeamAssignments.developerRoleId,
+        developerRoleCode: developerRoles.code,
+        developerRoleName: developerRoles.name,
+        assignedBy: requestTeamAssignments.assignedBy,
+        assignedAt: requestTeamAssignments.assignedAt,
+        unassignedAt: requestTeamAssignments.unassignedAt,
+        notes: requestTeamAssignments.notes,
       })
-      .from(requestAssignments)
-      .leftJoin(teams, eq(requestAssignments.teamId, teams.id))
-      .leftJoin(users, eq(requestAssignments.developerId, users.id))
+      .from(requestTeamAssignments)
+      .leftJoin(users, eq(requestTeamAssignments.assignedUserId, users.id))
+      .leftJoin(developerRoles, eq(requestTeamAssignments.developerRoleId, developerRoles.id))
       .where(
         and(
-          eq(requestAssignments.requestId, id),
-          isNull(requestAssignments.unassignedAt)
+          eq(requestTeamAssignments.requestId, id),
+          isNull(requestTeamAssignments.unassignedAt)
         )
       )
-      .limit(1);
+      .orderBy(developerRoles.sortOrder);
+
+    // Fetch team leader info if assigned
+    let teamLeader = null;
+    if (request.teamLeaderId) {
+      const [leader] = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+        })
+        .from(users)
+        .where(eq(users.id, request.teamLeaderId))
+        .limit(1);
+      teamLeader = leader || null;
+    }
+
+    // Fetch technical writer info if assigned
+    let technicalWriter = null;
+    if (request.technicalWriterId) {
+      const [writer] = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          developerRoleCode: developerRoles.code,
+        })
+        .from(users)
+        .leftJoin(developerRoles, eq(users.developerRoleId, developerRoles.id))
+        .where(eq(users.id, request.technicalWriterId))
+        .limit(1);
+      technicalWriter = writer || null;
+    }
 
     return {
       success: true,
@@ -276,7 +331,9 @@ export async function getRequestByIdAdmin(id: number) {
         ...request,
         attachments,
         histories,
-        assignment: assignment || null,
+        assignments,
+        teamLeader,
+        technicalWriter,
       },
     };
   } catch (error) {
@@ -364,6 +421,61 @@ export async function approveRequest(requestId: number, note?: string) {
       return { success: false, error: 'Request harus berstatus VERIFICATION' };
     }
 
+    // PHASE 3: Auto-create application master for NEW_APPLICATION
+    let applicationId = request.applicationId;
+    
+    if (request.requestType === 'new_application' && !applicationId) {
+      const { requestApplications } = await import('@/lib/db/schema');
+      
+      // Check if application already exists with this name
+      const [existingApp] = await db
+        .select()
+        .from(requestApplications)
+        .where(eq(requestApplications.applicationName, request.title))
+        .limit(1);
+
+      if (existingApp) {
+        return { 
+          success: false, 
+          error: `Aplikasi "${request.title}" sudah terdaftar. Gunakan RFC untuk perubahan.` 
+        };
+      }
+
+      // Create application master entry
+      const [newApp] = await db
+        .insert(requestApplications)
+        .values({
+          applicationName: request.title,
+          description: request.description,
+          currentVersion: '1.0.0',
+          createdBy: request.requesterId,
+        })
+        .$returningId();
+
+      applicationId = newApp.id;
+
+      // Update request with application ID
+      await db
+        .update(requests)
+        .set({ applicationId })
+        .where(eq(requests.id, requestId));
+
+      logAudit({
+        actorUserId: authCheck.session!.user.id,
+        actorName: authCheck.session!.user.name,
+        module: AUDIT_MODULES.REQUESTS,
+        entityType: 'application',
+        entityId: String(applicationId),
+        action: 'CREATE',
+        beforeData: null,
+        afterData: {
+          applicationName: request.title,
+          version: '1.0.0',
+          requestId,
+        },
+      });
+    }
+
     await db
       .update(requests)
       .set({ 
@@ -390,7 +502,11 @@ export async function approveRequest(requestId: number, note?: string) {
       entityId: String(requestId),
       action: AUDIT_ACTIONS.APPROVE,
       beforeData: { status: request.status },
-      afterData: { status: REQUEST_STATUSES.APPROVED, note },
+      afterData: { 
+        status: REQUEST_STATUSES.APPROVED, 
+        note,
+        applicationId: applicationId || null,
+      },
     });
 
     notifyRequestApproved({
@@ -402,6 +518,7 @@ export async function approveRequest(requestId: number, note?: string) {
 
     revalidatePath('/admin/requests');
     revalidatePath(`/admin/requests/${requestId}`);
+    revalidatePath('/admin/settings/applications'); // Refresh applications list
     return { success: true };
   } catch (error) {
     console.error('Approve request error:', error);
@@ -524,7 +641,7 @@ export async function setPriority(requestId: number, priorityId: number) {
       )
       .limit(1);
 
-    const targetSlaHours = slaPolicy?.targetHours || null;
+    const targetSlaHours = slaPolicy?.targetBusinessDays ? slaPolicy.targetBusinessDays * 24 : null;
 
     await db
       .update(requests)
@@ -596,23 +713,27 @@ export async function assignRequest(params: {
       return { success: false, error: 'Request harus berstatus APPROVED' };
     }
 
+    // TODO: Update to new assignment structure in Phase 2
+    // Temporarily disabled - new structure uses requestTeamAssignments with developer roles
+    /*
     await db
-      .update(requestAssignments)
+      .update(requestTeamAssignments)
       .set({ unassignedAt: new Date() })
       .where(
         and(
-          eq(requestAssignments.requestId, requestId),
-          isNull(requestAssignments.unassignedAt)
+          eq(requestTeamAssignments.requestId, requestId),
+          isNull(requestTeamAssignments.unassignedAt)
         )
       );
 
-    await db.insert(requestAssignments).values({
+    await db.insert(requestTeamAssignments).values({
       requestId,
-      teamId: teamId || null,
-      developerId: developerId || null,
+      assignedUserId: developerId,
+      developerRoleId: roleId, // New field required
       assignedBy: authCheck.session!.user.id,
       assignedAt: new Date(),
     });
+    */
 
     await db
       .update(requests)
@@ -623,7 +744,9 @@ export async function assignRequest(params: {
       })
       .where(eq(requests.id, requestId));
 
+    // Assignment note - TODO: Update for new structure in Phase 2
     let assignmentNote = 'Request di-assign';
+    /*
     if (teamId && developerId) {
       const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
       const [developer] = await db.select().from(users).where(eq(users.id, developerId)).limit(1);
@@ -632,6 +755,11 @@ export async function assignRequest(params: {
       const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
       assignmentNote = `Request di-assign ke ${team?.name || 'Team'}`;
     } else if (developerId) {
+      const [developer] = await db.select().from(users).where(eq(users.id, developerId)).limit(1);
+      assignmentNote = `Request di-assign ke ${developer?.name || 'Developer'}`;
+    }
+    */
+    if (developerId) {
       const [developer] = await db.select().from(users).where(eq(users.id, developerId)).limit(1);
       assignmentNote = `Request di-assign ke ${developer?.name || 'Developer'}`;
     }
@@ -694,6 +822,11 @@ export async function getPriorities() {
 }
 
 export async function getTeams() {
+  // Teams functionality deprecated - return empty array
+  // TODO: Remove this function in Phase 2
+  return { success: true, data: [] };
+  
+  /* Original implementation - kept for reference
   try {
     const data = await db
       .select()
@@ -706,6 +839,7 @@ export async function getTeams() {
     console.error('Get teams error:', error);
     return { success: false, error: 'Gagal mengambil data team' };
   }
+  */
 }
 
 export async function getDevelopers() {
@@ -745,5 +879,402 @@ export async function getUnits() {
   } catch (error) {
     console.error('Get units error:', error);
     return { success: false, error: 'Gagal mengambil data unit' };
+  }
+}
+
+// ============================================================
+// PHASE 3: NEW ASSIGNMENT WORKFLOW ACTIONS
+// ============================================================
+
+/**
+ * Get all developer roles (SA, TW, BE, FE, QA, DM)
+ */
+export async function getDeveloperRoles() {
+  try {
+    const { developerRoles } = await import('@/lib/db/schema');
+    
+    const data = await db
+      .select()
+      .from(developerRoles)
+      .where(eq(developerRoles.isActive, true))
+      .orderBy(developerRoles.sortOrder);
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Get developer roles error:', error);
+    return { success: false, error: 'Gagal mengambil data developer role' };
+  }
+}
+
+/**
+ * Get developers filtered by specific role code
+ * @param roleCode - Developer role code (SA, TW, BE, FE, QA, DM)
+ */
+export async function getDevelopersByRole(roleCode?: string) {
+  try {
+    const { developerRoles } = await import('@/lib/db/schema');
+    
+    const query = db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        unitId: users.unitId,
+        developerRoleId: users.developerRoleId,
+        developerRoleCode: developerRoles.code,
+        developerRoleName: developerRoles.name,
+      })
+      .from(users)
+      .leftJoin(developerRoles, eq(users.developerRoleId, developerRoles.id))
+      .where(
+        and(
+          eq(users.roleId, 3), // DEVELOPER role
+          eq(users.isActive, true)
+        )
+      )
+      .orderBy(users.name);
+
+    let data = await query;
+
+    // Filter by role code if provided
+    if (roleCode) {
+      data = data.filter(dev => dev.developerRoleCode === roleCode);
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Get developers by role error:', error);
+    return { success: false, error: 'Gagal mengambil data developer' };
+  }
+}
+
+/**
+ * Get all users (any role) for team leader selection
+ */
+export async function getTeamLeaderOptions() {
+  try {
+    const data = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        roleId: users.roleId,
+        unitId: users.unitId,
+      })
+      .from(users)
+      .where(eq(users.isActive, true))
+      .orderBy(users.name);
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Get team leader options error:', error);
+    return { success: false, error: 'Gagal mengambil data user' };
+  }
+}
+
+/**
+ * Get technical writers (developers with TW role)
+ */
+export async function getTechnicalWriters() {
+  try {
+    return await getDevelopersByRole('TW');
+  } catch (error) {
+    console.error('Get technical writers error:', error);
+    return { success: false, error: 'Gagal mengambil data technical writer' };
+  }
+}
+
+/**
+ * Get developer workload (active assignments count per developer)
+ */
+export async function getDeveloperWorkload() {
+  try {
+    const { developerRoles } = await import('@/lib/db/schema');
+    
+    const workloadData = await db
+      .select({
+        developerId: users.id,
+        developerName: users.name,
+        developerEmail: users.email,
+        developerRoleId: users.developerRoleId,
+        developerRoleCode: developerRoles.code,
+        developerRoleName: developerRoles.name,
+        activeAssignments: sql<number>`COUNT(DISTINCT ${requestTeamAssignments.requestId})`,
+      })
+      .from(users)
+      .leftJoin(developerRoles, eq(users.developerRoleId, developerRoles.id))
+      .leftJoin(
+        requestTeamAssignments,
+        and(
+          eq(requestTeamAssignments.assignedUserId, users.id),
+          isNull(requestTeamAssignments.unassignedAt)
+        )
+      )
+      .where(
+        and(
+          eq(users.roleId, 3), // DEVELOPER
+          eq(users.isActive, true)
+        )
+      )
+      .groupBy(users.id, users.name, users.email, users.developerRoleId, developerRoles.code, developerRoles.name)
+      .orderBy(users.name);
+
+    return { success: true, data: workloadData };
+  } catch (error) {
+    console.error('Get developer workload error:', error);
+    return { success: false, error: 'Gagal mengambil data workload developer' };
+  }
+}
+
+/**
+ * Assign team to request (new flow)
+ * @param requestId - Request ID
+ * @param devtiUrusan - DevTI urusan/division
+ * @param teamLeaderId - Team leader user ID (any role)
+ * @param technicalWriterId - Technical writer ID (must have TW role)
+ * @param developerAssignments - Array of { userId, developerRoleId }
+ */
+export async function assignTeamToRequest(params: {
+  requestId: number;
+  devtiUrusan: string;
+  teamLeaderId: number;
+  technicalWriterId: number;
+  developerAssignments: Array<{ userId: number; developerRoleId: number }>;
+  note?: string;
+}) {
+  try {
+    const authCheck = await checkAdminAuth();
+    if (!authCheck.authorized) {
+      return { success: false, error: authCheck.error };
+    }
+
+    const { requestId, devtiUrusan, teamLeaderId, technicalWriterId, developerAssignments, note } = params;
+
+    // Validation
+    if (!devtiUrusan || devtiUrusan.trim().length === 0) {
+      return { success: false, error: 'DevTI Urusan wajib diisi' };
+    }
+
+    if (!teamLeaderId) {
+      return { success: false, error: 'Ketua Tim wajib dipilih' };
+    }
+
+    if (!technicalWriterId) {
+      return { success: false, error: 'Technical Writer wajib dipilih' };
+    }
+
+    if (!developerAssignments || developerAssignments.length === 0) {
+      return { success: false, error: 'Minimal 1 developer harus di-assign' };
+    }
+
+    // Get request
+    const [request] = await db
+      .select()
+      .from(requests)
+      .where(eq(requests.id, requestId))
+      .limit(1);
+
+    if (!request) {
+      return { success: false, error: 'Request tidak ditemukan' };
+    }
+
+    if (request.status !== REQUEST_STATUSES.APPROVED) {
+      return { success: false, error: 'Request harus berstatus APPROVED' };
+    }
+
+    // Verify technical writer has TW role
+    const { developerRoles } = await import('@/lib/db/schema');
+    const [techWriter] = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        developerRoleCode: developerRoles.code,
+      })
+      .from(users)
+      .leftJoin(developerRoles, eq(users.developerRoleId, developerRoles.id))
+      .where(eq(users.id, technicalWriterId))
+      .limit(1);
+
+    if (!techWriter) {
+      return { success: false, error: 'Technical Writer tidak ditemukan' };
+    }
+
+    if (techWriter.developerRoleCode !== 'TW') {
+      return { success: false, error: 'User yang dipilih bukan Technical Writer' };
+    }
+
+    // Verify team leader exists
+    const [teamLeader] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, teamLeaderId))
+      .limit(1);
+
+    if (!teamLeader) {
+      return { success: false, error: 'Ketua Tim tidak ditemukan' };
+    }
+
+    // Unassign previous assignments (if any)
+    await db
+      .update(requestTeamAssignments)
+      .set({ unassignedAt: new Date() })
+      .where(
+        and(
+          eq(requestTeamAssignments.requestId, requestId),
+          isNull(requestTeamAssignments.unassignedAt)
+        )
+      );
+
+    // Create new assignments
+    const assignmentRecords = developerAssignments.map(assignment => ({
+      requestId,
+      assignedUserId: assignment.userId,
+      developerRoleId: assignment.developerRoleId,
+      assignedBy: authCheck.session!.user.id,
+      assignedAt: new Date(),
+    }));
+
+    await db.insert(requestTeamAssignments).values(assignmentRecords);
+
+    // Update request with assignment details
+    await db
+      .update(requests)
+      .set({
+        status: REQUEST_STATUSES.ASSIGNED,
+        devtiUrusan,
+        teamLeaderId,
+        technicalWriterId,
+        assignedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(requests.id, requestId));
+
+    // Create status history
+    const developerNames = await Promise.all(
+      developerAssignments.map(async (assignment) => {
+        const [dev] = await db
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, assignment.userId))
+          .limit(1);
+        return dev?.name || 'Unknown';
+      })
+    );
+
+    const assignmentNote = `Request di-assign ke tim:\n` +
+      `- Ketua Tim: ${teamLeader.name}\n` +
+      `- Technical Writer: ${techWriter.name}\n` +
+      `- Developers: ${developerNames.join(', ')}\n` +
+      `- DevTI Urusan: ${devtiUrusan}` +
+      (note ? `\n- Catatan: ${note}` : '');
+
+    await db.insert(requestStatusHistories).values({
+      requestId,
+      fromStatus: REQUEST_STATUSES.APPROVED,
+      toStatus: REQUEST_STATUSES.ASSIGNED,
+      changedBy: authCheck.session!.user.id,
+      changedByName: authCheck.session!.user.name,
+      actorRole: ROLES.ADMIN,
+      note: assignmentNote,
+    });
+
+    // Audit log
+    logAudit({
+      actorUserId: authCheck.session!.user.id,
+      actorName: authCheck.session!.user.name,
+      module: AUDIT_MODULES.REQUESTS,
+      entityType: 'request',
+      entityId: String(requestId),
+      action: AUDIT_ACTIONS.ASSIGN,
+      beforeData: { status: request.status },
+      afterData: {
+        status: REQUEST_STATUSES.ASSIGNED,
+        devtiUrusan,
+        teamLeaderId,
+        technicalWriterId,
+        developerAssignments: developerAssignments.length,
+        note,
+      },
+    });
+
+    // Send notifications to all assigned people
+    const { notifyTeamAssigned } = await import('@/lib/notifications/templates');
+    
+    // Notify all developers
+    for (const assignment of developerAssignments) {
+      notifyDeveloperAssigned({
+        requestId,
+        requestNo: request.requestNo,
+        title: request.title,
+        developerId: assignment.userId,
+      });
+    }
+
+    // Notify team leader and technical writer
+    await notifyTeamAssigned({
+      requestId,
+      requestNo: request.requestNo,
+      title: request.title,
+      teamLeaderId,
+      technicalWriterId,
+      requesterId: request.requesterId,
+    });
+
+    revalidatePath('/admin/requests');
+    revalidatePath(`/admin/requests/${requestId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Assign team to request error:', error);
+    return { success: false, error: 'Gagal meng-assign tim ke request' };
+  }
+}
+
+
+/**
+ * PHASE 3: Get developer role distribution for active requests
+ */
+export async function getDeveloperRoleDistribution() {
+  try {
+    const authCheck = await checkAdminAuth();
+    if (!authCheck.authorized) {
+      return { success: false, error: authCheck.error };
+    }
+
+    const { developerRoles } = await import('@/lib/db/schema');
+
+    // Get active requests by developer role
+    const distribution = await db
+      .select({
+        roleId: developerRoles.id,
+        roleCode: developerRoles.code,
+        roleName: developerRoles.name,
+        activeRequests: sql<number>`COUNT(DISTINCT ${requestTeamAssignments.requestId})`,
+      })
+      .from(developerRoles)
+      .leftJoin(
+        requestTeamAssignments,
+        and(
+          eq(requestTeamAssignments.developerRoleId, developerRoles.id),
+          isNull(requestTeamAssignments.unassignedAt)
+        )
+      )
+      .leftJoin(
+        requests,
+        and(
+          eq(requests.id, requestTeamAssignments.requestId),
+          inArray(requests.status, ['assigned', 'in_progress'])
+        )
+      )
+      .where(eq(developerRoles.isActive, true))
+      .groupBy(developerRoles.id, developerRoles.code, developerRoles.name)
+      .orderBy(developerRoles.sortOrder);
+
+    return {
+      success: true,
+      data: distribution,
+    };
+  } catch (error) {
+    console.error('Get developer role distribution error:', error);
+    return { success: false, error: 'Gagal mengambil distribusi role developer' };
   }
 }

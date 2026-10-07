@@ -1,12 +1,26 @@
 import { mysqlTable, varchar, text, timestamp, int, smallint, bigint, boolean, mysqlEnum, index, tinyint } from 'drizzle-orm/mysql-core';
 import { users } from './users';
-import { units, priorities, teams } from './master';
+import { units, priorities } from './master';
+import { requestApplications } from './request-applications';
+import { developerRoles } from './developer-roles';
 
 export const requests = mysqlTable('requests', {
   id: bigint('id', { mode: 'number' }).primaryKey().autoincrement(),
   requestNo: varchar('request_no', { length: 50 }).notNull().unique(),
   requestType: mysqlEnum('request_type', ['new_application', 'rfc']).notNull(),
+  
+  // For NEW_APPLICATION: title is the application name
+  // For RFC: title comes from linked application
   title: varchar('title', { length: 200 }).notNull(),
+  
+  // Application reference (NULL for NEW_APPLICATION, REQUIRED for RFC)
+  applicationId: int('application_id').references(() => requestApplications.id),
+  
+  // Version fields
+  // NEW_APPLICATION: auto-set to "1.0.0" (not editable by user)
+  // RFC: requested_version is REQUIRED and must be > application.current_version
+  requestedVersion: varchar('requested_version', { length: 50 }),
+  
   description: text('description').notNull(),
   businessNeed: text('business_need'),
   objective: text('objective'),
@@ -18,6 +32,11 @@ export const requests = mysqlTable('requests', {
   requesterEmail: varchar('requester_email', { length: 255 }).notNull(),
   requesterUnitId: int('requester_unit_id').references(() => units.id),
   requesterPhone: varchar('requester_phone', { length: 50 }),
+  
+  // Admin assignment fields
+  devtiUrusan: varchar('devti_urusan', { length: 255 }),
+  technicalWriterId: int('technical_writer_id').references(() => users.id),
+  teamLeaderId: int('team_leader_id').references(() => users.id),
   
   priorityId: smallint('priority_id').references(() => priorities.id),
   status: mysqlEnum('status', [
@@ -37,6 +56,7 @@ export const requests = mysqlTable('requests', {
   startedAt: timestamp('started_at'),
   completedAt: timestamp('completed_at'),
   
+  // SLA fields (now using business days)
   targetSlaHours: int('target_sla_hours'),
   actualDurationHours: int('actual_duration_hours'),
   slaMet: boolean('sla_met'),
@@ -54,6 +74,9 @@ export const requests = mysqlTable('requests', {
   priorityIdx: index('priority_id_idx').on(table.priorityId),
   submittedIdx: index('submitted_at_idx').on(table.submittedAt),
   completedIdx: index('completed_at_idx').on(table.completedAt),
+  applicationIdx: index('application_id_idx').on(table.applicationId),
+  technicalWriterIdx: index('technical_writer_id_idx').on(table.technicalWriterId),
+  teamLeaderIdx: index('team_leader_id_idx').on(table.teamLeaderId),
 }));
 
 export const requestStatusHistories = mysqlTable('request_status_histories', {
@@ -63,7 +86,9 @@ export const requestStatusHistories = mysqlTable('request_status_histories', {
   toStatus: varchar('to_status', { length: 50 }).notNull(),
   changedBy: int('changed_by').notNull().references(() => users.id),
   changedByName: varchar('changed_by_name', { length: 200 }).notNull(),
+  actorRole: varchar('actor_role', { length: 50 }),
   note: text('note'),
+  metadata: text('metadata'), // JSON for additional data like rejection reason
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({
   requestIdx: index('request_id_idx').on(table.requestId),
@@ -84,18 +109,28 @@ export const requestAttachments = mysqlTable('request_attachments', {
   storageKeyIdx: index('storage_key_idx').on(table.storageKey),
 }));
 
-export const requestAssignments = mysqlTable('request_assignments', {
+/**
+ * Request Team Assignments (New Structure)
+ * Individual-based assignments with specific developer roles
+ * No more team concept - admin assigns developers directly with their roles
+ */
+export const requestTeamAssignments = mysqlTable('request_team_assignments', {
   id: bigint('id', { mode: 'number' }).primaryKey().autoincrement(),
   requestId: bigint('request_id', { mode: 'number' }).notNull().references(() => requests.id),
-  teamId: int('team_id').references(() => teams.id),
-  developerId: int('developer_id').references(() => users.id),
+  assignedUserId: int('assigned_user_id').notNull().references(() => users.id),
+  developerRoleId: smallint('developer_role_id').notNull().references(() => developerRoles.id),
   assignedBy: int('assigned_by').notNull().references(() => users.id),
   assignedAt: timestamp('assigned_at').notNull().defaultNow(),
   unassignedAt: timestamp('unassigned_at'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
 }, (table) => ({
   requestIdx: index('request_id_idx').on(table.requestId),
-  developerIdx: index('developer_id_idx').on(table.developerId),
-  teamIdx: index('team_id_idx').on(table.teamId),
+  assignedUserIdx: index('assigned_user_id_idx').on(table.assignedUserId),
+  developerRoleIdx: index('developer_role_id_idx').on(table.developerRoleId),
+  assignedByIdx: index('assigned_by_idx').on(table.assignedBy),
+  activeAssignmentsIdx: index('active_assignments_idx').on(table.requestId, table.unassignedAt),
 }));
 
 export const requestProgress = mysqlTable('request_progress', {

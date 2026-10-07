@@ -1,17 +1,18 @@
 import { z } from 'zod';
+import { isValidVersion } from '@/lib/utils/version';
 
 export const loginSchema = z.object({
   email: z.string().email('Email tidak valid'),
   password: z.string().min(1, 'Password harus diisi'),
 });
 
-export const createRequestSchema = z.object({
+/**
+ * Base schema for common fields in both NEW_APPLICATION and RFC
+ */
+const baseRequestSchema = z.object({
   requestType: z.enum(['new_application', 'rfc'], {
     message: 'Jenis permintaan harus dipilih',
   }),
-  title: z.string()
-    .min(10, 'Judul minimal 10 karakter')
-    .max(200, 'Judul maksimal 200 karakter'),
   description: z.string()
     .min(50, 'Deskripsi minimal 50 karakter')
     .max(5000, 'Deskripsi maksimal 5000 karakter'),
@@ -29,6 +30,46 @@ export const createRequestSchema = z.object({
     .max(50, 'Nomor telepon maksimal 50 karakter')
     .optional(),
 });
+
+/**
+ * Schema for NEW_APPLICATION requests
+ * Requires: title (application name)
+ * Version is auto-generated as 1.0.0
+ */
+const newApplicationSchema = baseRequestSchema.extend({
+  requestType: z.literal('new_application'),
+  title: z.string()
+    .min(3, 'Nama aplikasi minimal 3 karakter')
+    .max(200, 'Nama aplikasi maksimal 200 karakter'),
+  applicationId: z.never().optional(), // Not allowed for new application
+  requestedVersion: z.never().optional(), // Not allowed for new application
+});
+
+/**
+ * Schema for RFC (Request for Change) requests
+ * Requires: applicationId, requestedVersion
+ * Title is inherited from selected application
+ */
+const rfcSchema = baseRequestSchema.extend({
+  requestType: z.literal('rfc'),
+  applicationId: z.coerce.number().int().positive('Aplikasi harus dipilih'),
+  requestedVersion: z.string()
+    .min(1, 'Versi baru harus diisi')
+    .refine(
+      (version) => isValidVersion(version),
+      'Format versi tidak valid. Gunakan format x.y.z (contoh: 1.2.3)'
+    ),
+  title: z.never().optional(), // Not allowed for RFC, will use application name
+});
+
+/**
+ * Discriminated union schema for request creation
+ * Automatically validates based on requestType
+ */
+export const createRequestSchema = z.discriminatedUnion('requestType', [
+  newApplicationSchema,
+  rfcSchema,
+]);
 
 export const updateProgressSchema = z.object({
   updateNote: z.string()

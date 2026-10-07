@@ -106,3 +106,66 @@ Format:
 - User & unit master source (internal database for v1.0)
 - User management UI in v1.0 scope
 - Developer performance metrics in reports (deferred to v1.1+)
+
+
+## ADR-0013 — Single-Page Request Form with Conditional Rendering
+- Status: Confirmed
+- Date: 2026-10-07
+- Decision: Replace multi-step wizard with single-page form using conditional rendering based on request type
+- Reason: Simplifies user flow, reduces clicks, provides immediate context for all required fields
+- Impact:
+  - User submits request in single page (was 5 steps, now 1 scrollable page)
+  - NEW_APPLICATION shows title input, auto-sets version to "1.0.0"
+  - RFC shows application dropdown and version input with real-time validation
+  - Conditional validation using Zod discriminated union ensures type safety
+- Alternatives considered: Keep multi-step wizard, use tabs, use collapsible sections
+- Benefits: Faster submission, better overview, easier to review before submit
+
+## ADR-0014 — Semantic Versioning for Application Versions
+- Status: Confirmed
+- Date: 2026-10-07
+- Decision: Enforce strict semantic versioning (x.y.z) format for all application versions
+- Reason: Industry standard, clear progression rules, prevents version confusion
+- Impact:
+  - NEW_APPLICATION: Auto-set to "1.0.0" (not editable by user)
+  - RFC: Must provide version in x.y.z format, must be greater than current version
+  - Version validation: Client-side (real-time feedback) + Server-side (data integrity)
+  - Version comparison: Major → Minor → Patch hierarchy
+- Validation rules:
+  - Format: Exactly 3 numbers separated by dots (e.g., "1.2.3")
+  - Each part must be non-negative integer
+  - Requested version must be > current version for RFC
+- Alternatives considered: Date-based versioning (2024.1.0), custom format, no validation
+- Future: Can add pre-release tags (1.0.0-beta) in v1.1 if needed
+
+## ADR-0015 — Application Master Created from Approved NEW_APPLICATION
+- Status: Confirmed
+- Date: 2026-10-07
+- Decision: Automatically create entry in request_applications table when NEW_APPLICATION request is approved
+- Reason: Maintains single source of truth, ensures application list is accurate, enables RFC workflow
+- Impact:
+  - Admin approval of NEW_APPLICATION triggers request_applications entry creation
+  - applicationName = request.title, currentVersion = "1.0.0"
+  - RFC requests can only reference applications in request_applications table
+  - When RFC completed, update request_applications.currentVersion to requested_version
+- Deferred: Implementation of auto-creation logic (to be done in Plan 3 - Admin flow)
+- Related: This decision enables the version management and RFC workflow in Plan 2
+
+## ADR-0016 — Version Validation at Multiple Layers
+- Status: Confirmed
+- Date: 2026-10-07
+- Decision: Validate version at 3 layers - client-side (UX), schema (type), server (data integrity)
+- Reason: Defense in depth, best user experience, prevents invalid data in database
+- Implementation:
+  1. **Client-side (Real-time)**: validateVersionProgression() on input change
+     - Immediate feedback with helpful error messages
+     - Prevents form submission if invalid
+  2. **Schema validation (Zod)**: isValidVersion() refine check
+     - Type-safe validation during form parsing
+     - Returns structured error for display
+  3. **Server-side (Before DB insert)**: validateVersionProgression() + application lookup
+     - Final check before database write
+     - Compares against current version from database (source of truth)
+     - Prevents race conditions or stale client data
+- Alternatives considered: Server-only validation, client-only validation
+- Benefits: Best UX (immediate feedback), data integrity (server validation), type safety (schema)

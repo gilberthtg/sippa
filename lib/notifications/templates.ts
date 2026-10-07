@@ -113,3 +113,51 @@ export async function notifyRequestCompleted(params: {
     entityId: String(params.requestId),
   });
 }
+
+/**
+ * PHASE 3: Notify team members (team leader, technical writer, requester)
+ */
+export async function notifyTeamAssigned(params: {
+  requestId: number;
+  requestNo: string;
+  title: string;
+  teamLeaderId: number;
+  technicalWriterId: number;
+  requesterId: number;
+}) {
+  const recipientIds = [
+    params.teamLeaderId,
+    params.technicalWriterId,
+    params.requesterId,
+  ];
+
+  // Notify team leader
+  await sendNotification({
+    type: NOTIFICATION_EVENTS.DEVELOPER_ASSIGNED,
+    recipientUserIds: [params.teamLeaderId],
+    title: `Anda Ditunjuk Sebagai Ketua Tim: ${params.requestNo}`,
+    message: `Anda ditunjuk sebagai Ketua Tim untuk permintaan "${params.title}"`,
+    entityType: 'request',
+    entityId: String(params.requestId),
+  });
+
+  // Notify technical writer
+  await sendNotification({
+    type: NOTIFICATION_EVENTS.DEVELOPER_ASSIGNED,
+    recipientUserIds: [params.technicalWriterId],
+    title: `Anda Ditunjuk Sebagai Technical Writer: ${params.requestNo}`,
+    message: `Anda ditunjuk sebagai Technical Writer untuk permintaan "${params.title}"`,
+    entityType: 'request',
+    entityId: String(params.requestId),
+  });
+
+  // Notify requester
+  await sendNotification({
+    type: NOTIFICATION_EVENTS.DEVELOPER_ASSIGNED,
+    recipientUserIds: [params.requesterId],
+    title: `Tim Telah Ditugaskan: ${params.requestNo}`,
+    message: `Tim telah ditugaskan untuk menangani permintaan "${params.title}"`,
+    entityType: 'request',
+    entityId: String(params.requestId),
+  });
+}

@@ -27,7 +27,7 @@ Primary business baseline: `CP - Gambaran Aplikasi SIPPA.pdf` provided for this 
 
 ## UI Direction
 - Soft, calm, comfortable visual language.
-- Primary color: green.
+- Primary color: red (#ed2e34).
 - UX must be prioritized over visual decoration.
 - Favor clear hierarchy, progressive disclosure, obvious status, low cognitive load, responsive layouts, accessible contrast, and consistent feedback.
 

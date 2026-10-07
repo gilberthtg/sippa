@@ -15,7 +15,7 @@ type SLAPolicy = {
   priorityId: number | null;
   priorityName: string | null;
   priorityCode: string | null;
-  targetHours: number;
+  targetBusinessDays: number; // Changed from targetHours
   isActive: boolean;
   effectiveFrom: Date | null;
   effectiveTo: Date | null;

@@ -2,7 +2,7 @@
 
 import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
-import { requests, requestAssignments, requestProgress, requestStatusHistories, users, priorities, units } from '@/lib/db/schema';
+import { requests, requestTeamAssignments, requestProgress, requestStatusHistories, users, priorities, units } from '@/lib/db/schema';
 import { eq, and, or, desc, sql, inArray } from 'drizzle-orm';
 import { logAudit } from '@/lib/utils/audit';
 import { AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
@@ -22,12 +22,12 @@ async function checkDeveloperAuth() {
 async function checkRequestAssignment(requestId: number, developerId: number) {
   const [assignment] = await db
     .select()
-    .from(requestAssignments)
+    .from(requestTeamAssignments)
     .where(
       and(
-        eq(requestAssignments.requestId, requestId),
-        eq(requestAssignments.developerId, developerId),
-        sql`${requestAssignments.unassignedAt} IS NULL`
+        eq(requestTeamAssignments.requestId, requestId),
+        eq(requestTeamAssignments.assignedUserId, developerId),
+        sql`${requestTeamAssignments.unassignedAt} IS NULL`
       )
     )
     .limit(1);
@@ -51,11 +51,11 @@ export async function getDeveloperDashboardStats() {
       })
       .from(requests)
       .innerJoin(
-        requestAssignments,
+        requestTeamAssignments,
         and(
-          eq(requests.id, requestAssignments.requestId),
-          eq(requestAssignments.developerId, authCheck.userId!),
-          sql`${requestAssignments.unassignedAt} IS NULL`
+          eq(requests.id, requestTeamAssignments.requestId),
+          eq(requestTeamAssignments.assignedUserId, authCheck.userId!),
+          sql`${requestTeamAssignments.unassignedAt} IS NULL`
         )
       );
 
@@ -70,11 +70,11 @@ export async function getDeveloperDashboardStats() {
       })
       .from(requests)
       .innerJoin(
-        requestAssignments,
+        requestTeamAssignments,
         and(
-          eq(requests.id, requestAssignments.requestId),
-          eq(requestAssignments.developerId, authCheck.userId!),
-          sql`${requestAssignments.unassignedAt} IS NULL`
+          eq(requests.id, requestTeamAssignments.requestId),
+          eq(requestTeamAssignments.assignedUserId, authCheck.userId!),
+          sql`${requestTeamAssignments.unassignedAt} IS NULL`
         )
       )
       .where(
@@ -123,8 +123,8 @@ export async function getAssignedRequests(params?: {
     const offset = (page - 1) * limit;
 
     const conditions = [
-      eq(requestAssignments.developerId, authCheck.userId!),
-      sql`${requestAssignments.unassignedAt} IS NULL`,
+      eq(requestTeamAssignments.assignedUserId, authCheck.userId!),
+      sql`${requestTeamAssignments.unassignedAt} IS NULL`,
     ];
 
     if (params?.status && params.status.length > 0) {
@@ -163,7 +163,7 @@ export async function getAssignedRequests(params?: {
         unitName: units.name,
       })
       .from(requests)
-      .innerJoin(requestAssignments, eq(requests.id, requestAssignments.requestId))
+      .innerJoin(requestTeamAssignments, eq(requests.id, requestTeamAssignments.requestId))
       .leftJoin(priorities, eq(requests.priorityId, priorities.id))
       .leftJoin(users, eq(requests.requesterId, users.id))
       .leftJoin(units, eq(requests.requesterUnitId, units.id))
@@ -175,7 +175,7 @@ export async function getAssignedRequests(params?: {
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)` })
       .from(requests)
-      .innerJoin(requestAssignments, eq(requests.id, requestAssignments.requestId))
+      .innerJoin(requestTeamAssignments, eq(requests.id, requestTeamAssignments.requestId))
       .where(and(...conditions));
 
     return {

@@ -22,6 +22,7 @@ interface DashboardStatsProps {
     completed: number;
     rejected: number;
     total: number;
+    approvedNotAssigned: number;
   };
 }
 
@@ -48,6 +49,14 @@ const statCards = [
     icon: CheckCircle,
     color: 'text-green-600',
     bgColor: 'bg-green-50',
+    link: '/admin/requests?status=approved',
+  },
+  {
+    title: 'Belum Di-assign',
+    key: 'approvedNotAssigned' as const,
+    icon: Clock,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
     link: '/admin/requests?status=approved',
   },
   {
@@ -82,14 +91,6 @@ const statCards = [
     bgColor: 'bg-red-50',
     link: '/admin/requests?status=rejected',
   },
-  {
-    title: 'Total Request',
-    key: 'total' as const,
-    icon: Clock,
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-50',
-    link: '/admin/requests',
-  },
 ];
 
 export function DashboardStats({ stats }: DashboardStatsProps) {
@@ -113,7 +114,7 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
               <CardContent>
                 <div className="text-2xl font-bold">{value}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {card.key === 'total' ? 'Semua request' : 'Klik untuk lihat detail'}
+                  Klik untuk lihat detail
                 </p>
               </CardContent>
             </Card>

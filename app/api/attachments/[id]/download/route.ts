@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
-import { requestAttachments, requests, requestAssignments } from '@/lib/db/schema';
+import { requestAttachments, requests, requestTeamAssignments } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
@@ -45,13 +45,13 @@ export async function GET(
 
     if (session.user.roleCode === 'developer') {
       const [assignment] = await db
-        .select({ id: requestAssignments.id })
-        .from(requestAssignments)
+        .select({ id: requestTeamAssignments.id })
+        .from(requestTeamAssignments)
         .where(
           and(
-            eq(requestAssignments.requestId, attachment.requestId),
-            eq(requestAssignments.developerId, session.user.id),
-            isNull(requestAssignments.unassignedAt)
+            eq(requestTeamAssignments.requestId, attachment.requestId),
+            eq(requestTeamAssignments.assignedUserId, session.user.id),
+            isNull(requestTeamAssignments.unassignedAt)
           )
         )
         .limit(1);

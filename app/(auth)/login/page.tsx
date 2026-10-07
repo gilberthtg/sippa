@@ -52,7 +52,8 @@ function LoginForm() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-            <span className="text-3xl font-bold text-primary">Si</span>
+            {/* <span className="text-3xl font-bold text-primary">Si</span> */}
+            <img src="logo.png" alt="Logo"/>
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">SiPPA</h1>
           <p className="text-gray-600">
@@ -139,7 +140,7 @@ function LoginForm() {
                 )}
               </Button>
 
-              <div className="mt-6 rounded-lg bg-muted/50 p-4 text-sm border">
+              {/* <div className="mt-6 rounded-lg bg-muted/50 p-4 text-sm border">
                 <p className="font-semibold mb-3 text-gray-900">Akun Demo</p>
                 <div className="space-y-2 text-muted-foreground">
                   <div className="flex justify-between">
@@ -158,7 +159,7 @@ function LoginForm() {
                     <span className="text-xs">Password: password123</span>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </form>
           </CardContent>
         </Card>

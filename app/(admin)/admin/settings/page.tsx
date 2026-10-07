@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Users, Building2, Flag, UsersRound, Target, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/db';
-import { users, units, priorities, teams, slaPolicies, auditLogs } from '@/lib/db/schema';
+import { users, units, priorities, slaPolicies, auditLogs } from '@/lib/db/schema';
 import { count, eq, gte } from 'drizzle-orm';
 
 async function getSettingsStats() {
@@ -18,7 +18,7 @@ async function getSettingsStats() {
     activeUsers,
     totalUnits,
     totalPriorities,
-    totalTeams,
+    // totalTeams, // Removed - teams functionality deprecated
     activeSLAPolicies,
     totalAuditLogs,
     todayAuditLogs,
@@ -27,7 +27,7 @@ async function getSettingsStats() {
     db.select({ count: count() }).from(users).where(eq(users.isActive, true)),
     db.select({ count: count() }).from(units),
     db.select({ count: count() }).from(priorities),
-    db.select({ count: count() }).from(teams),
+    // db.select({ count: count() }).from(teams), // Removed
     db.select({ count: count() }).from(slaPolicies).where(eq(slaPolicies.isActive, true)),
     db.select({ count: count() }).from(auditLogs),
     db.select({ count: count() }).from(auditLogs).where(gte(auditLogs.createdAt, today)),
@@ -38,7 +38,7 @@ async function getSettingsStats() {
     activeUsers: activeUsers[0].count,
     totalUnits: totalUnits[0].count,
     totalPriorities: totalPriorities[0].count,
-    totalTeams: totalTeams[0].count,
+    // totalTeams: totalTeams[0].count, // Removed
     activeSLAPolicies: activeSLAPolicies[0].count,
     totalAuditLogs: totalAuditLogs[0].count,
     todayAuditLogs: todayAuditLogs[0].count,
@@ -78,6 +78,8 @@ export default async function SettingsPage() {
       href: '/admin/settings/priorities',
       stats: [{ label: 'Priority Levels', value: stats.totalPriorities }],
     },
+    // Teams card removed - individual developer assignments now used
+    /*
     {
       title: 'Teams',
       description: 'Manage development teams',
@@ -85,6 +87,7 @@ export default async function SettingsPage() {
       href: '/admin/settings/teams',
       stats: [{ label: 'Total Teams', value: stats.totalTeams }],
     },
+    */
     {
       title: 'SLA Policies',
       description: 'Manage service level agreements',

@@ -23,12 +23,3 @@ export const priorities = mysqlTable('priorities', {
   sortOrder: int('sort_order').notNull().default(0),
   isActive: boolean('is_active').notNull().default(true),
 });
-
-export const teams = mysqlTable('teams', {
-  id: int('id').primaryKey().autoincrement(),
-  code: varchar('code', { length: 50 }).notNull().unique(),
-  name: varchar('name', { length: 200 }).notNull(),
-  isActive: boolean('is_active').notNull().default(true),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
-});

@@ -2,11 +2,16 @@ import { mysqlTable, varchar, text, timestamp, int, smallint, bigint, boolean, m
 import { priorities } from './master';
 import { users } from './users';
 
+/**
+ * SLA Policies Table
+ * Target SLA now calculated in BUSINESS DAYS (Mon-Fri, excluding holidays)
+ * Changed from target_hours to target_business_days
+ */
 export const slaPolicies = mysqlTable('sla_policies', {
   id: int('id').primaryKey().autoincrement(),
   requestType: mysqlEnum('request_type', ['new_application', 'rfc']),
   priorityId: smallint('priority_id').references(() => priorities.id),
-  targetHours: int('target_hours').notNull(),
+  targetBusinessDays: int('target_business_days').notNull(), // Changed from targetHours
   isActive: boolean('is_active').notNull().default(true),
   effectiveFrom: date('effective_from'),
   effectiveTo: date('effective_to'),

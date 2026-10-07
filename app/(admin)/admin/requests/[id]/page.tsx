@@ -6,9 +6,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { 
   getRequestByIdAdmin, 
-  getPriorities, 
-  getTeams, 
-  getDevelopers 
+  getPriorities,
 } from '@/app/actions/admin-requests';
 import { RequestDetailHeader } from '@/components/requests/request-detail-header';
 import { RequestDetailInfo } from '@/components/requests/request-detail-info';
@@ -26,11 +24,9 @@ export default async function AdminRequestDetailPage({ params }: PageProps) {
   const { id } = await params;
   const requestId = parseInt(id);
 
-  const [requestResult, prioritiesResult, teamsResult, developersResult] = await Promise.all([
+  const [requestResult, prioritiesResult] = await Promise.all([
     getRequestByIdAdmin(requestId),
     getPriorities(),
-    getTeams(),
-    getDevelopers(),
   ]);
 
   if (!requestResult.success || !requestResult.data) {
@@ -39,8 +35,6 @@ export default async function AdminRequestDetailPage({ params }: PageProps) {
 
   const request = requestResult.data;
   const priorities = prioritiesResult.success && prioritiesResult.data ? prioritiesResult.data : [];
-  const teams = teamsResult.success && teamsResult.data ? teamsResult.data : [];
-  const developers = developersResult.success && developersResult.data ? developersResult.data : [];
 
   return (
     <PageContainer>
@@ -97,8 +91,10 @@ export default async function AdminRequestDetailPage({ params }: PageProps) {
               priorityId: request.priorityId,
             }}
             priorities={priorities}
-            teams={teams}
-            developers={developers}
+            assignments={request.assignments || []}
+            teamLeader={request.teamLeader || null}
+            technicalWriter={request.technicalWriter || null}
+            devtiUrusan={request.devtiUrusan || null}
           />
         </div>
       </div>

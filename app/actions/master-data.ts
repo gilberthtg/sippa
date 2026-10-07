@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { units, priorities, teams } from '@/lib/db/schema';
+import { units, priorities } from '@/lib/db/schema';
 import { eq, and, or, like, desc, asc, count, sql } from 'drizzle-orm';
 import { auth } from '@/lib/auth/config';
 import { revalidatePath } from 'next/cache';
@@ -325,7 +325,10 @@ export async function togglePriorityActive(id: number, isActive: boolean) {
 }
 
 // ==================== TEAMS ====================
+// Teams functionality deprecated - replaced by individual developer assignments
+// The following functions are kept for reference but no longer used
 
+/*
 export async function getTeams(params?: {
   isActive?: boolean | null;
   search?: string;
@@ -463,3 +466,4 @@ export async function toggleTeamActive(id: number, isActive: boolean) {
 
   return { success: true };
 }
+*/

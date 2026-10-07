@@ -3,20 +3,40 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { 
   ClipboardCheck, 
   CheckCircle, 
   XCircle, 
   UserCheck,
-  Flag
+  Flag,
+  Users,
+  FileText,
+  User
 } from 'lucide-react';
 import { useState } from 'react';
 import { VerifyDialog } from './verify-dialog';
 import { ApproveDialog } from './approve-dialog';
 import { RejectDialog } from './reject-dialog';
-import { AssignmentDialog } from './assignment-dialog';
+import { TeamAssignmentDialog } from './team-assignment-dialog';
 import { PrioritySelector } from './priority-selector';
 import { REQUEST_STATUSES } from '@/lib/constants';
+
+interface Assignment {
+  id: number;
+  assignedUserId: number;
+  assignedUserName: string | null;
+  assignedUserEmail: string | null;
+  developerRoleId: number;
+  developerRoleCode: string | null;
+  developerRoleName: string | null;
+}
+
+interface TeamMember {
+  id: number;
+  name: string;
+  email: string;
+}
 
 interface RequestAdminActionsProps {
   request: {
@@ -26,15 +46,19 @@ interface RequestAdminActionsProps {
     priorityId: number | null;
   };
   priorities: Array<{ id: number; code: string; name: string }>;
-  teams: Array<{ id: number; name: string }>;
-  developers: Array<{ id: number; name: string; email: string }>;
+  assignments?: Assignment[];
+  teamLeader?: TeamMember | null;
+  technicalWriter?: TeamMember | null;
+  devtiUrusan?: string | null;
 }
 
 export function RequestAdminActions({
   request,
   priorities,
-  teams,
-  developers,
+  assignments = [],
+  teamLeader,
+  technicalWriter,
+  devtiUrusan,
 }: RequestAdminActionsProps) {
   const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
@@ -45,8 +69,12 @@ export function RequestAdminActions({
   const canApproveReject = request.status === REQUEST_STATUSES.VERIFICATION;
   const canSetPriority = 
     request.status === REQUEST_STATUSES.APPROVED || 
-    request.status === REQUEST_STATUSES.ASSIGNED;
+    request.status === REQUEST_STATUSES.ASSIGNED ||
+    request.status === REQUEST_STATUSES.IN_PROGRESS;
   const canAssign = request.status === REQUEST_STATUSES.APPROVED;
+  const isAssigned = request.status === REQUEST_STATUSES.ASSIGNED || 
+                     request.status === REQUEST_STATUSES.IN_PROGRESS ||
+                     request.status === REQUEST_STATUSES.COMPLETED;
 
   return (
     <>
@@ -126,7 +154,7 @@ export function RequestAdminActions({
             <>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Request disetujui. Assign ke team atau developer.
+                  Request disetujui. Assign tim untuk menangani request ini.
                 </p>
                 <Button
                   onClick={() => setAssignDialogOpen(true)}
@@ -134,13 +162,80 @@ export function RequestAdminActions({
                   variant="default"
                 >
                   <UserCheck className="mr-2 h-4 w-4" />
-                  Assign Request
+                  Assign Tim
                 </Button>
               </div>
+              <Separator />
             </>
           )}
 
-          {!canVerify && !canApproveReject && !canSetPriority && !canAssign && (
+          {/* Show Assignment Info */}
+          {isAssigned && (devtiUrusan || teamLeader || technicalWriter || assignments.length > 0) && (
+            <>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm font-medium">Informasi Tim</p>
+                </div>
+
+                {devtiUrusan && (
+                  <div className="text-sm">
+                    <p className="text-muted-foreground text-xs mb-1">DevTI Urusan:</p>
+                    <p className="font-medium">{devtiUrusan}</p>
+                  </div>
+                )}
+
+                {teamLeader && (
+                  <div className="text-sm">
+                    <p className="text-muted-foreground text-xs mb-1 flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      Ketua Tim:
+                    </p>
+                    <p className="font-medium">{teamLeader.name}</p>
+                    <p className="text-muted-foreground text-xs">{teamLeader.email}</p>
+                  </div>
+                )}
+
+                {technicalWriter && (
+                  <div className="text-sm">
+                    <p className="text-muted-foreground text-xs mb-1 flex items-center gap-1">
+                      <FileText className="h-3 w-3" />
+                      Technical Writer:
+                    </p>
+                    <p className="font-medium">{technicalWriter.name}</p>
+                    <p className="text-muted-foreground text-xs">{technicalWriter.email}</p>
+                  </div>
+                )}
+
+                {assignments.length > 0 && (
+                  <div className="text-sm">
+                    <p className="text-muted-foreground text-xs mb-2 flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      Developers ({assignments.length}):
+                    </p>
+                    <div className="space-y-2">
+                      {assignments.map((assignment) => (
+                        <div key={assignment.id} className="flex items-start gap-2 p-2 rounded bg-muted/50">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{assignment.assignedUserName}</p>
+                            <p className="text-xs text-muted-foreground">{assignment.assignedUserEmail}</p>
+                          </div>
+                          {assignment.developerRoleName && (
+                            <Badge variant="secondary" className="text-xs">
+                              {assignment.developerRoleCode}
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <Separator />
+            </>
+          )}
+
+          {!canVerify && !canApproveReject && !canSetPriority && !canAssign && !isAssigned && (
             <p className="text-sm text-muted-foreground text-center py-4">
               Tidak ada aksi yang tersedia untuk status saat ini
             </p>
@@ -169,13 +264,11 @@ export function RequestAdminActions({
         onOpenChange={setRejectDialogOpen}
       />
 
-      <AssignmentDialog
+      <TeamAssignmentDialog
         requestId={request.id}
         requestNo={request.requestNo}
         open={assignDialogOpen}
         onOpenChange={setAssignDialogOpen}
-        teams={teams}
-        developers={developers}
       />
     </>
   );
