@@ -42,7 +42,7 @@ import { cn } from '@/lib/utils';
 const createSLAPolicySchema = z.object({
   requestType: z.enum(['new_application', 'rfc']).refine(val => !!val, { message: 'Request type is required' }),
   priorityId: z.number().refine(val => !!val, { message: 'Priority is required' }),
-  targetHours: z.number().min(1, 'Target hours must be at least 1').max(8760, 'Target hours cannot exceed 1 year (8760 hours)'),
+  targetBusinessDays: z.number().min(1, 'Target business days must be at least 1').max(365, 'Target business days cannot exceed 1 year (365 days)'),
   effectiveFrom: z.string().nullable(),
   effectiveTo: z.string().nullable(),
 }).refine((data) => {
@@ -78,7 +78,7 @@ export function CreateSLAPolicyDialog({ open, onOpenChange, priorities }: Props)
     defaultValues: {
       requestType: undefined,
       priorityId: undefined,
-      targetHours: undefined,
+      targetBusinessDays: undefined,
       effectiveFrom: format(new Date(), 'yyyy-MM-dd'),
       effectiveTo: null,
     },
@@ -162,20 +162,20 @@ export function CreateSLAPolicyDialog({ open, onOpenChange, priorities }: Props)
 
             <FormField
               control={form.control}
-              name="targetHours"
+              name="targetBusinessDays"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Target Hours</FormLabel>
+                  <FormLabel>Target (Business Days)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
-                      placeholder="24"
+                      placeholder="7"
                       {...field}
                       onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                       value={field.value || ''}
                     />
                   </FormControl>
-                  <FormDescription>Maximum time allowed to complete the request</FormDescription>
+                  <FormDescription>Maximum business days (Mon-Fri, excluding holidays) to complete the request</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

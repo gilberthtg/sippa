@@ -27,8 +27,9 @@ import { Switch } from '@/components/ui/switch';
 import { 
   createUnit, 
   updateUnit, 
-  createTeam, 
-  updateTeam, 
+  // Teams feature deprecated in Phase 1 - functions commented out
+  // createTeam, 
+  // updateTeam, 
   createPriority, 
   updatePriority 
 } from '@/app/actions/master-data';
@@ -111,7 +112,10 @@ export function MasterDataDialog({ type, mode, open, onOpenChange, item }: Props
         if (type === 'units') {
           await createUnit({ code: data.code, name: data.name });
         } else if (type === 'teams') {
-          await createTeam({ code: data.code, name: data.name });
+          // Teams feature deprecated
+          toast.error('Teams feature has been deprecated. Use individual developer assignments instead.');
+          setIsLoading(false);
+          return;
         } else if (type === 'priorities') {
           await createPriority({ 
             code: data.code, 
@@ -126,7 +130,10 @@ export function MasterDataDialog({ type, mode, open, onOpenChange, item }: Props
         if (type === 'units') {
           await updateUnit(item.id, data);
         } else if (type === 'teams') {
-          await updateTeam(item.id, data);
+          // Teams feature deprecated
+          toast.error('Teams feature has been deprecated. Use individual developer assignments instead.');
+          setIsLoading(false);
+          return;
         } else if (type === 'priorities') {
           await updatePriority(item.id, data);
         }

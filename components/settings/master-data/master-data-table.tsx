@@ -20,7 +20,8 @@ import { Badge } from '@/components/ui/badge';
 import { MoreVertical, Pencil, ToggleLeft, ToggleRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
-import { toggleUnitActive, toggleTeamActive, togglePriorityActive } from '@/app/actions/master-data';
+import { toggleUnitActive, togglePriorityActive } from '@/app/actions/master-data';
+// Teams feature deprecated - toggleTeamActive removed
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
@@ -54,7 +55,9 @@ export function MasterDataTable({ type, items, onEdit, pagination }: Props) {
       if (type === 'units') {
         await toggleUnitActive(item.id, !item.isActive);
       } else if (type === 'teams') {
-        await toggleTeamActive(item.id, !item.isActive);
+        // Teams feature deprecated
+        toast.error('Teams feature has been deprecated. Use individual developer assignments instead.');
+        return;
       } else if (type === 'priorities') {
         await togglePriorityActive(item.id, !item.isActive);
       }

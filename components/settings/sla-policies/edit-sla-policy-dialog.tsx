@@ -43,7 +43,7 @@ import { cn } from '@/lib/utils';
 const editSLAPolicySchema = z.object({
   requestType: z.enum(['new_application', 'rfc']).refine(val => !!val, { message: 'Request type is required' }),
   priorityId: z.number().refine(val => !!val, { message: 'Priority is required' }),
-  targetHours: z.number().min(1, 'Target hours must be at least 1').max(8760, 'Target hours cannot exceed 1 year'),
+  targetBusinessDays: z.number().min(1, 'Target business days must be at least 1').max(365, 'Target business days cannot exceed 1 year'),
   effectiveFrom: z.string().nullable(),
   effectiveTo: z.string().nullable(),
   isActive: z.boolean(),
@@ -63,7 +63,7 @@ type SLAPolicy = {
   id: number;
   requestType: string | null;
   priorityId: number | null;
-  targetHours: number;
+  targetBusinessDays: number;
   effectiveFrom: Date | null;
   effectiveTo: Date | null;
   isActive: boolean;
@@ -91,7 +91,7 @@ export function EditSLAPolicyDialog({ open, onOpenChange, policy, priorities }: 
     defaultValues: {
       requestType: (policy.requestType as 'new_application' | 'rfc') || undefined,
       priorityId: policy.priorityId || undefined,
-      targetHours: policy.targetHours,
+      targetBusinessDays: policy.targetBusinessDays,
       effectiveFrom: policy.effectiveFrom ? format(new Date(policy.effectiveFrom), 'yyyy-MM-dd') : null,
       effectiveTo: policy.effectiveTo ? format(new Date(policy.effectiveTo), 'yyyy-MM-dd') : null,
       isActive: policy.isActive,
@@ -102,7 +102,7 @@ export function EditSLAPolicyDialog({ open, onOpenChange, policy, priorities }: 
     form.reset({
       requestType: (policy.requestType as 'new_application' | 'rfc') || undefined,
       priorityId: policy.priorityId || undefined,
-      targetHours: policy.targetHours,
+      targetBusinessDays: policy.targetBusinessDays,
       effectiveFrom: policy.effectiveFrom ? format(new Date(policy.effectiveFrom), 'yyyy-MM-dd') : null,
       effectiveTo: policy.effectiveTo ? format(new Date(policy.effectiveTo), 'yyyy-MM-dd') : null,
       isActive: policy.isActive,
@@ -186,10 +186,10 @@ export function EditSLAPolicyDialog({ open, onOpenChange, policy, priorities }: 
 
             <FormField
               control={form.control}
-              name="targetHours"
+              name="targetBusinessDays"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Target Hours</FormLabel>
+                  <FormLabel>Target (Business Days)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -197,6 +197,7 @@ export function EditSLAPolicyDialog({ open, onOpenChange, policy, priorities }: 
                       onChange={(e) => field.onChange(Number(e.target.value))}
                     />
                   </FormControl>
+                  <FormDescription>Maximum business days (Mon-Fri, excluding holidays) to complete the request</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

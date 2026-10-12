@@ -29,7 +29,7 @@ type SLAPolicy = {
   priorityId: number | null;
   priorityName: string | null;
   priorityCode: string | null;
-  targetHours: number;
+  targetBusinessDays: number;
   isActive: boolean;
   effectiveFrom: Date | null;
   effectiveTo: Date | null;
@@ -86,7 +86,7 @@ export function SLAPolicyTable({ policies, onEdit, pagination }: Props) {
             <TableRow>
               <TableHead>Request Type</TableHead>
               <TableHead>Priority</TableHead>
-              <TableHead>Target (Hours)</TableHead>
+              <TableHead>Target (Business Days)</TableHead>
               <TableHead>Effective From</TableHead>
               <TableHead>Effective To</TableHead>
               <TableHead>Status</TableHead>
@@ -102,7 +102,7 @@ export function SLAPolicyTable({ policies, onEdit, pagination }: Props) {
                 <TableCell>
                   <Badge variant="outline">{policy.priorityName || '-'}</Badge>
                 </TableCell>
-                <TableCell>{policy.targetHours}h</TableCell>
+                <TableCell>{policy.targetBusinessDays} days</TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {policy.effectiveFrom ? format(new Date(policy.effectiveFrom), 'dd MMM yyyy') : '-'}
                 </TableCell>
