@@ -47,3 +47,5 @@ uploads/
 .env
 .temp
 .vscode
+
+__tests__

@@ -114,9 +114,17 @@ export function isWeekend(date: Date): boolean {
  * @returns True if holiday, false otherwise
  */
 export function isHoliday(date: Date, holidays: Date[]): boolean {
-  const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+  // Normalize both dates to YYYY-MM-DD format in local time to avoid timezone issues
+  const normalizeDate = (d: Date): string => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  const dateStr = normalizeDate(date);
   return holidays.some(holiday => {
-    const holidayStr = holiday.toISOString().split('T')[0];
+    const holidayStr = normalizeDate(holiday);
     return holidayStr === dateStr;
   });
 }
@@ -297,8 +305,8 @@ export function extractApplicationName(title: string): string {
     name = name.replace(regex, '');
   }
   
-  // Remove version suffixes if any
-  name = name.replace(/\s+v?\d+(\.\d+)*$/i, '');
+  // Remove version suffixes if any (must do this before removing trailing punctuation)
+  name = name.replace(/\s+v?\d+(\.\d+)*[.,;:!?]*$/i, '');
   
   // Remove trailing punctuation
   name = name.replace(/[.,;:!?]+$/, '');

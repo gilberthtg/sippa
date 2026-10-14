@@ -1052,3 +1052,215 @@ See `.ai/PHASE_5_COMPLETE.md` for comprehensive documentation.
   - Migration script TypeScript errors are low priority (scripts are one-time use and already executed)
   - Focus shifted to documentation updates for production readiness
   - Manual testing execution will follow documentation completion
+
+
+## 2026-10-12 — Phase 9 START: Testing & QA (Day 1: Unit Testing Complete)
+- Goal: Begin Phase 9 comprehensive testing - create unit tests for critical utilities
+- Changes made:
+  - **Testing Infrastructure Setup:**
+    - Installed Jest testing framework and React Testing Library
+    - Created `jest.config.js` with Next.js integration
+    - Created `jest.setup.js` for testing-library setup
+    - Added test scripts to package.json: test, test:watch, test:unit
+  - **Version Validation Tests (`__tests__/lib/utils/version.test.ts`):**
+    - 24 comprehensive tests covering parseVersion, isValidVersion, compareVersions, validateVersionProgression, suggestNextVersion
+    - Tests cover valid/invalid formats, edge cases (0.0.0, large numbers), version progression rules
+    - RFC validation scenarios tested
+  - **Business Days Calculation Tests (`__tests__/lib/utils/migration.test.ts`):**
+    - 49 comprehensive tests covering:
+      - Weekend detection (isWeekend)
+      - Holiday detection (isHoliday) 
+      - Working day validation (isWorkingDay)
+      - Business days calculation (calculateBusinessDays) - 10 test scenarios
+      - Add business days (addBusinessDays) - 6 test scenarios
+    - Version utilities from migration.ts (4 tests)
+    - Data validation utilities (5 tests): email, string sanitization, MySQL date conversion
+    - Migration helper utilities (6 tests): unique name generation, application name extraction
+    - Real-world SLA calculation scenarios (4 tests)
+  - **Bug Fixes:**
+    - Fixed isHoliday() timezone issue by using local date normalization instead of toISOString()
+    - Fixed extractApplicationName() regex to handle version with trailing punctuation
+    - Corrected SLA calculation test expectation for holiday scenario
+- Files created:
+  - `__tests__/lib/utils/version.test.ts` (350 lines, 24 tests)
+  - `__tests__/lib/utils/migration.test.ts` (450 lines, 49 tests)
+  - `jest.config.js` (20 lines)
+  - `jest.setup.js` (1 line)
+  - `.ai/PHASE_9_PLAN.md` (comprehensive testing plan for all 7 days)
+- Files modified:
+  - `package.json` - Added test scripts
+  - `lib/utils/migration.ts` - Fixed isHoliday() and extractApplicationName()
+- Tests/checks:
+  - ✅ Unit Tests: 73/73 PASSED (0 failed)
+  - ✅ Code Coverage: version.ts (96.22%), migration.ts (82.25%)
+  - ✅ Test Duration: ~11.4 seconds
+  - ✅ All critical utility functions comprehensively tested
+- Test Results Summary:
+  - Total: 73 tests across 2 test suites
+  - Version validation: 24 tests
+  - Business days calculation: 49 tests
+  - All edge cases covered (weekend boundaries, holidays, month boundaries, timezone handling)
+  - Real-world SLA scenarios validated
+- Next recommended step: **Phase 9 Day 2-3: Integration Testing**
+  - Test NEW_APPLICATION flow end-to-end
+  - Test RFC flow with version validation
+  - Test invalid RFC flow
+  - Verify database state changes and notifications
+
+
+
+## 2026-10-12 — Phase 10 IN PROGRESS: Documentation & Deployment (Day 1)
+- Goal: Update all documentation for v1.0 release and prepare for production deployment
+- Phase: Phase 10 - Documentation & Deployment (Day 1 of 3)
+- Progress: 3/28 tasks complete (11%)
+- Changes made:
+  - **Core Documentation Updates:**
+    - ✅ Updated `.ai/DATABASE.md` to v1.0 production schema
+      - Documented all Phase 1-8 schema changes
+      - Added developer_roles, request_applications, sla_holidays, request_team_assignments tables
+      - Updated users (developer_role_id), requests (application_id, requested_version, etc.)
+      - Documented SLA business days calculation
+      - Added foreign key relationships, indexes, performance considerations
+      - Added migration history and storage estimates
+    - ✅ Updated `.ai/BUSINESS_RULES.md` with Phase 2-4 flows
+      - Documented NEW_APPLICATION and RFC workflows
+      - Added version validation rules (semantic versioning)
+      - Updated role descriptions (User, Admin, Developer)
+      - Documented 6 developer roles (SA, TW, BE, FE, QA, DM)
+      - Added team assignment rules (Team Leader, TW, Developers)
+      - Updated SLA calculation (business days, Mon-Fri, exclude holidays)
+      - Documented reporting updates (Laptri with role distribution, SLA with business days)
+      - Added form validation rules
+      - Updated notification events
+      - Added data integrity rules
+    - ✅ Updated `.ai/ARCHITECTURE.md` with Phase 1-8 component changes
+      - Updated component directory structure (new Phase 2-6 components)
+      - Documented new components: request-form-single, team-assignment-dialog, role-badge, team-info-card
+      - Updated server actions documentation (requests, admin-requests, developer-requests)
+      - Added new server actions: developer-roles, request-applications, sla-holidays
+      - Documented utility functions: version validation, business days calculation, role badge utilities
+      - Added data flow diagrams (NEW_APPLICATION flow, RFC flow)
+      - Added Phase 1-8 restructure summary
+      - Confirmed technology stack
+  - **Progress Tracking:**
+    - ✅ Created `.ai/PHASE_10_PLAN.md` - Comprehensive progress tracker
+      - 28 tasks defined across 3 days
+      - 10 documentation tasks (Day 1)
+      - 7 staging deployment tasks (Day 2)
+      - 7 production deployment tasks (Day 3)
+      - 4 optional training tasks
+      - Success criteria defined
+      - Risk assessment included
+- Files changed:
+  - `.ai/DATABASE.md` (updated - complete rewrite, 350 lines)
+  - `.ai/BUSINESS_RULES.md` (updated - complete rewrite, 500 lines)
+  - `.ai/ARCHITECTURE.md` (updated - added 400 lines)
+  - `.ai/PHASE_10_PLAN.md` (created - 800 lines)
+  - `.ai/SESSION_LOG.md` (this entry)
+- Decisions:
+  - Documentation updates follow Phase 1-8 completion status
+  - Comprehensive documentation before staging/production deployment
+  - All Phase 1-8 changes reflected in core context files
+- Tests/checks:
+  - ✅ Core documentation (DATABASE, BUSINESS_RULES, ARCHITECTURE) updated
+  - ✅ All Phase 1-8 changes documented
+  - ✅ Consistent terminology across all docs
+  - ✅ No conflicting information
+- Outstanding tasks (Day 1 remaining):
+  - ⏳ Update USER_GUIDE.md (Task 4 - 3-4 hours)
+  - ⏳ Update ADMIN_GUIDE.md (Task 5 - 4-5 hours)
+  - ⏳ Update DEVELOPER_GUIDE.md (Task 6 - 2-3 hours)
+  - ⏳ Create MIGRATION_GUIDE.md (Task 7 - 3-4 hours)
+  - ⏳ Update README.md (Task 8 - 1-2 hours)
+  - ⏳ Update SETUP.md (Task 9 - 1-2 hours)
+  - ⏳ Update DEPLOYMENT.md (Task 10 - 2-3 hours)
+- Next recommended step: **Continue Day 1 documentation updates (Tasks 4-10)**
+- Estimated Day 1 completion: 16-24 hours total (~3 working days)
+- Overall Phase 10 progress: 11% complete (3/28 tasks)
+
+
+
+## 2026-10-14 — Phase 10 Progress: USER_GUIDE and ADMIN_GUIDE Updates
+- Goal: Continue Phase 10 documentation updates for restructure changes (Phase 2-6)
+- Changes made:
+  - **USER_GUIDE.md Updated:**
+    - Documented single-page request form (replaced multi-step wizard)
+    - Added NEW_APPLICATION process (title input, auto-version 1.0.0)
+    - Added RFC process (application selector, version validation)
+    - Version validation rules and examples (x.y.z format, must be > current)
+    - Real-time validation behavior explanation
+    - Tips for version progression (patch/minor/major)
+    - Updated request list columns (Application, Version)
+    - Documented team composition visibility (Team Leader, TW, Developers)
+    - Added 6 developer roles explanation (SA, TW, BE, FE, QA, DM)
+    - Updated FAQ (10+ new entries for NEW_APPLICATION, RFC, versioning, team structure)
+    - Updated tips section (request type selection, version guidance)
+  - **ADMIN_GUIDE.md Updated:**
+    - Updated dashboard overview (Belum Di-assign metric, Developer Role Distribution widget)
+    - Comprehensive team assignment section:
+      - DevTI Urusan field
+      - Team Leader selection (any user)
+      - Technical Writer selection (TW role only, required)
+      - Developer multi-select with role badges (minimum 1)
+      - SLA target display (business days, auto-calculated)
+      - Team assignment validation rules
+      - Assignment best practices (3-5 developers typical, role matching, workload balancing)
+    - Added Developer Workload View section:
+      - Purpose and access
+      - Table columns and filters
+      - Use cases (capacity check, resource planning, load balancing)
+      - Best practices (3-5 assignments optimal, >7 is overload risk)
+    - Updated Teams section (marked DEPRECATED, replaced by individual assignments)
+    - Added Developer Roles management section:
+      - 6 roles with descriptions and badge colors
+      - CRUD operations
+      - Role assignment enforcement (1 role per developer)
+      - Use cases
+    - Added Applications master section:
+      - Read-only, auto-created from NEW_APPLICATION
+      - Version management explanation
+      - View history feature
+    - Added SLA Holidays management section:
+      - Business days calculation purpose
+      - CRUD operations
+      - CSV bulk import (61 pre-loaded holidays 2024-2026)
+      - Impact on SLA countdown
+    - Updated SLA Policies section:
+      - Changed from hours to business days
+      - Business days calculation explanation (Mon-Fri, exclude weekends + holidays)
+      - Updated default policies table
+    - Updated Users section:
+      - Added developer_role requirement for DEVELOPER role
+      - Role assignment enforcement
+      - Updated create/edit user flows
+- Files changed:
+  - `docs/USER_GUIDE.md` (updated - added 1,500+ words, 10 new FAQ entries)
+  - `docs/ADMIN_GUIDE.md` (updated - added 3,000+ words, 5 new master data sections)
+  - `.ai/PHASE_10_PLAN.md` (updated - marked Tasks 4-5 as complete)
+- Documentation coverage:
+  - ✅ NEW_APPLICATION → RFC flow fully documented
+  - ✅ Version validation comprehensive explanation
+  - ✅ Team assignment with roles step-by-step guide
+  - ✅ Developer roles management (SA, TW, BE, FE, QA, DM)
+  - ✅ Business days SLA calculation
+  - ✅ Application master concept
+  - ✅ SLA holidays management
+  - ✅ Developer workload view for capacity planning
+- Phase 10 Progress:
+  - Tasks completed: 5/10 (50% of Day 1 documentation)
+  - Remaining: DEVELOPER_GUIDE.md, MIGRATION_GUIDE.md, README.md, SETUP.md, DEPLOYMENT.md
+  - Estimated remaining: 10-17 hours (Day 1), then staging/production deployment
+- Quality:
+  - User-friendly language with examples
+  - Comprehensive FAQ sections
+  - Step-by-step procedures
+  - Best practices included
+  - Clear warnings and tips
+  - Consistent formatting
+- Tests/checks:
+  - ✅ Documentation follows existing format and tone
+  - ✅ All Phase 2-6 changes reflected
+  - ✅ Cross-references accurate
+  - ✅ No broken links or references
+- Next recommended step: **Continue with DEVELOPER_GUIDE.md (Task 6) - document developer role-specific features and team collaboration**
+

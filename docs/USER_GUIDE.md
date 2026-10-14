@@ -59,24 +59,66 @@ From the sidebar, click **Request Baru** or the "+ Request Baru" button on dashb
 
 ### Step 2: Choose Request Type
 
+SiPPA now uses a **single-page form** that adapts based on your request type.
+
 Select one of:
 
 **New Application**
-- For entirely new applications/systems
+- For entirely new applications/systems that don't exist yet
 - Examples: New employee portal, new reporting system, new mobile app
+- System will automatically assign version "1.0.0"
 
 **RFC (Request for Change)**
-- For changes to existing applications
+- For changes, updates, or enhancements to **existing applications**
 - Examples: Add new feature, fix bug, modify workflow, update UI
+- You'll select which application and specify the new version
 
 ### Step 3: Fill Request Information
 
+#### For New Application:
+
 **Title** (required)
-- Brief, descriptive title
-- Example: "Employee Self-Service Portal" or "Add Export to Excel in HR Report"
+- Name of the new application you want
+- Example: "Employee Self-Service Portal" or "HR Dashboard System"
+- Must be at least 3 characters
+
+**Version**
+- Automatically set to "1.0.0" (not editable)
+- This will be the first version of your new application
+
+#### For RFC (Request for Change):
+
+**Select Application** (required)
+- Choose from dropdown of existing applications
+- Shows application name and current version
+- Example: "SIPPA HR System (v1.2.3)"
+- Only applications from approved requests appear here
+
+**Requested Version** (required)
+- Enter the new version number you're requesting
+- Format: x.y.z (example: 1.2.4, 1.3.0, 2.0.0)
+- **Must be higher than current version**
+- System validates in real-time
+
+**Version Validation:**
+- ✅ Valid: Current v1.2.3 → Requested v1.2.4 (patch update)
+- ✅ Valid: Current v1.2.3 → Requested v1.3.0 (minor update)  
+- ✅ Valid: Current v1.2.3 → Requested v2.0.0 (major update)
+- ❌ Invalid: Current v1.2.3 → Requested v1.2.3 (same version)
+- ❌ Invalid: Current v1.2.3 → Requested v1.2.0 (lower version)
+
+💡 **Tip:** Not sure what version to use?
+- **Patch (x.y.Z)**: Bug fixes, small changes (1.2.3 → 1.2.4)
+- **Minor (x.Y.z)**: New features, no breaking changes (1.2.3 → 1.3.0)
+- **Major (X.y.z)**: Major changes, breaking changes (1.2.3 → 2.0.0)
+
+System will show helpful suggestions if you enter an invalid version.
+
+#### For Both Types:
 
 **Description** (required)
 - Detailed explanation of what you need
+- Minimum 20 characters
 - Be specific about requirements
 - Include:
   - What problem this solves
@@ -89,9 +131,8 @@ Select importance level:
 - **Low** - Can wait, no deadline pressure
 - **Medium** - Important but not critical
 - **High** - Important with near-term deadline
-- **Critical** - Urgent, blocking work
 
-💡 **Tip:** Admins will set final priority considering other factors.
+💡 **Tip:** Admins will set final priority considering other factors like business impact and available resources.
 
 ### Step 4: Add Attachments (Optional)
 
@@ -120,6 +161,17 @@ Review your information:
 
 Click **Submit Request** when ready.
 
+### Step 6: Review and Submit
+
+Review your information:
+- Check request type (New Application or RFC)
+- For New Application: Verify title and description
+- For RFC: Verify application selection and version number
+- Confirm urgency level
+- Confirm attachments uploaded correctly
+
+Click **Submit Request** when ready.
+
 ### After Submission
 
 ✅ You'll see a success message with your request number (e.g., REQ-2026-001)
@@ -127,6 +179,16 @@ Click **Submit Request** when ready.
 📧 You'll receive a notification confirming submission
 
 📊 Request appears in your DevTI Request list with status: **SUBMITTED**
+
+#### What Happens Next for New Application:
+1. Admin reviews and approves/rejects
+2. If approved, your application becomes part of the application master list
+3. Future RFCs can reference this application
+
+#### What Happens Next for RFC:
+1. Admin reviews version change request
+2. Validates that version progression makes sense
+3. If approved and completed, application version updates in the system
 
 ---
 
@@ -141,7 +203,8 @@ Click **Submit Request** when ready.
 
 - **Request No** - Unique identifier (REQ-2026-XXX)
 - **Type** - New Application or RFC
-- **Title** - Request title
+- **Title / Application** - Request title (for New Application) or Application name (for RFC)
+- **Version** - For RFC: shows requested version
 - **Status** - Current workflow status
 - **Priority** - Set by admin after approval
 - **Submitted** - Date you submitted
@@ -173,9 +236,22 @@ Click on any request to see:
 
 **Request Information**
 - Request number, type, title
+- For RFC: Application name and requested version
 - Description and urgency
 - Your unit
 - Current status and priority
+
+**Team Assignment** (if assigned)
+Once your request is assigned, you can see:
+- **DevTI Urusan** - Which DevTI division is handling it
+- **Team Leader** - Project coordinator
+- **Technical Writer** - Documentation specialist
+- **Assigned Developers** - Team members with their specific roles:
+  - System Analyst (SA)
+  - Backend Developer (BE)
+  - Frontend Developer (FE)
+  - Quality Assurance (QA)
+  - Data Management (DM)
 
 **Timeline**
 Visual history showing:
@@ -233,6 +309,38 @@ You'll receive notifications when:
 
 ## ❓ FAQ
 
+### What's the difference between New Application and RFC?
+
+**New Application**: For brand new systems that don't exist yet. The system automatically assigns version "1.0.0" and creates a new entry in the application master list when approved.
+
+**RFC (Request for Change)**: For changes to existing applications. You must select an existing application and specify a version number higher than the current version.
+
+### How do I know what version to request for RFC?
+
+The system shows the current version when you select an application. Your requested version must be higher. Guidelines:
+- **Patch update** (1.2.3 → 1.2.4): Bug fixes, small changes
+- **Minor update** (1.2.3 → 1.3.0): New features
+- **Major update** (1.2.3 → 2.0.0): Significant changes
+
+If you're unsure, use a minor update (increment the middle number). The system will validate and suggest corrections if needed.
+
+### Why can't I submit an RFC with version 1.2.3 when current is 1.2.3?
+
+Version numbers must always increase. Same or lower versions are not allowed because they would create confusion. The system requires version progression to track application evolution properly.
+
+### Can I submit a New Application with the same name as an existing one?
+
+When admins approve your New Application, it creates a new entry in the application master. It's best to check with admin if you're unsure whether an application already exists. You might need to submit an RFC instead.
+
+### Who are the team members I see on my request?
+
+Once assigned, you'll see:
+- **Team Leader**: Coordinates the project
+- **Technical Writer**: Creates documentation
+- **Developers**: Multiple specialists with specific roles (backend, frontend, QA, etc.)
+
+This team structure ensures your request is handled by the right expertise.
+
 ### How long does approval take?
 
 Typically 1-3 business days. Admins review requests in submission order and may contact you for clarification.
@@ -252,16 +360,22 @@ Check rejection reason in request detail timeline. Common reasons:
 - Insufficient information
 - Out of scope for DevTI
 - Budget/resource constraints
+- For RFC: Version validation issues
 
 You can resubmit with corrections after addressing the issues.
 
 ### What happens after approval?
 
 1. Admin sets priority based on urgency and business impact
-2. Admin assigns to appropriate developer or team
-3. You receive "assigned" notification
-4. Developer begins work and provides progress updates
+2. Admin assigns to appropriate team:
+   - Selects Team Leader
+   - Assigns Technical Writer
+   - Assigns multiple developers with specific roles
+3. You receive "assigned" notification with team details
+4. Team begins work and provides progress updates
 5. You receive "completed" notification when finished
+6. For New Application: Application added to master list
+7. For RFC: Application version updated in system
 
 ### How do I know progress?
 
@@ -270,20 +384,22 @@ Check request detail page for:
 - Progress percentage (if in progress)
 - Developer notes in progress section
 - Timeline history
+- Team composition and their roles
 
 ### Can I contact the developer directly?
 
-For progress questions, check updates on request detail page first. For urgent clarifications, contact admin who will coordinate with developer.
+For progress questions, check updates on request detail page first. For urgent clarifications, contact admin who will coordinate with the team.
 
 ### What if I have a critical issue?
 
-- Mark urgency as "Critical" when submitting
+- Mark urgency as "High" when submitting
 - Contact admin immediately via phone/email
 - Provide request number for faster processing
+- Admin will prioritize based on business impact
 
 ### Can I submit multiple requests?
 
-Yes, no limit. Each request is tracked independently.
+Yes, no limit. Each request is tracked independently. You can submit multiple New Applications or RFCs.
 
 ### What file types can I upload?
 
@@ -332,9 +448,18 @@ Use the same URL and credentials.
 
 ## 💡 Tips for Better Requests
 
+### Choose the Right Type
+- **New Application**: Only for brand new systems
+- **RFC**: For any change to existing systems
+
 ### Be Specific
 ❌ "Fix the system"  
 ✅ "Add search functionality to employee directory that filters by name and department"
+
+### For RFC: Know Your Version
+- Check current version in the dropdown
+- Request next logical version
+- System helps with validation and suggestions
 
 ### Provide Context
 Include:
@@ -351,6 +476,9 @@ Not everything is critical. Honest urgency helps admins prioritize effectively.
 
 ### Follow Up
 Check notifications and progress updates regularly.
+
+### Understand the Team
+Once assigned, you'll see the full team working on your request. Each member has a specific role to ensure quality delivery.
 
 ---
 

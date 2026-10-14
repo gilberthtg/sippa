@@ -51,7 +51,7 @@ As an admin, you are responsible for:
 
 Your admin dashboard displays:
 
-### Incoming Queue
+### Incoming Queue (Belum Di-review)
 New submitted requests awaiting initial review.  
 **Action needed:** Review and move to verification or approval.
 
@@ -59,22 +59,37 @@ New submitted requests awaiting initial review.
 Requests under detailed review.  
 **Action needed:** Approve or reject.
 
-### Approved but Unassigned
-Approved requests without developer assignment.  
-**Action needed:** Set priority and assign.
+### Approved but Unassigned (Belum Di-assign)
+Approved requests without team assignment.  
+**Action needed:** Set priority and assign team.  
+**Critical metric:** Minimize this queue to avoid delays.
 
 ### In Progress
-Currently active requests being developed.  
+Currently active requests being developed by assigned teams.  
 **Monitor:** Track progress and SLA status.
 
 ### SLA Attention
 Requests approaching or exceeding SLA deadlines.  
 **Action needed:** Review and prioritize.
 
+###Developer Role Distribution Widget
+Visual breakdown showing how many requests involve each developer role:
+- **SA (System Analyst)** - Purple: Requirements and design
+- **TW (Technical Writer)** - Blue: Documentation
+- **BE (Backend Developer)** - Green: Server-side development
+- **FE (Frontend Developer)** - Yellow: User interface
+- **QA (Quality Assurance)** - Red: Testing and quality
+- **DM (Data Management)** - Indigo: Database work
+
+**Use this to:**
+- Identify role bottlenecks
+- Balance team assignments
+- Plan capacity by specialty
+
 ### Quick Stats
 - Total requests (all time)
 - Completed this month
-- Average completion time
+- Average completion time (business days)
 - SLA achievement rate
 
 ---
@@ -158,28 +173,94 @@ For approved requests:
 2. Select appropriate priority level
 3. Priority determines SLA target (configured in SLA Policies)
 
-#### 4. Assign to Developer/Team
+#### 4. Assign Team to Request
+
+**Important:** Team assignment is now individual-based with specific roles, not team-based. You'll assign multiple developers with their specialized roles.
 
 **Steps:**
-1. Click **Assign** button
-2. Select assignment type:
-   - **Team** - Assign to team (team lead will delegate)
-   - **Developer** - Assign directly to specific developer
+1. Click **Assign Team** button on approved request
+2. Team Assignment Dialog opens with the following fields:
 
-3. Choose from dropdown:
-   - Active teams or developers only
-   - See current workload if available
+**a. DevTI Urusan** (required)
+- Text input field
+- Specify which DevTI division/section handles this request
+- Example: "Pengembangan Aplikasi Internal", "Integrasi Sistem"
+- Helps track workload by division
 
-4. Click **Assign**
-5. Developer receives assignment notification
-6. Request status changes to ASSIGNED
+**b. Team Leader** (required)
+- Dropdown of all users (any role: User, Admin, or Developer)
+- Select the project coordinator/liaison
+- Team Leader responsibilities:
+  - Coordinates project activities
+  - Acts as main contact for requester
+  - Monitors progress and timeline
+- Can be admin, regular user, or developer
+
+**c. Technical Writer** (required)
+- Dropdown filtered to developers with Technical Writer (TW) role only
+- Must assign exactly 1 Technical Writer
+- TW responsibilities:
+  - Creates technical documentation
+  - Writes user guides
+  - Maintains documentation standards
+
+**d. Assign Developers** (required, minimum 1)
+- Multi-select list showing all active developers
+- Each developer shows their role badge:
+  - **SA** (System Analyst) - Purple badge
+  - **BE** (Backend Developer) - Green badge
+  - **FE** (Frontend Developer) - Yellow badge
+  - **QA** (Quality Assurance) - Red badge
+  - **DM** (Data Management) - Indigo badge
+  - **TW** (Technical Writer) - Blue badge (listed here but should be selected above)
+- Check boxes for developers you want to assign
+- Typical assignment: 3-5 developers with complementary roles
+- Example team:
+  ```
+  ☑ Ahmad Nur (Backend Developer)
+  ☑ Siti Aminah (Frontend Developer)
+  ☑ Budi Santoso (Quality Assurance)
+  ☐ Dewi Lestari (Data Management)
+  ```
+
+**e. SLA Target** (auto-calculated)
+- Automatically displayed based on request type + priority
+- Shows: "Target: X hari kerja" (business days)
+- Business days = Monday-Friday, excluding holidays
+- Read-only, set by SLA policies
+
+3. Review team composition
+4. Click **Assign Team**
+5. System creates individual assignments for each team member
+6. Request status changes to IN_PROGRESS
+7. Notifications sent to ALL team members:
+   - Team Leader
+   - Technical Writer
+   - All assigned developers
+   - Requester (FYI)
+
+**Assignment Validation:**
+- System ensures:
+  - Technical Writer has TW role
+  - At least 1 developer assigned
+  - DevTI Urusan is specified
+  - Team Leader is selected
+  - All roles are valid and active
 
 **Assignment Best Practices:**
-- Balance workload across developers
-- Match skills to request type
-- Consider current assignments
-- Team assignment for large/complex requests
-- Direct assignment for specific expertise needs
+- **Balance workload:** Check Developer Workload view before assigning
+- **Match skills:** 
+  - BE for server-side work, APIs, database
+  - FE for UI, user experience
+  - SA for requirements analysis, system design
+  - QA for testing, quality assurance
+  - DM for database design, data migration
+- **Team size:** 
+  - Small requests: 2-3 developers (e.g., 1 BE + 1 FE or 1 BE + 1 QA)
+  - Medium requests: 3-4 developers (e.g., 1 SA + 1 BE + 1 FE + 1 QA)
+  - Large requests: 4-6 developers (full team with all roles)
+- **Technical Writer:** Required for all requests (documentation is mandatory)
+- **Team Leader:** Choose someone with project coordination skills
 
 ### Monitoring Progress
 
@@ -193,6 +274,47 @@ For approved requests:
 - Contact developer for status
 - Reassign if necessary
 - Update requester with realistic timeline
+
+### Developer Workload View
+
+**Purpose:** Help balance assignments across developers and identify over/under-utilized resources.
+
+**Access:** From dashboard or before assigning teams
+
+**Displays:**
+- List of all developers with DEVELOPER role
+- Current active assignments per developer
+- Developer role specialization (SA, TW, BE, FE, QA, DM)
+- SLA status of their assignments
+
+**Table Columns:**
+- **Developer Name**
+- **Role** - Specialty badge (BE, FE, QA, etc.)
+- **Active Assignments** - Count of IN_PROGRESS requests
+- **Unit** - Developer's organizational unit
+- **SLA Status** - Summary (X met, Y exceeded)
+
+**Filters:**
+- By Developer Role (SA, TW, BE, FE, QA, DM, All)
+- By Unit
+- By Workload (low to high)
+
+**Sort:**
+- By Name
+- By Active Assignments (identifies overloaded developers)
+- By Developer Role
+
+**Use Cases:**
+- **Before assignment:** Check who has capacity
+- **Resource planning:** Identify hiring needs
+- **Load balancing:** Redistribute if someone is overloaded
+- **Performance review:** See completion rates
+
+**Best Practices:**
+- Aim for 3-5 active assignments per developer
+- Consider role specialization when assigning
+- Monitor developers with >7 active assignments (risk of burnout)
+- Balance complex requests across multiple developers
 
 ### Request Detail View
 
@@ -364,25 +486,163 @@ Manage priority levels for requests.
 
 ### Teams
 
-Manage developer teams.
+⚠️ **DEPRECATED:** Team-based assignment has been replaced with individual role-based assignment in the restructure.
 
-**Default Teams:**
-- Backend Team
-- Frontend Team
+**Old Approach (No longer used):**
+- Developers were organized into predefined teams
+- Requests were assigned to entire teams
+- Team leads delegated within the team
+
+**New Approach (Current):**
+- Developers have specific roles (SA, TW, BE, FE, QA, DM)
+- Admin assigns individuals with appropriate roles for each request
+- More flexible and better matches skills to needs
+
+**Historical Data:**
+- Old team information is preserved for historical requests
+- You can still view old team assignments in completed requests
+- No new team-based assignments can be created
+
+**See:** Developer Roles section below for current role management.
+
+### Developer Roles
+
+Manage specialized developer roles for role-based assignment.
+
+**Navigation:** Settings → Developer Roles
+
+**Available Roles:**
+
+| Code | Name | Description | Badge Color |
+|------|------|-------------|-------------|
+| **SA** | System Analyst | Requirements analysis and system design | Purple |
+| **TW** | Technical Writer | Technical documentation and user guides | Blue |
+| **BE** | Backend Developer | Server-side development, APIs, databases | Green |
+| **FE** | Frontend Developer | User interface and client-side development | Yellow |
+| **QA** | Quality Assurance | Testing, quality control, bug tracking | Red |
+| **DM** | Data Management | Database design, data migration, data tasks | Indigo |
 
 **Actions:**
-- **Add New Team** - Create team
-- **Edit** - Update team name
-- **Manage Members** - Add/remove developers
-- **Deactivate** - Hide from assignment (keeps historical data)
+- **View Roles** - See all configured roles
+- **Edit Role** - Update name, description, sort order
+- **Deactivate** - Hide from selection (keeps historical data)
+- Cannot delete roles with existing assignments
 
-**Team Members:**
-- Click **Manage Members** on team row
-- See current members
-- Add developers from available list
-- Remove members (click ❌)
+**Role Assignment:**
+- Each developer must have exactly 1 developer role
+- Assigned when creating/editing developer user accounts
+- Displayed throughout the system (badges, workload view, team composition)
 
-💡 **Tip:** Team structure helps organize workload and improve assignment efficiency.
+**Use Cases:**
+- Assignment planning (know who has what skills)
+- Workload distribution by specialty
+- Reporting by role
+- Team composition display
+
+💡 **Tip:** Role specialization improves assignment quality and developer satisfaction.
+
+### Applications
+
+View application master list (read-only).
+
+**Navigation:** Settings → Applications
+
+**Purpose:** Central registry of all applications managed by DevTI.
+
+**How Applications are Created:**
+- **Automatically** when admin approves a NEW_APPLICATION request
+- Application name comes from request title
+- Initial version: 1.0.0
+- Cannot be manually created or deleted
+
+**Application List Shows:**
+- **Application Name** - Unique application identifier
+- **Current Version** - Latest approved version (updated by completed RFCs)
+- **Created Date** - When first NEW_APPLICATION was approved
+- **Total RFCs** - Count of change requests for this application
+
+**Actions:**
+- **View History** - See all requests (NEW_APPLICATION + RFCs) for this application
+- **View Details** - Application information and version timeline
+
+**Version Management:**
+- NEW_APPLICATION creates application with version 1.0.0
+- RFC requests specify new version (must be > current version)
+- When RFC completed, current_version updates automatically
+- Version history tracked through request records
+
+**Use Cases:**
+- See all applications under DevTI management
+- Track version progression
+- Reference for RFC submissions (users select from this list)
+- Portfolio reporting
+
+💡 **Note:** This is a read-only view. Applications are managed through the request workflow, not direct CRUD.
+
+### SLA Holidays
+
+Manage holiday calendar for business days calculation.
+
+**Navigation:** Settings → SLA Holidays
+
+**Purpose:** Define non-working days excluded from SLA calculations.
+
+**Holiday List:**
+- All configured holidays (Indonesian national holidays by default)
+- Shows date, description, and active status
+- Sorted chronologically
+
+**Actions:**
+
+**Add Holiday:**
+1. Click **Add Holiday** button
+2. Fill form:
+   - Date (required, must be future date for practical use)
+   - Description (e.g., "Hari Kemerdekaan RI", "Tahun Baru")
+   - Active (Yes/No)
+3. Click **Save**
+
+**Edit Holiday:**
+1. Click **Edit** on holiday row
+2. Update date or description
+3. Click **Save Changes**
+
+**Delete Holiday:**
+1. Click **Delete** on holiday row
+2. Confirm deletion
+3. ⚠️ Only delete if added by mistake. Historical holidays should remain for accurate reporting.
+
+**Bulk Import (CSV):**
+1. Click **Import CSV** button
+2. Download template CSV if needed
+3. Prepare CSV with columns: date, description
+4. Upload CSV file
+5. Review preview
+6. Click **Import** to add all holidays
+
+**CSV Format Example:**
+```
+date,description
+2026-01-01,Tahun Baru
+2026-02-12,Imlek
+2026-03-11,Isra Mi'raj
+```
+
+**Pre-loaded Holidays:**
+System comes with Indonesian national holidays for 2024-2026 (61 holidays total).
+
+**Use Cases:**
+- Accurate SLA calculations (business days only)
+- Planning around national holidays
+- Reporting actual working days
+- Set realistic expectations for requesters
+
+**Business Days Impact:**
+- Holidays are excluded from SLA countdown
+- Example: 5 business days target submitted Friday, includes Monday-Friday next week, excludes weekend + any holidays
+- More accurate than calendar days for Indonesian context
+
+💡 **Tip:** Update holidays annually, typically in December for the following year.
 
 ### Units
 
@@ -412,25 +672,40 @@ Manage organizational units (departments).
 
 ### SLA Policies
 
-Configure target SLA hours by request type and priority.
+Configure target SLA in **business days** by request type and priority.
+
+**Important:** SLA is now calculated in **business days** (Monday-Friday only), excluding weekends and holidays defined in SLA Holidays.
 
 **Default Policies (examples):**
 
-| Request Type | Priority | Target Hours |
-|--------------|----------|--------------|
-| New Application | Low | 720 (30 days) |
-| New Application | Medium | 480 (20 days) |
-| New Application | High | 240 (10 days) |
-| New Application | Critical | 120 (5 days) |
-| RFC | Low | 360 (15 days) |
-| RFC | Medium | 240 (10 days) |
-| RFC | High | 120 (5 days) |
-| RFC | Critical | 72 (3 days) |
+| Request Type | Priority | Target Business Days |
+|--------------|----------|---------------------|
+| New Application | Low | 30 days |
+| New Application | Medium | 20 days |
+| New Application | High | 10 days |
+| RFC | Low | 15 days |
+| RFC | Medium | 10 days |
+| RFC | High | 5 days |
 
 **Actions:**
 - **Add New Policy** - Define new SLA rule
-- **Edit** - Adjust target hours
+- **Edit** - Adjust target business days
 - **Deactivate** - Stop using (keeps historical)
+
+**Business Days Calculation:**
+- **Included:** Monday - Friday
+- **Excluded:** Saturday, Sunday, and holidays from SLA Holidays table
+- **Start:** Request submitted_at date
+- **End:** Request completed_at date
+- **Example:** Request submitted Monday, target 5 business days = following Monday (if no holidays)
+
+**Fields:**
+- Request Type: NEW_APPLICATION or RFC
+- Priority: Low, Medium, High (from Priorities master)
+- Target Business Days: Number of working days
+- Active: Yes/No
+
+⚠️ **Important:** Changing SLA policies affects future requests only. Existing requests keep their original SLA target.
 
 **Fields:**
 - Request Type: New Application or RFC
@@ -456,6 +731,7 @@ Manage user accounts and roles.
 
 **User List:**
 - See all users with name, email, role, unit
+- For developers: also shows developer role (SA, TW, BE, FE, QA, DM)
 - Filter by role or active status
 - Search by name or email
 
@@ -468,6 +744,10 @@ Manage user accounts and roles.
    - Email (required, unique)
    - Password (required, min 6 chars)
    - Role (User, Admin, or Developer)
+   - **Developer Role** (required if role = Developer)
+     - Select from: SA, TW, BE, FE, QA, DM
+     - Each developer must have exactly one role
+     - Cannot create developer without selecting role
    - Unit (organizational unit)
    - Active (Yes/No)
 3. Click **Create User**
@@ -476,19 +756,30 @@ Manage user accounts and roles.
 **Edit User:**
 1. Click **Edit** on user row
 2. Update fields (cannot change email)
-3. Leave password blank to keep current
-4. Click **Save Changes**
+3. For developers: can change developer role if needed
+4. Leave password blank to keep current
+5. Click **Save Changes**
 
 **Deactivate User:**
 1. Click **Edit** on user row
 2. Set Active to "No"
 3. User cannot login but historical data preserved
 
+**Developer Role Assignment:**
+- **Required** for all users with role = Developer
+- System enforces this at database level
+- Used for:
+  - Assignment filtering (find BE developers)
+  - Workload view (group by role)
+  - Team composition display
+  - Role-based reporting
+
 ⚠️ **Security Best Practices:**
 - Use strong temporary passwords
 - Require users to change password on first login (manual process)
 - Deactivate accounts for terminated employees immediately
 - Regularly audit admin and developer role assignments
+- Ensure all developers have appropriate developer roles assigned
 
 ---
 
