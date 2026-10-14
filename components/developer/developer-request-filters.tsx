@@ -76,13 +76,15 @@ export function DeveloperRequestFilters() {
 
       {/* Status Filter */}
       <Select onValueChange={(value) => updateFilter('status', value as string)}>
-        <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="Status" />
+        <SelectTrigger className="w-[160px]">
+          <SelectValue placeholder="Status">
+            Status
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {STATUS_OPTIONS.map((option) => (
             <SelectItem key={option.value} value={option.value}>
-              {option.label}
+              <span className="font-medium">{option.label}</span>
             </SelectItem>
           ))}
         </SelectContent>
@@ -90,13 +92,15 @@ export function DeveloperRequestFilters() {
 
       {/* Priority Filter */}
       <Select onValueChange={(value) => updateFilter('priorityId', value as string)}>
-        <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="Priority" />
+        <SelectTrigger className="w-[160px]">
+          <SelectValue placeholder="Priority">
+            Priority
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {PRIORITY_OPTIONS.map((option) => (
             <SelectItem key={option.value} value={option.value}>
-              {option.label}
+              <span className="font-medium">{option.label}</span>
             </SelectItem>
           ))}
         </SelectContent>
@@ -104,13 +108,15 @@ export function DeveloperRequestFilters() {
 
       {/* Type Filter */}
       <Select onValueChange={(value) => updateFilter('requestType', value as string)}>
-        <SelectTrigger className="w-[160px]">
-          <SelectValue placeholder="Request Type" />
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Request Type">
+            Request Type
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {TYPE_OPTIONS.map((option) => (
             <SelectItem key={option.value} value={option.value}>
-              {option.label}
+              <span className="font-medium">{option.label}</span>
             </SelectItem>
           ))}
         </SelectContent>

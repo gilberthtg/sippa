@@ -32,6 +32,8 @@ export function PrioritySelector({
     currentPriorityId?.toString() || ''
   );
 
+  const selectedPriority = priorities.find(p => p.id.toString() === selectedPriorityId);
+
   const handlePriorityChange = () => {
     if (!selectedPriorityId || selectedPriorityId === currentPriorityId?.toString()) {
       return;
@@ -61,13 +63,18 @@ export function PrioritySelector({
           onValueChange={(val) => setSelectedPriorityId(val || '')}
           disabled={isPending}
         >
-          <SelectTrigger id="priority">
-            <SelectValue placeholder="Pilih priority" />
+          <SelectTrigger id="priority" className="w-full">
+            <SelectValue placeholder="Pilih priority">
+              {selectedPriority ? `${selectedPriority.code} - ${selectedPriority.name}` : 'Pilih priority'}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {priorities.map((priority) => (
               <SelectItem key={priority.id} value={priority.id.toString()}>
-                {priority.code} - {priority.name}
+                <div className="flex flex-col py-1">
+                  <span className="font-medium">{priority.code}</span>
+                  <span className="text-xs text-muted-foreground">{priority.name}</span>
+                </div>
               </SelectItem>
             ))}
           </SelectContent>

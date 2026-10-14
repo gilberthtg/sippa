@@ -267,13 +267,18 @@ export function TeamAssignmentDialog({
                 onValueChange={(val) => setTeamLeaderId(val || '')} 
                 disabled={isPending}
               >
-                <SelectTrigger id="team-leader">
-                  <SelectValue placeholder="Pilih ketua tim" />
+                <SelectTrigger id="team-leader" className="w-full">
+                  <SelectValue placeholder="Pilih ketua tim">
+                    {selectedTeamLeader ? `${selectedTeamLeader.name} (${selectedTeamLeader.email})` : 'Pilih ketua tim'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {teamLeaders.map((leader) => (
                     <SelectItem key={leader.id} value={leader.id.toString()}>
-                      {leader.name} ({leader.email})
+                      <div className="flex flex-col py-1">
+                        <span className="font-medium">{leader.name}</span>
+                        <span className="text-xs text-muted-foreground">{leader.email}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -294,18 +299,23 @@ export function TeamAssignmentDialog({
                 onValueChange={(val) => setTechnicalWriterId(val || '')} 
                 disabled={isPending}
               >
-                <SelectTrigger id="technical-writer">
-                  <SelectValue placeholder="Pilih technical writer" />
+                <SelectTrigger id="technical-writer" className="w-full">
+                  <SelectValue placeholder="Pilih technical writer">
+                    {selectedTechnicalWriter ? `${selectedTechnicalWriter.name} (${selectedTechnicalWriter.email})` : 'Pilih technical writer'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {technicalWriters.length === 0 ? (
                     <SelectItem value="none" disabled>
-                      Tidak ada Technical Writer tersedia
+                      <span className="text-muted-foreground italic">Tidak ada Technical Writer tersedia</span>
                     </SelectItem>
                   ) : (
                     technicalWriters.map((writer) => (
                       <SelectItem key={writer.id} value={writer.id.toString()}>
-                        {writer.name} ({writer.email})
+                        <div className="flex flex-col py-1">
+                          <span className="font-medium">{writer.name}</span>
+                          <span className="text-xs text-muted-foreground">{writer.email}</span>
+                        </div>
                       </SelectItem>
                     ))
                   )}

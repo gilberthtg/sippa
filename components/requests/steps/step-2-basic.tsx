@@ -84,13 +84,39 @@ export function Step2Basic({
         <div className="space-y-2">
           <Label htmlFor="urgency">Tingkat Urgensi</Label>
           <Select value={urgency} onValueChange={(value) => onUrgencyChange(value || '')}>
-            <SelectTrigger id="urgency">
-              <SelectValue placeholder="Pilih tingkat urgensi" />
+            <SelectTrigger id="urgency" className="w-full">
+              <SelectValue placeholder="Pilih tingkat urgensi">
+                {urgency === URGENCY_LEVELS.LOW && 'Rendah - Tidak mendesak, bisa ditangani sesuai jadwal normal'}
+                {urgency === URGENCY_LEVELS.MEDIUM && 'Sedang - Perlu perhatian, tapi tidak kritis'}
+                {urgency === URGENCY_LEVELS.HIGH && 'Tinggi - Mendesak dan memerlukan penanganan prioritas'}
+                {!urgency && 'Pilih tingkat urgensi'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={URGENCY_LEVELS.LOW}>Rendah</SelectItem>
-              <SelectItem value={URGENCY_LEVELS.MEDIUM}>Sedang</SelectItem>
-              <SelectItem value={URGENCY_LEVELS.HIGH}>Tinggi</SelectItem>
+              <SelectItem value={URGENCY_LEVELS.LOW}>
+                <div className="flex flex-col py-1">
+                  <span className="font-medium">Rendah</span>
+                  <span className="text-xs text-muted-foreground">
+                    Tidak mendesak, bisa ditangani sesuai jadwal normal
+                  </span>
+                </div>
+              </SelectItem>
+              <SelectItem value={URGENCY_LEVELS.MEDIUM}>
+                <div className="flex flex-col py-1">
+                  <span className="font-medium">Sedang</span>
+                  <span className="text-xs text-muted-foreground">
+                    Perlu perhatian, tapi tidak kritis
+                  </span>
+                </div>
+              </SelectItem>
+              <SelectItem value={URGENCY_LEVELS.HIGH}>
+                <div className="flex flex-col py-1">
+                  <span className="font-medium">Tinggi</span>
+                  <span className="text-xs text-muted-foreground">
+                    Mendesak dan memerlukan penanganan prioritas
+                  </span>
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

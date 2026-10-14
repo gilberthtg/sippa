@@ -38,18 +38,38 @@ export function RequestListClient({ initialRequests }: RequestListClientProps) {
     setRequests(initialRequests);
   }, [initialRequests]);
 
+  // Update URL and trigger server refresh when filter or search changes
   useEffect(() => {
     const params = new URLSearchParams();
     if (filter !== 'all') params.set('status', filter);
     if (search) params.set('search', search);
     
     const query = params.toString();
+    const newUrl = `/requests${query ? `?${query}` : ''}`;
     
     startTransition(() => {
-      router.push(`/requests${query ? `?${query}` : ''}`);
-      router.refresh();
+      router.push(newUrl, { scroll: false });
     });
   }, [filter, search, router]);
+
+  // Filter requests on client side for immediate feedback
+  const filteredRequests = requests.filter((request) => {
+    // Apply status filter
+    if (filter !== 'all' && request.status !== filter) {
+      return false;
+    }
+
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      return (
+        request.requestNo.toLowerCase().includes(searchLower) ||
+        request.title.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return true;
+  });
 
   if (error) {
     return (
@@ -75,7 +95,7 @@ export function RequestListClient({ initialRequests }: RequestListClientProps) {
       {isPending ? (
         <LoadingState message="Memuat data..." />
       ) : (
-        <RequestTable requests={requests} />
+        <RequestTable requests={filteredRequests} />
       )}
     </div>
   );

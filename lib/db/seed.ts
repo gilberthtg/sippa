@@ -1,20 +1,31 @@
 import { config } from 'dotenv';
 import { db } from './index';
-import { roles, priorities, units, users, slaPolicies, requests, requestStatusHistories, requestTeamAssignments, requestProgress, requestAttachments } from './schema';
+import { roles, priorities, units, users, slaPolicies, requests, requestStatusHistories, requestTeamAssignments, requestProgress, requestAttachments, requestApplications } from './schema';
 import bcrypt from 'bcryptjs';
 
-// Load environment variables from .env.local
+// Load environment variables from .env.local or .env
 config({ path: '.env.local' });
+config({ path: '.env' });
 
 async function seed() {
   console.log('🌱 Seeding database...');
 
   // Clean up existing test data
   console.log('  → Cleaning up existing test data...');
+  
+  // Delete in order to respect foreign key constraints
   await db.delete(requestProgress).execute();
-  // await db.delete(requestAssignments).execute(); // Deprecated - using requestTeamAssignments
+  await db.delete(requestTeamAssignments).execute();
   await db.delete(requestStatusHistories).execute();
   await db.delete(requestAttachments).execute();
+  
+  // Drop deprecated request_assignments table if exists
+  try {
+    await db.execute('DELETE FROM request_assignments');
+  } catch (e) {
+    // Table might not exist, ignore error
+  }
+  
   await db.delete(requests).execute();
   await db.delete(slaPolicies).execute();
 
@@ -84,6 +95,46 @@ async function seed() {
       phone: '081234567892',
     },
   ]).onDuplicateKeyUpdate({ set: { name: 'Admin User' } });
+
+  // Seed Request Applications (for RFC testing)
+  console.log('  → Seeding request applications...');
+  await db.insert(requestApplications).values([
+    {
+      id: 1,
+      applicationName: 'SIPPA Core',
+      description: 'Sistem Informasi Permintaan Pengembangan Aplikasi - Platform utama untuk manajemen request pengembangan',
+      currentVersion: '1.2.0',
+      createdBy: 1,
+    },
+    {
+      id: 2,
+      applicationName: 'HR Management System',
+      description: 'Sistem manajemen sumber daya manusia untuk mengelola data karyawan, absensi, dan penggajian',
+      currentVersion: '2.5.3',
+      createdBy: 1,
+    },
+    {
+      id: 3,
+      applicationName: 'Finance Portal',
+      description: 'Portal keuangan untuk manajemen budget, invoice, dan laporan keuangan',
+      currentVersion: '1.0.8',
+      createdBy: 1,
+    },
+    {
+      id: 4,
+      applicationName: 'Asset Tracking',
+      description: 'Aplikasi untuk tracking dan manajemen aset perusahaan',
+      currentVersion: '3.1.2',
+      createdBy: 1,
+    },
+    {
+      id: 5,
+      applicationName: 'Document Management',
+      description: 'Sistem manajemen dokumen dengan fitur versioning dan workflow approval',
+      currentVersion: '1.4.0',
+      createdBy: 1,
+    },
+  ]).onDuplicateKeyUpdate({ set: { applicationName: 'SIPPA Core' } });
 
   // Seed SLA Policies
   console.log('  → Seeding SLA policies...');
@@ -291,6 +342,7 @@ async function seed() {
   console.log('');
   console.log('📊 Report Data:');
   console.log('  - 8 SLA policies created');
+  console.log('  - 5 request applications created');
   console.log('  - 25 completed requests created');
   console.log('  - Distribution: Q1(6), Q2(7), Q3(6), Q4(6)');
   console.log('  - Types: 13 New Application, 12 RFC');

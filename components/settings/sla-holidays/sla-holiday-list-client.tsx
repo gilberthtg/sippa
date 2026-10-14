@@ -158,14 +158,16 @@ export function SLAHolidayListClient({ initialData }: Props) {
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-1 items-center gap-4">
           <Select value={String(currentYear)} onValueChange={handleYearChange}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[160px]">
               <CalendarIcon className="mr-2 h-4 w-4" />
-              <SelectValue />
+              <SelectValue>
+                <span className="font-medium">{currentYear}</span>
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {yearOptions.map((year) => (
                 <SelectItem key={year} value={String(year)}>
-                  {year}
+                  <span className="font-medium">{year}</span>
                 </SelectItem>
               ))}
             </SelectContent>

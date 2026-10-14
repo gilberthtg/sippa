@@ -223,6 +223,7 @@ export function RequestFormSingle() {
 
       if (result.success) {
         router.push(`/requests/${result.requestId}`);
+        router.refresh(); // Force refresh to get fresh data
       } else {
         setGeneralError(result.error || 'Terjadi kesalahan');
       }
@@ -231,14 +232,6 @@ export function RequestFormSingle() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* General Error */}
-      {generalError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{generalError}</AlertDescription>
-        </Alert>
-      )}
-
       {/* Section 1: Request Type */}
       <Card>
         <CardHeader>
@@ -320,14 +313,22 @@ export function RequestFormSingle() {
                 >
                   <SelectTrigger
                     id="application"
-                    className={errors.applicationId ? 'border-destructive' : ''}
+                    className={`w-full ${errors.applicationId ? 'border-destructive' : ''}`}
                   >
-                    <SelectValue placeholder={loadingApps ? 'Memuat...' : 'Pilih aplikasi'} />
+                    <SelectValue placeholder={loadingApps ? 'Memuat...' : 'Pilih aplikasi'}>
+                      {selectedApp ? selectedApp.name : loadingApps ? 'Memuat...' : 'Pilih aplikasi'}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {applications.map((app) => (
                       <SelectItem key={app.id} value={app.id.toString()}>
-                        {app.label}
+                        <div className="flex flex-col py-1">
+                          <span className="font-medium">{app.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            Versi: {app.currentVersion}
+                            {app.description && ` • ${app.description}`}
+                          </span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -420,13 +421,39 @@ export function RequestFormSingle() {
           <div className="space-y-2">
             <Label htmlFor="urgency">Tingkat Urgensi</Label>
             <Select value={urgency} onValueChange={(value) => setUrgency(value || '')}>
-              <SelectTrigger id="urgency">
-                <SelectValue placeholder="Pilih tingkat urgensi" />
+              <SelectTrigger id="urgency" className="w-full">
+                <SelectValue placeholder="Pilih tingkat urgensi">
+                  {urgency === 'low' && 'Rendah - Tidak mendesak, bisa ditangani sesuai jadwal normal'}
+                  {urgency === 'medium' && 'Sedang - Perlu perhatian, tapi tidak kritis'}
+                  {urgency === 'high' && 'Tinggi - Mendesak dan memerlukan penanganan prioritas'}
+                  {!urgency && 'Pilih tingkat urgensi'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="low">Rendah</SelectItem>
-                <SelectItem value="medium">Sedang</SelectItem>
-                <SelectItem value="high">Tinggi</SelectItem>
+                <SelectItem value="low">
+                  <div className="flex flex-col py-1">
+                    <span className="font-medium">Rendah</span>
+                    <span className="text-xs text-muted-foreground">
+                      Tidak mendesak, bisa ditangani sesuai jadwal normal
+                    </span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="medium">
+                  <div className="flex flex-col py-1">
+                    <span className="font-medium">Sedang</span>
+                    <span className="text-xs text-muted-foreground">
+                      Perlu perhatian, tapi tidak kritis
+                    </span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="high">
+                  <div className="flex flex-col py-1">
+                    <span className="font-medium">Tinggi</span>
+                    <span className="text-xs text-muted-foreground">
+                      Mendesak dan memerlukan penanganan prioritas
+                    </span>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -554,6 +581,14 @@ export function RequestFormSingle() {
           )}
         </CardContent>
       </Card>
+      
+      {/* General Error */}
+      {generalError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{generalError}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Submit Button */}
       <div className="flex justify-end gap-4">

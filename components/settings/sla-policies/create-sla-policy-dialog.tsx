@@ -118,13 +118,27 @@ export function CreateSLAPolicyDialog({ open, onOpenChange, priorities }: Props)
                   <FormLabel>Request Type</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select request type" />
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select request type">
+                          {field.value === 'new_application' && 'New Application'}
+                          {field.value === 'rfc' && 'RFC - Request for Change'}
+                          {!field.value && 'Select request type'}
+                        </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="new_application">New Application</SelectItem>
-                      <SelectItem value="rfc">RFC</SelectItem>
+                      <SelectItem value="new_application">
+                        <div className="flex flex-col py-1">
+                          <span className="font-medium">New Application</span>
+                          <span className="text-xs text-muted-foreground">Aplikasi baru yang belum pernah ada</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="rfc">
+                        <div className="flex flex-col py-1">
+                          <span className="font-medium">RFC</span>
+                          <span className="text-xs text-muted-foreground">Request for Change - perubahan aplikasi</span>
+                        </div>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -135,29 +149,37 @@ export function CreateSLAPolicyDialog({ open, onOpenChange, priorities }: Props)
             <FormField
               control={form.control}
               name="priorityId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Priority</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(Number(value))}
-                    value={field.value?.toString()}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {priorities.map((priority) => (
-                        <SelectItem key={priority.id} value={priority.id.toString()}>
-                          {priority.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const selectedPriority = priorities.find(p => p.id === field.value);
+                return (
+                  <FormItem>
+                    <FormLabel>Priority</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(Number(value))}
+                      value={field.value?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select priority">
+                            {selectedPriority ? `${selectedPriority.code} - ${selectedPriority.name}` : 'Select priority'}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {priorities.map((priority) => (
+                          <SelectItem key={priority.id} value={priority.id.toString()}>
+                            <div className="flex flex-col py-1">
+                              <span className="font-medium">{priority.code}</span>
+                              <span className="text-xs text-muted-foreground">{priority.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <FormField

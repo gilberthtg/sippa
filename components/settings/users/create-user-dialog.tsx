@@ -150,58 +150,80 @@ export function CreateUserDialog({ open, onOpenChange, roles, units }: Props) {
             <FormField
               control={form.control}
               name="roleId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(Number(value))}
-                    value={field.value?.toString()}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role.id} value={role.id.toString()}>
-                          {role.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const selectedRole = roles.find(r => r.id === field.value);
+                return (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(Number(value))}
+                      value={field.value?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select role">
+                            {selectedRole ? `${selectedRole.name} (${selectedRole.code})` : 'Select role'}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {roles.map((role) => (
+                          <SelectItem key={role.id} value={role.id.toString()}>
+                            <div className="flex flex-col py-1">
+                              <span className="font-medium">{role.name}</span>
+                              <span className="text-xs text-muted-foreground">{role.code}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <FormField
               control={form.control}
               name="unitId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Unit (Optional)</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(value === 'none' ? null : Number(value))}
-                    value={field.value ? field.value.toString() : 'none'}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select unit" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {units.map((unit) => (
-                        <SelectItem key={unit.id} value={unit.id.toString()}>
-                          {unit.name}
+              render={({ field }) => {
+                const selectedUnit = units.find(u => u.id === field.value);
+                return (
+                  <FormItem>
+                    <FormLabel>Unit (Optional)</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(value === 'none' ? null : Number(value))}
+                      value={field.value ? field.value.toString() : 'none'}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select unit">
+                            {field.value === null || field.value === undefined ? (
+                              <span className="text-muted-foreground italic">None</span>
+                            ) : (
+                              selectedUnit ? `${selectedUnit.name} (${selectedUnit.code})` : 'Select unit'
+                            )}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground italic">None</span>
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+                        {units.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id.toString()}>
+                            <div className="flex flex-col py-1">
+                              <span className="font-medium">{unit.name}</span>
+                              <span className="text-xs text-muted-foreground">{unit.code}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <FormField

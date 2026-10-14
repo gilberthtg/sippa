@@ -94,14 +94,18 @@ export function AssignmentDialog({
           <div className="space-y-2">
             <Label htmlFor="team">Team</Label>
             <Select value={teamId} onValueChange={(val) => setTeamId(val || '')} disabled={isPending}>
-              <SelectTrigger id="team">
-                <SelectValue placeholder="Pilih team (opsional)" />
+              <SelectTrigger id="team" className="w-full">
+                <SelectValue placeholder="Pilih team (opsional)">
+                  {teamId === 'none' ? 'Tidak ada' : selectedTeam?.name || 'Pilih team (opsional)'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Tidak ada</SelectItem>
+                <SelectItem value="none">
+                  <span className="text-muted-foreground italic">Tidak ada</span>
+                </SelectItem>
                 {teams.map((team) => (
                   <SelectItem key={team.id} value={team.id.toString()}>
-                    {team.name}
+                    <span className="font-medium">{team.name}</span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -111,14 +115,21 @@ export function AssignmentDialog({
           <div className="space-y-2">
             <Label htmlFor="developer">Developer</Label>
             <Select value={developerId} onValueChange={(val) => setDeveloperId(val || '')} disabled={isPending}>
-              <SelectTrigger id="developer">
-                <SelectValue placeholder="Pilih developer (opsional)" />
+              <SelectTrigger id="developer" className="w-full">
+                <SelectValue placeholder="Pilih developer (opsional)">
+                  {developerId === 'none' ? 'Tidak ada' : selectedDeveloper ? `${selectedDeveloper.name} (${selectedDeveloper.email})` : 'Pilih developer (opsional)'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Tidak ada</SelectItem>
+                <SelectItem value="none">
+                  <span className="text-muted-foreground italic">Tidak ada</span>
+                </SelectItem>
                 {developers.map((dev) => (
                   <SelectItem key={dev.id} value={dev.id.toString()}>
-                    {dev.name} ({dev.email})
+                    <div className="flex flex-col py-1">
+                      <span className="font-medium">{dev.name}</span>
+                      <span className="text-xs text-muted-foreground">{dev.email}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>

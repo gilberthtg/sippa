@@ -3,8 +3,9 @@ import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import * as schema from './schema';
 
-// Load environment variables
+// Load environment variables from .env.local or .env
 config({ path: '.env.local' });
+config({ path: '.env' });
 
 const poolConnection = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',

@@ -180,6 +180,7 @@ export async function createRequest(formData: FormData) {
     });
 
     revalidatePath('/requests');
+    revalidatePath(`/requests/${requestId}`);
     return { success: true, requestId: Number(requestId), requestNo };
   } catch (error) {
     console.error('Create request error:', error);
@@ -294,7 +295,12 @@ export async function getRequestById(id: number) {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.requesterId !== session.user.id) {
+    // Convert both to numbers to ensure proper comparison
+    const requesterId = Number(request.requesterId);
+    const userId = Number(session.user.id);
+    
+    if (requesterId !== userId) {
+      console.log('Access denied:', { requesterId, userId, match: requesterId === userId });
       return { success: false, error: 'Anda tidak memiliki akses ke request ini' };
     }
 

@@ -32,12 +32,14 @@ export function LaptriFilters({
         <label className="text-sm font-medium">Tahun:</label>
         <Select value={year.toString()} onValueChange={(val) => onYearChange(parseInt(val || year.toString()))}>
           <SelectTrigger className="w-32">
-            <SelectValue />
+            <SelectValue>
+              {year}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {years.map((y) => (
               <SelectItem key={y} value={y.toString()}>
-                {y}
+                <span className="font-medium">{y}</span>
               </SelectItem>
             ))}
           </SelectContent>
@@ -70,13 +72,27 @@ export function LaptriFilters({
       <div className="flex items-center gap-2">
         <label className="text-sm font-medium">Jenis:</label>
         <Select value={requestType || 'all'} onValueChange={(val) => onRequestTypeChange(val === 'all' ? undefined : (val || undefined))}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
+          <SelectTrigger className="w-52">
+            <SelectValue>
+              {!requestType || requestType === 'all' ? 'Semua Jenis Request' : requestType === 'new_application' ? 'New Application' : 'RFC - Request for Change'}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Semua</SelectItem>
-            <SelectItem value="new_application">New Application</SelectItem>
-            <SelectItem value="rfc">RFC</SelectItem>
+            <SelectItem value="all">
+              <span className="font-medium">Semua Jenis Request</span>
+            </SelectItem>
+            <SelectItem value="new_application">
+              <div className="flex flex-col py-1">
+                <span className="font-medium">New Application</span>
+                <span className="text-xs text-muted-foreground">Aplikasi baru</span>
+              </div>
+            </SelectItem>
+            <SelectItem value="rfc">
+              <div className="flex flex-col py-1">
+                <span className="font-medium">RFC</span>
+                <span className="text-xs text-muted-foreground">Request for Change</span>
+              </div>
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>

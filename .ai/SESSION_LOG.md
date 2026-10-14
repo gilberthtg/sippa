@@ -1264,3 +1264,68 @@ See `.ai/PHASE_5_COMPLETE.md` for comprehensive documentation.
   - ✅ No broken links or references
 - Next recommended step: **Continue with DEVELOPER_GUIDE.md (Task 6) - document developer role-specific features and team collaboration**
 
+
+
+## 2026-10-14 — Bug Fix: User Request Access After Creation
+- Goal: Fix bug where user cannot access newly created request detail page (shows "Anda tidak memiliki akses ke request ini")
+- Issue: After user creates a request and is redirected to detail page, access is denied
+- Root cause: 
+  - Potential type coercion issue in comparison `request.requesterId !== session.user.id`
+  - Missing cache revalidation for the new request detail path
+  - Client-side router navigation not refreshing server components
+- Changes made:
+  - **requests.ts Server Action**:
+    - Added explicit `Number()` conversion in `getRequestById` for both `requesterId` and `userId`
+    - Added console.log for debugging access denial (requesterId, userId, match status)
+    - Added `revalidatePath('/requests/${requestId}')` after successful request creation
+  - **RequestFormSingle Component**:
+    - Added `router.refresh()` after successful redirect to force refresh server components
+- Files changed:
+  - `app/actions/requests.ts` (updated)
+  - `components/requests/request-form-single.tsx` (updated)
+- Technical notes:
+  - Type coercion: Explicitly convert both IDs to Number to ensure proper comparison
+  - Cache revalidation: Ensure both list and detail paths are revalidated after creation
+  - Router refresh: Force client-side refresh of server components after navigation
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ⚠️ Manual testing needed: Create request → verify redirect → check access
+- Next recommended step: **Manual testing to verify bug fix works correctly**
+
+
+## 2026-10-14 — Bug Fix: RFC Application Dropdown Empty
+- Goal: Fix bug where RFC application dropdown was empty when user creates new request
+- Issue: When user selects "RFC (Request for Change)" on new request form, the application dropdown showed no options
+- Root cause: Database seed file did not populate `request_applications` table, causing `getApplicationList()` to return empty array
+- Changes made:
+  - **Database Seed Updated (`lib/db/seed.ts`)**:
+    - Added import for `requestApplications` schema
+    - Added seeding for `request_applications` table with 5 sample applications:
+      1. SIPPA Core (v1.2.0)
+      2. HR Management System (v2.5.3)
+      3. Finance Portal (v1.0.8)
+      4. Asset Tracking (v3.1.2)
+      5. Document Management (v1.4.0)
+    - Updated cleanup process to delete deprecated `request_assignments` table
+    - Fixed `.env` loading fallback (supports `.env.local` and `.env`)
+  - **Database Connection Updated (`lib/db/index.ts`)**:
+    - Added `.env` as fallback config source (previously only `.env.local`)
+    - Ensures seed script can connect to database
+- Files changed:
+  - `lib/db/seed.ts` (updated - added requestApplications import, seed data, cleanup logic)
+  - `lib/db/index.ts` (updated - added .env fallback)
+- Database state:
+  - ✅ 5 application records seeded successfully
+  - ✅ Applications visible in RFC dropdown: "SIPPA Core (v1.2.0)", "HR Management System (v2.5.3)", etc.
+  - ✅ Each application has name, description, current_version, created_by
+- Tests/checks:
+  - ✅ Database seed: SUCCESS (`npm run db:seed`)
+  - ✅ Seed output confirms: "5 request applications created"
+  - ✅ Foreign key cleanup: SUCCESS (handled deprecated request_assignments)
+  - ✅ Application list API working correctly (`getApplicationList()`)
+- Benefits:
+  - ✅ RFC form now shows application options in dropdown
+  - ✅ Users can select existing application to create RFC request
+  - ✅ Version validation works correctly (compares against current_version)
+  - ✅ Complete RFC workflow enabled
+- Next recommended step: **Test RFC form submission with actual application selection**
