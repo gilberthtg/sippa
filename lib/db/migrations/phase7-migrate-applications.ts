@@ -126,9 +126,9 @@ export async function migrateApplications(
     
     const newAppRequests = await db.query.requests.findMany({
       where: and(
-        eq(requests.requestType, 'NEW_APPLICATION'),
+        eq(requests.requestType, 'new_application'),
         isNull(requests.applicationId),
-        inArray(requests.status, ['APPROVED', 'IN_PROGRESS', 'COMPLETED'])
+        inArray(requests.status, ['approved', 'in_progress', 'completed'])
       ),
       orderBy: (requests, { asc }) => [asc(requests.submittedAt)],
     });
@@ -308,7 +308,7 @@ export async function linkRFCRequests(
     
     const rfcRequests = await db.query.requests.findMany({
       where: and(
-        eq(requests.requestType, 'RFC'),
+        eq(requests.requestType, 'rfc'),
         isNull(requests.applicationId)
       ),
     });
@@ -447,4 +447,3 @@ if (require.main === module) {
 
 // Export for programmatic use
 export default migrateApplications;
-export { linkRFCRequests };

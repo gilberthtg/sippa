@@ -628,7 +628,7 @@ export async function getApplications(params?: {
         .where(
           and(
             eq(requests.applicationId, app.id),
-            eq(requests.requestType, 'RFC')
+            eq(requests.requestType, 'rfc')
           )
         );
 
@@ -688,11 +688,11 @@ export async function getApplicationHistory(applicationId: number) {
       or(
         and(
           eq(requests.applicationId, applicationId),
-          eq(requests.requestType, 'RFC')
+          eq(requests.requestType, 'rfc')
         ),
         and(
           eq(requests.applicationId, applicationId),
-          eq(requests.requestType, 'NEW_APPLICATION')
+          eq(requests.requestType, 'new_application')
         )
       )
     )
@@ -728,8 +728,8 @@ export async function getSLAHolidays(params?: {
 
   // Filter by year
   if (year) {
-    const startDate = `${year}-01-01`;
-    const endDate = `${year}-12-31`;
+    const startDate = new Date(`${year}-01-01`);
+    const endDate = new Date(`${year}-12-31`);
     conditions.push(
       between(slaHolidays.holidayDate, startDate, endDate)
     );
@@ -776,7 +776,7 @@ export async function createSLAHoliday(data: {
   const existing = await db
     .select({ id: slaHolidays.id })
     .from(slaHolidays)
-    .where(eq(slaHolidays.holidayDate, data.holidayDate))
+    .where(eq(slaHolidays.holidayDate, new Date(data.holidayDate)))
     .limit(1);
 
   if (existing.length > 0) {
@@ -784,7 +784,7 @@ export async function createSLAHoliday(data: {
   }
 
   const result = await db.insert(slaHolidays).values({
-    holidayDate: data.holidayDate,
+    holidayDate: new Date(data.holidayDate),
     description: data.description,
     isActive: true,
   });
@@ -821,7 +821,7 @@ export async function updateSLAHoliday(
       .from(slaHolidays)
       .where(
         and(
-          eq(slaHolidays.holidayDate, data.holidayDate),
+          eq(slaHolidays.holidayDate, new Date(data.holidayDate)),
           sql`${slaHolidays.id} != ${id}`
         )
       )
@@ -835,7 +835,7 @@ export async function updateSLAHoliday(
   await db
     .update(slaHolidays)
     .set({
-      ...(data.holidayDate && { holidayDate: data.holidayDate }),
+      ...(data.holidayDate && { holidayDate: new Date(data.holidayDate) }),
       ...(data.description && { description: data.description }),
       ...(data.isActive !== undefined && { isActive: data.isActive }),
       updatedAt: new Date(),
@@ -879,8 +879,8 @@ export async function deleteSLAHoliday(id: number) {
 export async function bulkDeleteSLAHolidays(year: number) {
   const adminUser = await checkAdminAuth();
 
-  const startDate = `${year}-01-01`;
-  const endDate = `${year}-12-31`;
+  const startDate = new Date(`${year}-01-01`);
+  const endDate = new Date(`${year}-12-31`);
 
   // Get count before delete for audit
   const countResult = await db
@@ -944,7 +944,7 @@ export async function bulkImportSLAHolidays(holidays: Array<{
     .select({ date: slaHolidays.holidayDate })
     .from(slaHolidays);
 
-  const existingDateSet = new Set(existingDates.map((d) => d.date));
+  const existingDateSet = new Set(existingDates.map((d) => d.date.toISOString().split('T')[0]));
 
   // Filter out duplicates
   const newHolidays = holidays.filter((h) => !existingDateSet.has(h.holidayDate));
@@ -956,7 +956,7 @@ export async function bulkImportSLAHolidays(holidays: Array<{
   // Bulk insert
   await db.insert(slaHolidays).values(
     newHolidays.map((h) => ({
-      holidayDate: h.holidayDate,
+      holidayDate: new Date(h.holidayDate),
       description: h.description,
       isActive: true,
     }))

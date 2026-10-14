@@ -20,7 +20,7 @@
 
 import { db } from '../index';
 import { requestTeamAssignments, users } from '../schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 // ============================================================================
 // Configuration
@@ -121,9 +121,9 @@ async function checkOldTablesExist(): Promise<{
       FROM information_schema.tables 
       WHERE table_schema = DATABASE()
       AND table_name IN ('teams', 'team_members', 'request_assignments')
-    `);
+    `) as unknown as [any[], any];
     
-    const tableNames = (tables as any[]).map(t => t.table_name || t.TABLE_NAME);
+    const tableNames = tables.map(t => t.table_name || t.TABLE_NAME);
     
     return {
       teamsExists: tableNames.includes('teams'),
@@ -210,9 +210,9 @@ export async function migrateAssignments(
       SELECT id, request_id, team_id, assigned_by, assigned_at, notes
       FROM request_assignments
       ORDER BY assigned_at ASC
-    `);
+    `) as unknown as [OldRequestAssignment[], any];
     
-    const assignments = oldAssignments as OldRequestAssignment[];
+    const assignments = oldAssignments;
     results.totalProcessed = assignments.length;
     
     if (assignments.length === 0) {
@@ -228,14 +228,14 @@ export async function migrateAssignments(
     for (const assignment of assignments) {
       try {
         // Get team members for this team
-        const [teamMembers] = await db.execute(`
+        const [teamMembers] = await db.execute(sql`
           SELECT tm.user_id, tm.role, u.developer_role_id
           FROM team_members tm
           JOIN users u ON u.id = tm.user_id
-          WHERE tm.team_id = ?
-        `, [assignment.team_id]);
+          WHERE tm.team_id = ${assignment.team_id}
+        `) as unknown as [any[], any];
         
-        const members = teamMembers as any[];
+        const members = teamMembers;
         
         if (members.length === 0) {
           logger.warn(`Team ${assignment.team_id} has no members - skipping`);
@@ -350,9 +350,9 @@ export async function verifyMigration(): Promise<{
       JOIN roles r ON r.id = u.role_id
       WHERE r.code = 'DEVELOPER'
       AND u.developer_role_id IS NULL
-    `);
+    `) as unknown as [any[], any];
     
-    const count = (developersWithoutRole as any[])[0]?.count || 0;
+    const count = developersWithoutRole[0]?.count || 0;
     const check2 = {
       name: 'All developers have roles',
       passed: count === 0,
@@ -370,9 +370,9 @@ export async function verifyMigration(): Promise<{
       WHERE request_type = 'NEW_APPLICATION'
       AND status IN ('APPROVED', 'IN_PROGRESS', 'COMPLETED')
       AND application_id IS NULL
-    `);
+    `) as unknown as [any[], any];
     
-    const appCount = (appsWithoutId as any[])[0]?.count || 0;
+    const appCount = appsWithoutId[0]?.count || 0;
     const check3 = {
       name: 'NEW_APPLICATION requests linked',
       passed: appCount === 0,
@@ -445,4 +445,4 @@ if (require.main === module) {
 
 // Export for programmatic use
 export default migrateAssignments;
-export { verifyMigration };
+

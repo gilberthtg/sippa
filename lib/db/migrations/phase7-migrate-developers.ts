@@ -148,7 +148,7 @@ export async function migrateDevelopers(
     // Step 2: Get all developer role mappings
     logger.log('Step 2: Loading all developer roles...');
     const allRoles = await db.query.developerRoles.findMany({
-      where: eq(developerRoles.isActive, 1),
+      where: eq(developerRoles.isActive, true),
     });
     
     const roleMap = new Map(allRoles.map(r => [r.code, r]));

@@ -236,8 +236,8 @@ async function rollbackDeveloperRoles(
     
     const [result] = await db.execute(`
       SELECT COUNT(*) as count FROM users WHERE developer_role_id IS NOT NULL
-    `);
-    const count = (result as any[])[0]?.count || 0;
+    `) as unknown as [any[], any];
+    const count = result[0]?.count || 0;
     
     if (count === 0) {
       logger.log('  No developer roles to rollback');
