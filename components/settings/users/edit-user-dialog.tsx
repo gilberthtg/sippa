@@ -92,6 +92,7 @@ export function EditUserDialog({ open, onOpenChange, user, roles, units, develop
 
   const form = useForm<EditUserForm>({
     resolver: zodResolver(editUserSchema),
+    mode: 'onChange', // Enable onChange mode for better reactivity
     defaultValues: {
       name: user.name,
       email: user.email,
@@ -106,7 +107,7 @@ export function EditUserDialog({ open, onOpenChange, user, roles, units, develop
   // Watch roleId to determine if developer role should be shown
   const selectedRoleId = form.watch('roleId');
   const selectedRole = roles.find(r => r.id === selectedRoleId);
-  const isDeveloperRole = selectedRole?.code === 'DEVELOPER';
+  const isDeveloperRole = selectedRole?.code?.toLowerCase() === 'developer';
 
   useEffect(() => {
     form.reset({

@@ -767,21 +767,9 @@ export async function assignRequest(params: {
       })
       .where(eq(requests.id, requestId));
 
-    // Assignment note - TODO: Update for new structure in Phase 2
+    // Assignment note
     let assignmentNote = 'Request di-assign';
-    /*
-    if (teamId && developerId) {
-      const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
-      const [developer] = await db.select().from(users).where(eq(users.id, developerId)).limit(1);
-      assignmentNote = `Request di-assign ke ${team?.name || 'Team'} - ${developer?.name || 'Developer'}`;
-    } else if (teamId) {
-      const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
-      assignmentNote = `Request di-assign ke ${team?.name || 'Team'}`;
-    } else if (developerId) {
-      const [developer] = await db.select().from(users).where(eq(users.id, developerId)).limit(1);
-      assignmentNote = `Request di-assign ke ${developer?.name || 'Developer'}`;
-    }
-    */
+    
     if (developerId) {
       const [developer] = await db.select().from(users).where(eq(users.id, developerId)).limit(1);
       assignmentNote = `Request di-assign ke ${developer?.name || 'Developer'}`;
@@ -842,27 +830,6 @@ export async function getPriorities() {
     console.error('Get priorities error:', error);
     return { success: false, error: 'Gagal mengambil data priority' };
   }
-}
-
-export async function getTeams() {
-  // Teams functionality deprecated - return empty array
-  // TODO: Remove this function in Phase 2
-  return { success: true, data: [] };
-  
-  /* Original implementation - kept for reference
-  try {
-    const data = await db
-      .select()
-      .from(teams)
-      .where(eq(teams.isActive, true))
-      .orderBy(teams.name);
-
-    return { success: true, data };
-  } catch (error) {
-    console.error('Get teams error:', error);
-    return { success: false, error: 'Gagal mengambil data team' };
-  }
-  */
 }
 
 export async function getDevelopers() {

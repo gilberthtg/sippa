@@ -215,12 +215,14 @@ This document describes the production database schema for SIPPA after the Phase
 - is_read
 - created_at
 
-## Deprecated Tables (Removed in Phase 1)
+## Deprecated Tables
 
-The following tables were removed during restructure:
-- ~~teams~~ - Replaced by individual assignments
-- ~~team_members~~ - No longer needed
-- ~~request_assignments~~ - Renamed to request_team_assignments with new structure
+The following tables were removed during Phase 1 restructure and are no longer part of the database:
+- `teams` - Removed (replaced by individual assignments)
+- `team_members` - Removed (no longer needed)
+- `request_assignments` - Renamed to `request_team_assignments` with new structure
+
+**Note:** These tables have been completely removed from the schema. All functionality now uses individual developer assignments through the `request_team_assignments` table.
 
 ## Indexes
 

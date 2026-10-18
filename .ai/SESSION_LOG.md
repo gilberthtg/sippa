@@ -1475,3 +1475,40 @@ See `.ai/PHASE_5_COMPLETE.md` for comprehensive documentation.
   - ✅ Consistent with database schema and business rules from BUSINESS_RULES.md
   - ✅ Audit log captures developer role changes
 - Next recommended step: **Manual testing of user creation/editing with different roles to verify dropdown behavior and validation**
+
+
+## 2026-10-18 — Teams & Team Members Tables Complete Removal
+- Goal: Remove all references to deprecated teams and team_members tables from codebase
+- Changes made:
+  - **Database Documentation Updated**:
+    - Updated `.ai/DATABASE.md` - clarified that teams and team_members tables have been completely removed
+    - Added note that all functionality now uses individual developer assignments
+  - **Code Cleanup**:
+    - `lib/db/seed.ts`: Removed deprecated teams seeding code (commented section)
+    - `app/actions/admin-requests.ts`: Removed `getTeams()` function entirely
+    - `app/actions/admin-requests.ts`: Cleaned up commented team assignment code
+    - `app/actions/master-data.ts`: Removed all commented teams CRUD functions (~150 lines)
+    - `components/admin/assignment-dialog.tsx`: Deleted entire file (replaced by TeamAssignmentDialog)
+    - `app/(admin)/admin/settings/teams/`: Deleted entire folder and page.tsx
+  - **Migration Files**: Kept for historical reference (phase7-migrate-assignments.ts, phase7-rollback.ts)
+- Files changed:
+  - Deleted: 2 files (assignment-dialog.tsx, teams/page.tsx)
+  - Updated: 3 files (seed.ts, admin-requests.ts, master-data.ts)
+  - Updated: 1 doc file (DATABASE.md)
+- Verification:
+  - ✅ No schema definitions for teams or team_members exist
+  - ✅ No active code uses teams or team_members
+  - ✅ TeamAssignmentDialog is the active assignment component
+  - ✅ Migration scripts preserved for reference
+- Remaining references:
+  - Migration scripts (phase7-*): Intentionally kept for historical reference and rollback capability
+  - Components with deprecated type hints: Will be cleaned in follow-up if issues found
+- Benefits:
+  - ✅ Cleaner codebase without deprecated code
+  - ✅ No confusion about which assignment method to use
+  - ✅ Reduced maintenance burden
+  - ✅ Clearer for new developers (only one way to assign)
+- Tests/checks:
+  - TypeScript compilation: Not run (minor cleanup, no breaking changes expected)
+  - Build: Not run (cleanup only)
+- Next recommended step: **Run TypeScript check and build to verify no broken references**

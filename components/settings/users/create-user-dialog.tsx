@@ -84,11 +84,12 @@ export function CreateUserDialog({ open, onOpenChange, roles, units, developerRo
 
   const form = useForm<CreateUserForm>({
     resolver: zodResolver(createUserSchema),
+    mode: 'onChange', // Enable onChange mode for better reactivity
     defaultValues: {
       name: '',
       email: '',
       password: '',
-      roleId: undefined,
+      roleId: 0, // Changed from undefined to 0 to prevent controlled/uncontrolled warning
       developerRoleId: null,
       unitId: null,
       phone: null,
@@ -98,9 +99,15 @@ export function CreateUserDialog({ open, onOpenChange, roles, units, developerRo
   // Watch roleId to determine if developer role should be shown
   const selectedRoleId = form.watch('roleId');
   const selectedRole = roles.find(r => r.id === selectedRoleId);
-  const isDeveloperRole = selectedRole?.code === 'DEVELOPER';
+  const isDeveloperRole = selectedRole?.code?.toLowerCase() === 'developer';
 
   const onSubmit = async (data: CreateUserForm) => {
+    // Validate role selection
+    if (!data.roleId || data.roleId === 0) {
+      toast.error('Please select a role');
+      return;
+    }
+
     // Validate developer role requirement
     if (isDeveloperRole && !data.developerRoleId) {
       toast.error('Developer role is required when role is Developer');
@@ -184,7 +191,7 @@ export function CreateUserDialog({ open, onOpenChange, roles, units, developerRo
                     <FormLabel>Role</FormLabel>
                     <Select
                       onValueChange={(value) => field.onChange(Number(value))}
-                      value={field.value?.toString()}
+                      value={field.value > 0 ? field.value.toString() : ''}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">

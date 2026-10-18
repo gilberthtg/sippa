@@ -90,7 +90,7 @@ export function UserFilters({ roles, units }: Props) {
   return (
     <div className="flex items-center gap-2">
       <DropdownMenu>
-        <DropdownMenuTrigger>
+        <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
             <Filter className="mr-2 h-4 w-4" />
             Filters

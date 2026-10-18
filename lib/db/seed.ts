@@ -42,10 +42,10 @@ async function seed() {
   // Seed Priorities
   console.log('  → Seeding priorities...');
   await db.insert(priorities).values([
-    { id: 1, code: 'low', name: 'Low', sortOrder: 1 },
-    { id: 2, code: 'medium', name: 'Medium', sortOrder: 2 },
-    { id: 3, code: 'high', name: 'High', sortOrder: 3 },
-    // { id: 4, code: 'critical', name: 'Critical', sortOrder: 4 },
+    { id: 1, code: 'low', name: 'Low', sortOrder: 1, isActive: true },
+    { id: 2, code: 'medium', name: 'Medium', sortOrder: 2, isActive: true },
+    { id: 3, code: 'high', name: 'High', sortOrder: 3, isActive: true },
+    { id: 4, code: 'critical', name: 'Critical', sortOrder: 4, isActive: false },
   ]).onDuplicateKeyUpdate({ set: { name: sql`VALUES(name)` } });
 
   // Seed Units
@@ -68,14 +68,6 @@ async function seed() {
       name: sql`VALUES(name)`,
     },
   });
-
-
-  // Seed Teams - DEPRECATED (Phase 1 restructure - teams replaced by individual assignments)
-  // console.log('  → Seeding teams...');
-  // await db.insert(teams).values([
-  //   { id: 1, code: 'DEVTI', name: 'Development Team IT' },
-  //   { id: 2, code: 'INFRA', name: 'Infrastructure Team' },
-  // ]).onDuplicateKeyUpdate({ set: { name: 'Development Team IT' } });
 
   // Seed Users
   console.log('  → Seeding users...');
@@ -274,7 +266,7 @@ async function seed() {
       currentVersion: '1.4.0',
       createdBy: 1,
     },
-  ]).onDuplicateKeyUpdate({ set: { applicationName: sql`VALUES(applicationName)` } });
+  ]).onDuplicateKeyUpdate({ set: { applicationName: sql`VALUES(application_name)` } });
 
   // Seed SLA Policies
   console.log('  → Seeding SLA policies...');
@@ -287,7 +279,7 @@ async function seed() {
     { requestType: 'rfc', priorityId: 2, targetBusinessDays: 44 },  // Medium: 3 days
     { requestType: 'rfc', priorityId: 3, targetBusinessDays: 44 },  // High: 2 days
     // { requestType: 'rfc', priorityId: 4, targetBusinessDays: 1 },  // Critical: 1 day
-  ]).onDuplicateKeyUpdate({ set: { targetBusinessDays: sql`VALUES(targetBusinessDays)` } });
+  ]).onDuplicateKeyUpdate({ set: { targetBusinessDays: sql`VALUES(target_business_days)` } });
 
   // Seed Completed Requests for Testing Reports
   console.log('  → Seeding completed requests...');
