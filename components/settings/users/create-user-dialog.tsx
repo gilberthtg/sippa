@@ -38,8 +38,16 @@ const createUserSchema = z.object({
   email: z.string().email('Invalid email format'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   roleId: z.number().refine(val => !!val, { message: 'Role is required' }),
+  developerRoleId: z.number().nullable(),
   unitId: z.number().nullable(),
   phone: z.string().max(50, 'Phone too long').nullable(),
+}).refine((data) => {
+  // If role is DEVELOPER (roleId 3), developerRoleId must be provided
+  // We'll validate this in the component based on roleCode
+  return true;
+}, {
+  message: 'Developer role is required when role is Developer',
+  path: ['developerRoleId'],
 });
 
 type CreateUserForm = z.infer<typeof createUserSchema>;
@@ -56,14 +64,21 @@ type Unit = {
   code: string;
 };
 
+type DeveloperRole = {
+  id: number;
+  name: string;
+  code: string;
+};
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   roles: Role[];
   units: Unit[];
+  developerRoles: DeveloperRole[];
 };
 
-export function CreateUserDialog({ open, onOpenChange, roles, units }: Props) {
+export function CreateUserDialog({ open, onOpenChange, roles, units, developerRoles }: Props) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -74,12 +89,24 @@ export function CreateUserDialog({ open, onOpenChange, roles, units }: Props) {
       email: '',
       password: '',
       roleId: undefined,
+      developerRoleId: null,
       unitId: null,
       phone: null,
     },
   });
 
+  // Watch roleId to determine if developer role should be shown
+  const selectedRoleId = form.watch('roleId');
+  const selectedRole = roles.find(r => r.id === selectedRoleId);
+  const isDeveloperRole = selectedRole?.code === 'DEVELOPER';
+
   const onSubmit = async (data: CreateUserForm) => {
+    // Validate developer role requirement
+    if (isDeveloperRole && !data.developerRoleId) {
+      toast.error('Developer role is required when role is Developer');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -182,6 +209,47 @@ export function CreateUserDialog({ open, onOpenChange, roles, units }: Props) {
                 );
               }}
             />
+
+            {isDeveloperRole && (
+              <FormField
+                control={form.control}
+                name="developerRoleId"
+                render={({ field }) => {
+                  const selectedDevRole = developerRoles.find(dr => dr.id === field.value);
+                  return (
+                    <FormItem>
+                      <FormLabel>Developer Role <span className="text-destructive">*</span></FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(Number(value))}
+                        value={field.value?.toString()}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select developer role">
+                              {selectedDevRole ? `${selectedDevRole.name} (${selectedDevRole.code})` : 'Select developer role'}
+                            </SelectValue>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {developerRoles.map((devRole) => (
+                            <SelectItem key={devRole.id} value={devRole.id.toString()}>
+                              <div className="flex flex-col py-1">
+                                <span className="font-medium">{devRole.name}</span>
+                                <span className="text-xs text-muted-foreground">{devRole.code}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Required for Developer role
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            )}
 
             <FormField
               control={form.control}

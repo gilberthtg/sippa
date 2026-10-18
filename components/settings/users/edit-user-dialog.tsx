@@ -38,6 +38,7 @@ const editUserSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name too long'),
   email: z.string().email('Invalid email format'),
   roleId: z.number().refine(val => !!val, { message: 'Role is required' }),
+  developerRoleId: z.number().nullable(),
   unitId: z.number().nullable(),
   phone: z.string().max(50, 'Phone too long').nullable(),
   isActive: z.boolean(),
@@ -50,6 +51,7 @@ type User = {
   name: string;
   email: string;
   roleId: number;
+  developerRoleId: number | null;
   unitId: number | null;
   phone: string | null;
   isActive: boolean;
@@ -67,16 +69,23 @@ type Unit = {
   code: string;
 };
 
+type DeveloperRole = {
+  id: number;
+  name: string;
+  code: string;
+};
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: User;
   roles: Role[];
   units: Unit[];
+  developerRoles: DeveloperRole[];
   currentUserId: number;
 };
 
-export function EditUserDialog({ open, onOpenChange, user, roles, units, currentUserId }: Props) {
+export function EditUserDialog({ open, onOpenChange, user, roles, units, developerRoles, currentUserId }: Props) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const isCurrentUser = user.id === currentUserId;
@@ -87,17 +96,24 @@ export function EditUserDialog({ open, onOpenChange, user, roles, units, current
       name: user.name,
       email: user.email,
       roleId: user.roleId,
+      developerRoleId: user.developerRoleId,
       unitId: user.unitId,
       phone: user.phone,
       isActive: user.isActive,
     },
   });
 
+  // Watch roleId to determine if developer role should be shown
+  const selectedRoleId = form.watch('roleId');
+  const selectedRole = roles.find(r => r.id === selectedRoleId);
+  const isDeveloperRole = selectedRole?.code === 'DEVELOPER';
+
   useEffect(() => {
     form.reset({
       name: user.name,
       email: user.email,
       roleId: user.roleId,
+      developerRoleId: user.developerRoleId,
       unitId: user.unitId,
       phone: user.phone,
       isActive: user.isActive,
@@ -105,6 +121,12 @@ export function EditUserDialog({ open, onOpenChange, user, roles, units, current
   }, [user, form]);
 
   const onSubmit = async (data: EditUserForm) => {
+    // Validate developer role requirement
+    if (isDeveloperRole && !data.developerRoleId) {
+      toast.error('Developer role is required when role is Developer');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -198,6 +220,47 @@ export function EditUserDialog({ open, onOpenChange, user, roles, units, current
                 );
               }}
             />
+
+            {isDeveloperRole && (
+              <FormField
+                control={form.control}
+                name="developerRoleId"
+                render={({ field }) => {
+                  const selectedDevRole = developerRoles.find(dr => dr.id === field.value);
+                  return (
+                    <FormItem>
+                      <FormLabel>Developer Role <span className="text-destructive">*</span></FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(Number(value))}
+                        value={field.value?.toString() || ''}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select developer role">
+                              {selectedDevRole ? `${selectedDevRole.name} (${selectedDevRole.code})` : 'Select developer role'}
+                            </SelectValue>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {developerRoles.map((devRole) => (
+                            <SelectItem key={devRole.id} value={devRole.id.toString()}>
+                              <div className="flex flex-col py-1">
+                                <span className="font-medium">{devRole.name}</span>
+                                <span className="text-xs text-muted-foreground">{devRole.code}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Required for Developer role
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            )}
 
             <FormField
               control={form.control}

@@ -1329,3 +1329,149 @@ See `.ai/PHASE_5_COMPLETE.md` for comprehensive documentation.
   - ✅ Version validation works correctly (compares against current_version)
   - ✅ Complete RFC workflow enabled
 - Next recommended step: **Test RFC form submission with actual application selection**
+
+
+## 2026-10-14 — Admin Request Table Order By Fix
+- Goal: Fix non-functional order by (sort) feature on admin DevTI request table
+- Issue: Clicking sort buttons (Request No, Diajukan) on admin request table did not change sort order
+- Root cause: 
+  - AdminRequestTable had onSort callback and UI buttons, but parent AdminRequestListClient did not implement handler
+  - getAllRequests server action had hardcoded `.orderBy(desc(requests.submittedAt))` without sort parameters
+  - URL did not track sortBy/sortOrder parameters
+- Changes made:
+  - **Server Action (`app/actions/admin-requests.ts`)**:
+    - Added `sortBy` and `sortOrder` parameters to `getAllRequests` function
+    - Implemented dynamic orderBy clause with switch statement for sortable fields:
+      - `requestNo`: Request number sorting
+      - `title`: Title sorting
+      - `status`: Status sorting  
+      - `submittedAt`: Submission date sorting (default)
+    - Support both 'asc' and 'desc' sort orders (default: 'desc')
+  - **Admin Request Page (`app/(admin)/admin/requests/page.tsx`)**:
+    - Added `sortBy` and `sortOrder` to PageProps interface
+    - Extract sort parameters from searchParams with defaults ('submittedAt', 'desc')
+    - Pass sort parameters to getAllRequests action
+    - Pass initial sort state to AdminRequestListClient component
+  - **Admin Request List Client (`components/admin/admin-request-list-client.tsx`)**:
+    - Added `initialSortBy` and `initialSortOrder` props
+    - Added `sortBy` and `sortOrder` state with useState
+    - Implemented `handleSort` function:
+      - Toggle sort order if clicking same field (asc ↔ desc)
+      - Set new field with default desc order if clicking different field
+    - Updated `updateURL` to include sortBy and sortOrder in query params
+    - Pass `currentSortBy` and `currentSortOrder` to AdminRequestTable
+  - **Admin Request Table (`components/admin/admin-request-table.tsx`)**:
+    - Added `currentSortBy` and `currentSortOrder` props to interface
+    - Imported ArrowUp and ArrowDown icons from lucide-react
+    - Implemented `getSortIcon` helper function:
+      - Show ArrowUpDown (neutral) if field is not currently sorted
+      - Show ArrowUp if field is sorted ascending
+      - Show ArrowDown if field is sorted descending
+    - Updated table headers to display dynamic sort icons
+- Files changed:
+  - `app/actions/admin-requests.ts` (updated)
+  - `app/(admin)/admin/requests/page.tsx` (updated)
+  - `components/admin/admin-request-list-client.tsx` (updated)
+  - `components/admin/admin-request-table.tsx` (updated)
+- Sortable columns:
+  - ✅ No. Request (requestNo)
+  - ✅ Diajukan (submittedAt)
+  - Can be extended: title, status (currently not exposed in UI)
+- UX improvements:
+  - ✅ Visual feedback with directional arrow icons (↑ ↓)
+  - ✅ Toggle behavior: first click = desc, second click = asc
+  - ✅ URL state preservation (refresh keeps sort order)
+  - ✅ Works with filters and pagination
+  - ✅ Default sort: submittedAt desc (newest first)
+- Tests/checks:
+  - ✅ TypeScript: PASSED (no compilation errors)
+  - ⚠️ Manual testing needed: Verify sort functionality on admin request table
+- Benefits:
+  - ✅ Admin can now sort requests by number or submission date
+  - ✅ Sort state persists in URL (shareable, refresh-safe)
+  - ✅ Clear visual indication of active sort and direction
+  - ✅ Works seamlessly with existing filters and pagination
+  - ✅ Extensible pattern for adding more sortable columns
+- Next recommended step: **Test admin request table sorting functionality with actual data**
+
+
+## 2026-10-18 — User Management Enhancement: Developer Role Selection
+- Goal: Add developer role selection in user management module and create dummy users for each developer role
+- Changes made:
+  - **User Management Forms Updated**:
+    - `create-user-dialog.tsx`: Added developer role dropdown field
+      - Shows only when selected role is DEVELOPER
+      - Required field for Developer role with validation
+      - Displays all active developer roles (SA, TW, BE, FE, QA, DM)
+    - `edit-user-dialog.tsx`: Added developer role dropdown field
+      - Shows only when selected role is DEVELOPER
+      - Required field for Developer role with validation
+      - Pre-populates with existing developer role if any
+    - `user-list-client.tsx`: Added developerRoles prop and passed to dialogs
+    - `user-table.tsx`: Added developerRoleId field to User type
+  - **Server Actions Enhanced (`app/actions/user-management.ts`)**:
+    - `createUser()`: Added developerRoleId parameter
+      - Validates developer role requirement when role is DEVELOPER
+      - Saves developerRoleId to database
+      - Includes in audit log
+    - `updateUser()`: Added developerRoleId parameter
+      - Validates developer role requirement when updating to DEVELOPER role
+      - Updates developerRoleId in database
+      - Includes in audit log
+    - `getAllUsers()`: Added developerRoleId to select query
+    - `getUserById()`: Added developerRoleId to select query
+    - `getDeveloperRolesForDropdown()`: New function to fetch active developer roles
+      - Returns id, name, code
+      - Filters by isActive = true
+      - Orders by sortOrder
+  - **Page Component Updated (`app/(admin)/admin/settings/users/page.tsx`)**:
+    - Added getDeveloperRolesForDropdown import
+    - Fetches developer roles in parallel with users, roles, and units
+    - Passes developerRoles to UserListClient component
+  - **Seed Data Enhanced (`lib/db/seed.ts`)**:
+    - Added 3 additional User role dummy users (John Doe, Jane Smith, Bob Wilson)
+    - Added 12 Developer role dummy users (2 per developer role):
+      - **SA (System Analyst)**: Ahmad Fauzi (dev.sa@sippa.local)
+      - **TW (Technical Writer)**: Siti Nurhaliza (dev.tw@sippa.local), Dewi Lestari (dev.tw2@sippa.local)
+      - **BE (Back End)**: Budi Santoso (dev.be@sippa.local), Andi Wijaya (dev.be2@sippa.local)
+      - **FE (Front End)**: Rina Kusuma (dev.fe@sippa.local), Dian Pratama (dev.fe2@sippa.local)
+      - **QA (Quality Assurance)**: Yudi Setiawan (dev.qa@sippa.local), Maya Sari (dev.qa2@sippa.local)
+      - **DM (Data Management)**: Rudi Hartono (dev.dm@sippa.local), Lisa Anggraini (dev.dm2@sippa.local)
+    - All developer dummy users assigned to Unit IT (id: 1)
+    - All passwords: password123
+    - Added requestApplications cleanup in seed cleanup phase
+- Files changed:
+  - `components/settings/users/create-user-dialog.tsx` (updated - 6 changes)
+  - `components/settings/users/edit-user-dialog.tsx` (updated - 6 changes)
+  - `components/settings/users/user-list-client.tsx` (updated - 4 changes)
+  - `components/settings/users/user-table.tsx` (updated - 1 change)
+  - `app/actions/user-management.ts` (updated - 6 changes)
+  - `app/(admin)/admin/settings/users/page.tsx` (updated - 3 changes)
+  - `lib/db/seed.ts` (updated - 2 changes)
+- Validation Rules:
+  - ✅ Developer role dropdown only shown when role is DEVELOPER
+  - ✅ Developer role is required when creating/updating user with DEVELOPER role
+  - ✅ Client-side validation shows error if developer role is missing
+  - ✅ Server-side validation throws error if developer role is missing for DEVELOPER users
+  - ✅ Database query fetches only active developer roles ordered by sortOrder
+- Tests/checks:
+  - ✅ TypeScript compilation: PASSED (`npx tsc --noEmit`)
+  - ✅ Database seed: SUCCESS (17 users seeded - 1 admin, 4 users, 12 developers)
+  - ✅ Production Build: SUCCESS (all 30 routes compiled)
+- Dummy User Accounts:
+  - **Admin**: admin@sippa.local / password123
+  - **Users**: user@sippa.local, user2@sippa.local, user3@sippa.local / password123
+  - **Developers (SA)**: dev.sa@sippa.local / password123
+  - **Developers (TW)**: dev.tw@sippa.local, dev.tw2@sippa.local / password123
+  - **Developers (BE)**: dev.be@sippa.local, dev.be2@sippa.local / password123
+  - **Developers (FE)**: dev.fe@sippa.local, dev.fe2@sippa.local / password123
+  - **Developers (QA)**: dev.qa@sippa.local, dev.qa2@sippa.local / password123
+  - **Developers (DM)**: dev.dm@sippa.local, dev.dm2@sippa.local / password123
+- Benefits:
+  - ✅ Admin can now assign developer role during user creation/editing
+  - ✅ Clear visual indication of developer specialization in forms
+  - ✅ Prevents creating developer users without specified role
+  - ✅ Comprehensive dummy data for testing all developer roles
+  - ✅ Consistent with database schema and business rules from BUSINESS_RULES.md
+  - ✅ Audit log captures developer role changes
+- Next recommended step: **Manual testing of user creation/editing with different roles to verify dropdown behavior and validation**

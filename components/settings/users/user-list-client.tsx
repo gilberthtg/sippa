@@ -19,6 +19,7 @@ type User = {
   roleId: number;
   roleName: string | null;
   roleCode: string | null;
+  developerRoleId: number | null;
   unitId: number | null;
   unitName: string | null;
   phone: string | null;
@@ -40,6 +41,12 @@ type Unit = {
   code: string;
 };
 
+type DeveloperRole = {
+  id: number;
+  name: string;
+  code: string;
+};
+
 type Props = {
   initialData: {
     users: User[];
@@ -50,10 +57,11 @@ type Props = {
   };
   roles: Role[];
   units: Unit[];
+  developerRoles: DeveloperRole[];
   currentUserId: number;
 };
 
-export function UserListClient({ initialData, roles, units, currentUserId }: Props) {
+export function UserListClient({ initialData, roles, units, developerRoles, currentUserId }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -116,6 +124,7 @@ export function UserListClient({ initialData, roles, units, currentUserId }: Pro
         onOpenChange={setCreateDialogOpen}
         roles={roles}
         units={units}
+        developerRoles={developerRoles}
       />
 
       {selectedUser && (
@@ -126,6 +135,7 @@ export function UserListClient({ initialData, roles, units, currentUserId }: Pro
             user={selectedUser}
             roles={roles}
             units={units}
+            developerRoles={developerRoles}
             currentUserId={currentUserId}
           />
 

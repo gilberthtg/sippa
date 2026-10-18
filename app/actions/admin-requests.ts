@@ -41,6 +41,8 @@ export async function getAllRequests(params?: {
   search?: string;
   page?: number;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }) {
   try {
     const authCheck = await checkAdminAuth();
@@ -90,11 +92,32 @@ export async function getAllRequests(params?: {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+    // Determine sort column and direction
+    const sortBy = params?.sortBy || 'submittedAt';
+    const sortOrder = params?.sortOrder || 'desc';
+    
+    let orderByClause;
+    switch (sortBy) {
+      case 'requestNo':
+        orderByClause = sortOrder === 'asc' ? requests.requestNo : desc(requests.requestNo);
+        break;
+      case 'title':
+        orderByClause = sortOrder === 'asc' ? requests.title : desc(requests.title);
+        break;
+      case 'status':
+        orderByClause = sortOrder === 'asc' ? requests.status : desc(requests.status);
+        break;
+      case 'submittedAt':
+      default:
+        orderByClause = sortOrder === 'asc' ? requests.submittedAt : desc(requests.submittedAt);
+        break;
+    }
+
     const data = await db
       .select()
       .from(requests)
       .where(whereClause)
-      .orderBy(desc(requests.submittedAt))
+      .orderBy(orderByClause)
       .limit(limit)
       .offset(offset);
 

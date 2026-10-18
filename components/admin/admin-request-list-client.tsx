@@ -26,6 +26,8 @@ interface AdminRequestListClientProps {
   initialPage: number;
   initialLimit: number;
   priorities: Array<{ id: number; name: string }>;
+  initialSortBy?: string;
+  initialSortOrder?: 'asc' | 'desc';
 }
 
 export function AdminRequestListClient({
@@ -34,6 +36,8 @@ export function AdminRequestListClient({
   initialPage,
   initialLimit,
   priorities,
+  initialSortBy = 'submittedAt',
+  initialSortOrder = 'desc',
 }: AdminRequestListClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -48,6 +52,8 @@ export function AdminRequestListClient({
   const [typeFilter, setTypeFilter] = useState<string[]>(
     searchParams.get('type')?.split(',').filter(Boolean) || []
   );
+  const [sortBy, setSortBy] = useState(initialSortBy);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(initialSortOrder);
 
   const updateURL = useCallback(() => {
     const params = new URLSearchParams();
@@ -56,10 +62,12 @@ export function AdminRequestListClient({
     if (statusFilter.length > 0) params.set('status', statusFilter.join(','));
     if (priorityFilter.length > 0) params.set('priority', priorityFilter.join(','));
     if (typeFilter.length > 0) params.set('type', typeFilter.join(','));
+    if (sortBy) params.set('sortBy', sortBy);
+    if (sortOrder) params.set('sortOrder', sortOrder);
     params.set('page', '1');
 
     router.push(`/admin/requests?${params.toString()}`);
-  }, [search, statusFilter, priorityFilter, typeFilter, router]);
+  }, [search, statusFilter, priorityFilter, typeFilter, sortBy, sortOrder, router]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -73,6 +81,16 @@ export function AdminRequestListClient({
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', newPage.toString());
     router.push(`/admin/requests?${params.toString()}`);
+  };
+
+  const handleSort = (field: string) => {
+    // Toggle sort order if clicking same field, otherwise default to desc
+    if (field === sortBy) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('desc');
+    }
   };
 
   const totalPages = Math.ceil(initialTotal / initialLimit);
@@ -98,7 +116,12 @@ export function AdminRequestListClient({
         </p>
       </div>
 
-      <AdminRequestTable requests={initialRequests} />
+      <AdminRequestTable 
+        requests={initialRequests} 
+        onSort={handleSort}
+        currentSortBy={sortBy}
+        currentSortOrder={sortOrder}
+      />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">

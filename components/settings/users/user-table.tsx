@@ -28,6 +28,7 @@ type User = {
   roleId: number;
   roleName: string | null;
   roleCode: string | null;
+  developerRoleId: number | null;
   unitId: number | null;
   unitName: string | null;
   phone: string | null;

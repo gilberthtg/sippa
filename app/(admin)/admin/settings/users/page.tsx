@@ -4,7 +4,7 @@ import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { Suspense } from 'react';
 import { UserListClient } from '@/components/settings/users/user-list-client';
-import { getAllUsers, getRolesForDropdown, getUnitsForDropdown } from '@/app/actions/user-management';
+import { getAllUsers, getRolesForDropdown, getUnitsForDropdown, getDeveloperRolesForDropdown } from '@/app/actions/user-management';
 
 export default async function UsersPage({
   searchParams,
@@ -23,10 +23,11 @@ export default async function UsersPage({
   const unitIds = params.unitIds ? (params.unitIds as string).split(',').map(Number) : [];
   const isActive = params.isActive === 'true' ? true : params.isActive === 'false' ? false : null;
 
-  const [usersData, roles, units] = await Promise.all([
+  const [usersData, roles, units, developerRoles] = await Promise.all([
     getAllUsers({ page, search, roleIds, unitIds, isActive }),
     getRolesForDropdown(),
     getUnitsForDropdown(),
+    getDeveloperRolesForDropdown(),
   ]);
 
   return (
@@ -41,6 +42,7 @@ export default async function UsersPage({
           initialData={usersData}
           roles={roles}
           units={units}
+          developerRoles={developerRoles}
           currentUserId={session.user.id}
         />
       </Suspense>

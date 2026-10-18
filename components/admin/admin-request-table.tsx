@@ -14,7 +14,7 @@ import { PriorityBadge } from '@/components/requests/priority-badge';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import Link from 'next/link';
-import { ArrowUpDown, Eye } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowUpDown, Eye } from 'lucide-react';
 
 interface Request {
   id: number;
@@ -31,6 +31,8 @@ interface Request {
 interface AdminRequestTableProps {
   requests: Request[];
   onSort?: (field: string) => void;
+  currentSortBy?: string;
+  currentSortOrder?: 'asc' | 'desc';
 }
 
 const typeLabels = {
@@ -38,7 +40,12 @@ const typeLabels = {
   rfc: 'RFC',
 };
 
-export function AdminRequestTable({ requests, onSort }: AdminRequestTableProps) {
+export function AdminRequestTable({ 
+  requests, 
+  onSort,
+  currentSortBy,
+  currentSortOrder 
+}: AdminRequestTableProps) {
   if (requests.length === 0) {
     return (
       <div className="text-center py-12 border rounded-lg">
@@ -46,6 +53,15 @@ export function AdminRequestTable({ requests, onSort }: AdminRequestTableProps) 
       </div>
     );
   }
+
+  const getSortIcon = (field: string) => {
+    if (currentSortBy !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return currentSortOrder === 'asc' 
+      ? <ArrowUp className="ml-2 h-4 w-4" />
+      : <ArrowDown className="ml-2 h-4 w-4" />;
+  };
 
   return (
     <div className="border rounded-lg">
@@ -60,7 +76,7 @@ export function AdminRequestTable({ requests, onSort }: AdminRequestTableProps) 
                 onClick={() => onSort?.('requestNo')}
               >
                 No. Request
-                <ArrowUpDown className="ml-2 h-4 w-4" />
+                {getSortIcon('requestNo')}
               </Button>
             </TableHead>
             <TableHead>Tipe</TableHead>
@@ -76,7 +92,7 @@ export function AdminRequestTable({ requests, onSort }: AdminRequestTableProps) 
                 onClick={() => onSort?.('submittedAt')}
               >
                 Diajukan
-                <ArrowUpDown className="ml-2 h-4 w-4" />
+                {getSortIcon('submittedAt')}
               </Button>
             </TableHead>
             <TableHead className="text-right">Aksi</TableHead>

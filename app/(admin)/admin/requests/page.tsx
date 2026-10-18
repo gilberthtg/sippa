@@ -13,6 +13,8 @@ interface PageProps {
     type?: string;
     search?: string;
     page?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }>;
 }
 
@@ -23,6 +25,8 @@ async function RequestListContent({ searchParams }: PageProps) {
   const priorityArray = params.priority?.split(',').filter(Boolean).map(Number) || [];
   const typeArray = params.type?.split(',').filter(Boolean) || [];
   const page = parseInt(params.page || '1');
+  const sortBy = params.sortBy || 'submittedAt';
+  const sortOrder = params.sortOrder || 'desc';
 
   const [requestsResult, prioritiesResult] = await Promise.all([
     getAllRequests({
@@ -32,6 +36,8 @@ async function RequestListContent({ searchParams }: PageProps) {
       search: params.search,
       page,
       limit: 20,
+      sortBy,
+      sortOrder,
     }),
     getPriorities(),
   ]);
@@ -49,6 +55,8 @@ async function RequestListContent({ searchParams }: PageProps) {
       initialPage={requestsResult.page || 1}
       initialLimit={requestsResult.limit || 20}
       priorities={priorities}
+      initialSortBy={sortBy}
+      initialSortOrder={sortOrder}
     />
   );
 }

@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { users, roles, units } from '@/lib/db/schema';
+import { users, roles, units, developerRoles } from '@/lib/db/schema';
 import { eq, and, or, like, desc, asc, sql, count } from 'drizzle-orm';
 import { auth } from '@/lib/auth/config';
 import bcrypt from 'bcryptjs';
@@ -84,6 +84,7 @@ export async function getAllUsers(params?: {
         roleId: users.roleId,
         roleName: roles.name,
         roleCode: roles.code,
+        developerRoleId: users.developerRoleId,
         unitId: users.unitId,
         unitName: units.name,
         phone: users.phone,
@@ -125,6 +126,7 @@ export async function getUserById(id: number) {
       roleId: users.roleId,
       roleName: roles.name,
       roleCode: roles.code,
+      developerRoleId: users.developerRoleId,
       unitId: users.unitId,
       unitName: units.name,
       phone: users.phone,
@@ -147,6 +149,7 @@ export async function createUser(data: {
   email: string;
   password: string;
   roleId: number;
+  developerRoleId?: number | null;
   unitId?: number | null;
   phone?: string | null;
 }) {
@@ -162,6 +165,12 @@ export async function createUser(data: {
     throw new Error('Email already exists');
   }
 
+  // Validate developer role requirement
+  const role = await db.select().from(roles).where(eq(roles.id, data.roleId)).limit(1);
+  if (role[0]?.code === 'DEVELOPER' && !data.developerRoleId) {
+    throw new Error('Developer role is required when creating a Developer user');
+  }
+
   const passwordHash = await bcrypt.hash(data.password, 10);
 
   const result = await db.insert(users).values({
@@ -169,6 +178,7 @@ export async function createUser(data: {
     email: data.email,
     passwordHash,
     roleId: data.roleId,
+    developerRoleId: data.developerRoleId || null,
     unitId: data.unitId || null,
     phone: data.phone || null,
     isActive: true,
@@ -181,7 +191,7 @@ export async function createUser(data: {
     entityType: 'user',
     entityId: String(result[0].insertId),
     action: AUDIT_ACTIONS.CREATE,
-    afterData: { name: data.name, email: data.email, roleId: data.roleId, unitId: data.unitId },
+    afterData: { name: data.name, email: data.email, roleId: data.roleId, developerRoleId: data.developerRoleId, unitId: data.unitId },
   });
 
   revalidatePath('/admin/settings/users');
@@ -195,6 +205,7 @@ export async function updateUser(
     name?: string;
     email?: string;
     roleId?: number;
+    developerRoleId?: number | null;
     unitId?: number | null;
     phone?: string | null;
     isActive?: boolean;
@@ -222,6 +233,14 @@ export async function updateUser(
     }
   }
 
+  // Validate developer role requirement
+  if (data.roleId) {
+    const role = await db.select().from(roles).where(eq(roles.id, data.roleId)).limit(1);
+    if (role[0]?.code === 'DEVELOPER' && !data.developerRoleId) {
+      throw new Error('Developer role is required when role is Developer');
+    }
+  }
+
   const [currentUser] = await db.select().from(users).where(eq(users.id, id)).limit(1);
 
   await db
@@ -230,6 +249,7 @@ export async function updateUser(
       ...(data.name && { name: data.name }),
       ...(data.email && { email: data.email }),
       ...(data.roleId && { roleId: data.roleId }),
+      ...(data.developerRoleId !== undefined && { developerRoleId: data.developerRoleId }),
       ...(data.unitId !== undefined && { unitId: data.unitId }),
       ...(data.phone !== undefined && { phone: data.phone }),
       ...(data.isActive !== undefined && { isActive: data.isActive }),
@@ -244,7 +264,7 @@ export async function updateUser(
     entityType: 'user',
     entityId: String(id),
     action: AUDIT_ACTIONS.UPDATE,
-    beforeData: { name: currentUser.name, email: currentUser.email, roleId: currentUser.roleId, isActive: currentUser.isActive },
+    beforeData: { name: currentUser.name, email: currentUser.email, roleId: currentUser.roleId, developerRoleId: currentUser.developerRoleId, isActive: currentUser.isActive },
     afterData: data,
   });
 
@@ -347,4 +367,16 @@ export async function getUnitsForDropdown() {
     .where(eq(units.isActive, true));
 
   return unitsList;
+}
+
+export async function getDeveloperRolesForDropdown() {
+  await checkAdminAuth();
+
+  const devRolesList = await db
+    .select({ id: developerRoles.id, name: developerRoles.name, code: developerRoles.code })
+    .from(developerRoles)
+    .where(eq(developerRoles.isActive, true))
+    .orderBy(asc(developerRoles.sortOrder));
+
+  return devRolesList;
 }
