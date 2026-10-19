@@ -26,13 +26,13 @@ interface RecentActivityWidgetProps {
 }
 
 const statusLabels: Record<string, string> = {
-  submitted: 'Submitted',
-  in_review: 'In Review',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  ongoing: 'Ongoing',
-  on_hold: 'On Hold',
-  done: 'Done',
+  submitted: 'Diajukan',
+  in_review: 'Sedang Ditinjau',
+  approved: 'Disetujui',
+  rejected: 'Ditolak',
+  ongoing: 'Sedang Berlangsung',
+  on_hold: 'Ditangguhkan',
+  done: 'Selesai',
 };
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {

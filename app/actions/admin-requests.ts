@@ -13,10 +13,11 @@ import {
   slaPolicies
 } from '@/lib/db/schema';
 import { REQUEST_STATUSES, ROLES, AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
+import { validateTransitionWithContext } from '@/lib/validations/status-transitions';
 import { eq, and, desc, or, like, sql, gte, lte, inArray, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { logAudit } from '@/lib/utils/audit';
-import { notifyRequestApproved, notifyRequestRejected, notifyDeveloperAssigned } from '@/lib/notifications/templates';
+import { notifyRequestApproved, notifyRequestRejected, notifyDeveloperAssigned, notifyRequestCompleted } from '@/lib/notifications/templates';
 
 async function checkAdminAuth() {
   const session = await auth();
@@ -394,8 +395,13 @@ export async function verifyRequest(requestId: number, note?: string) {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.status !== REQUEST_STATUSES.SUBMITTED) {
-      return { success: false, error: 'Request harus berstatus SUBMITTED' };
+    const transitionValidation = validateTransitionWithContext(
+      request.status as 'submitted' | 'in_review' | 'approved' | 'rejected' | 'ongoing' | 'done' | 'on_hold',
+      REQUEST_STATUSES.IN_REVIEW,
+      ROLES.ADMIN
+    );
+    if (!transitionValidation.valid) {
+      return { success: false, error: transitionValidation.error || 'Transisi status tidak valid' };
     }
 
     await db
@@ -452,8 +458,13 @@ export async function approveRequest(requestId: number, note?: string) {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.status !== REQUEST_STATUSES.IN_REVIEW) {
-      return { success: false, error: 'Request harus berstatus IN_REVIEW' };
+    const approveTransitionValidation = validateTransitionWithContext(
+      request.status as 'submitted' | 'in_review' | 'approved' | 'rejected' | 'ongoing' | 'done' | 'on_hold',
+      REQUEST_STATUSES.APPROVED,
+      ROLES.ADMIN
+    );
+    if (!approveTransitionValidation.valid) {
+      return { success: false, error: approveTransitionValidation.error || 'Transisi status tidak valid' };
     }
 
     // PHASE 3: Auto-create application master for NEW_APPLICATION
@@ -582,8 +593,13 @@ export async function rejectRequest(requestId: number, reason: string) {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.status !== REQUEST_STATUSES.IN_REVIEW) {
-      return { success: false, error: 'Request harus berstatus IN_REVIEW' };
+    const rejectTransitionValidation = validateTransitionWithContext(
+      request.status as 'submitted' | 'in_review' | 'approved' | 'rejected' | 'ongoing' | 'done' | 'on_hold',
+      REQUEST_STATUSES.REJECTED,
+      ROLES.ADMIN
+    );
+    if (!rejectTransitionValidation.valid) {
+      return { success: false, error: rejectTransitionValidation.error || 'Transisi status tidak valid' };
     }
 
     await db
@@ -630,6 +646,79 @@ export async function rejectRequest(requestId: number, reason: string) {
   } catch (error) {
     console.error('Reject request error:', error);
     return { success: false, error: 'Gagal menolak request' };
+  }
+}
+
+export async function completeRequest(requestId: number, note?: string) {
+  try {
+    const authCheck = await checkAdminAuth();
+    if (!authCheck.authorized) {
+      return { success: false, error: authCheck.error };
+    }
+
+    const [request] = await db
+      .select()
+      .from(requests)
+      .where(eq(requests.id, requestId))
+      .limit(1);
+
+    if (!request) {
+      return { success: false, error: 'Request tidak ditemukan' };
+    }
+
+    const completeTransitionValidation = validateTransitionWithContext(
+      request.status as 'submitted' | 'in_review' | 'approved' | 'rejected' | 'ongoing' | 'done' | 'on_hold',
+      REQUEST_STATUSES.DONE,
+      ROLES.ADMIN
+    );
+    if (!completeTransitionValidation.valid) {
+      return { success: false, error: completeTransitionValidation.error || 'Transisi status tidak valid' };
+    }
+
+    const now = new Date();
+    await db
+      .update(requests)
+      .set({
+        status: REQUEST_STATUSES.DONE,
+        completedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(requests.id, requestId));
+
+    await db.insert(requestStatusHistories).values({
+      requestId,
+      fromStatus: request.status,
+      toStatus: REQUEST_STATUSES.DONE,
+      changedBy: authCheck.session!.user.id,
+      changedByName: authCheck.session!.user.name,
+      note: note || 'Request diselesaikan oleh admin',
+    });
+
+    logAudit({
+      actorUserId: authCheck.session!.user.id,
+      actorName: authCheck.session!.user.name,
+      module: AUDIT_MODULES.REQUESTS,
+      entityType: 'request',
+      entityId: String(requestId),
+      action: AUDIT_ACTIONS.COMPLETE,
+      beforeData: { status: request.status },
+      afterData: { status: REQUEST_STATUSES.DONE, note },
+    });
+
+    notifyRequestCompleted({
+      requestId,
+      requestNo: request.requestNo,
+      title: request.title,
+      requesterId: request.requesterId,
+    });
+
+    revalidatePath('/admin/requests');
+    revalidatePath(`/admin/requests/${requestId}`);
+    revalidatePath('/developer/requests');
+    return { success: true, message: 'Request berhasil diselesaikan' };
+  } catch (error) {
+    console.error('Complete request error:', error);
+    return { success: false, error: 'Gagal menyelesaikan request' };
   }
 }
 
@@ -744,8 +833,13 @@ export async function assignRequest(params: {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.status !== REQUEST_STATUSES.APPROVED) {
-      return { success: false, error: 'Request harus berstatus APPROVED' };
+    const legacyAssignValidation = validateTransitionWithContext(
+      request.status as 'submitted' | 'in_review' | 'approved' | 'rejected' | 'ongoing' | 'done' | 'on_hold',
+      REQUEST_STATUSES.ONGOING,
+      ROLES.ADMIN
+    );
+    if (!legacyAssignValidation.valid) {
+      return { success: false, error: legacyAssignValidation.error || 'Transisi status tidak valid' };
     }
 
     // TODO: Update to new assignment structure in Phase 2
@@ -1092,8 +1186,13 @@ export async function assignTeamToRequest(params: {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.status !== REQUEST_STATUSES.APPROVED) {
-      return { success: false, error: 'Request harus berstatus APPROVED' };
+    const assignTransitionValidation = validateTransitionWithContext(
+      request.status as 'submitted' | 'in_review' | 'approved' | 'rejected' | 'ongoing' | 'done' | 'on_hold',
+      REQUEST_STATUSES.ONGOING,
+      ROLES.ADMIN
+    );
+    if (!assignTransitionValidation.valid) {
+      return { success: false, error: assignTransitionValidation.error || 'Transisi status tidak valid' };
     }
 
     // Verify technical writer has TW role

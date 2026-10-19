@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { REQUEST_STATUSES } from '@/lib/constants';
+import { REQUEST_STATUSES, STATUS_LABELS } from '@/lib/constants';
 
 interface RequestFiltersProps {
   activeFilter: string;
@@ -10,13 +10,13 @@ interface RequestFiltersProps {
 
 const FILTERS = [
   { value: 'all', label: 'Semua' },
-  { value: REQUEST_STATUSES.SUBMITTED, label: 'Submitted' },
-  { value: REQUEST_STATUSES.IN_REVIEW, label: 'In Review' },
-  { value: REQUEST_STATUSES.APPROVED, label: 'Approved' },
-  { value: REQUEST_STATUSES.ONGOING, label: 'Ongoing' },
-  { value: REQUEST_STATUSES.ON_HOLD, label: 'On Hold' },
-  { value: REQUEST_STATUSES.DONE, label: 'Done' },
-  { value: REQUEST_STATUSES.REJECTED, label: 'Rejected' },
+  { value: REQUEST_STATUSES.SUBMITTED, label: STATUS_LABELS[REQUEST_STATUSES.SUBMITTED] },
+  { value: REQUEST_STATUSES.IN_REVIEW, label: STATUS_LABELS[REQUEST_STATUSES.IN_REVIEW] },
+  { value: REQUEST_STATUSES.APPROVED, label: STATUS_LABELS[REQUEST_STATUSES.APPROVED] },
+  { value: REQUEST_STATUSES.ONGOING, label: STATUS_LABELS[REQUEST_STATUSES.ONGOING] },
+  { value: REQUEST_STATUSES.ON_HOLD, label: STATUS_LABELS[REQUEST_STATUSES.ON_HOLD] },
+  { value: REQUEST_STATUSES.DONE, label: STATUS_LABELS[REQUEST_STATUSES.DONE] },
+  { value: REQUEST_STATUSES.REJECTED, label: STATUS_LABELS[REQUEST_STATUSES.REJECTED] },
 ];
 
 export function RequestFilters({ activeFilter, onFilterChange }: RequestFiltersProps) {

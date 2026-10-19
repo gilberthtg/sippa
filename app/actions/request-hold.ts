@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
 import { requests, requestTeamAssignments, requestStatusHistories, users } from '@/lib/db/schema';
 import { REQUEST_STATUSES, ROLES, AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
+import { validateTransitionWithContext } from '@/lib/validations/status-transitions';
 import { eq, and, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { logAudit } from '@/lib/utils/audit';
@@ -60,8 +61,13 @@ export async function pauseRequest(params: { requestId: number; reason: string }
     if (!request) {
       return { success: false, error: 'Request tidak ditemukan' };
     }
-    if (request.status !== REQUEST_STATUSES.ONGOING) {
-      return { success: false, error: 'Hanya request ONGOING yang dapat ditahan' };
+    const pauseValidation = validateTransitionWithContext(
+      request.status as 'submitted' | 'in_review' | 'approved' | 'rejected' | 'ongoing' | 'done' | 'on_hold',
+      REQUEST_STATUSES.ON_HOLD,
+      authCheck.isAdmin ? ROLES.ADMIN : ROLES.DEVELOPER
+    );
+    if (!pauseValidation.valid) {
+      return { success: false, error: pauseValidation.error || 'Transisi status tidak valid' };
     }
 
     const now = new Date();
@@ -127,8 +133,13 @@ export async function resumeRequest(params: { requestId: number; note?: string }
     if (!request) {
       return { success: false, error: 'Request tidak ditemukan' };
     }
-    if (request.status !== REQUEST_STATUSES.ON_HOLD) {
-      return { success: false, error: 'Hanya request ON_HOLD yang dapat dilanjutkan' };
+    const resumeValidation = validateTransitionWithContext(
+      request.status as 'submitted' | 'in_review' | 'approved' | 'rejected' | 'ongoing' | 'done' | 'on_hold',
+      REQUEST_STATUSES.ONGOING,
+      authCheck.isAdmin ? ROLES.ADMIN : ROLES.DEVELOPER
+    );
+    if (!resumeValidation.valid) {
+      return { success: false, error: resumeValidation.error || 'Transisi status tidak valid' };
     }
 
     // Calculate paused duration

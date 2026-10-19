@@ -1,7 +1,9 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Circle, CheckCircle2 } from 'lucide-react';
+import { Circle, ArrowRight } from 'lucide-react';
+import { StatusBadge } from '@/components/requests/status-badge';
+import { STATUS_LABELS } from '@/lib/constants';
 
 interface History {
   id: number;
@@ -20,25 +22,32 @@ export function RequestDetailTimeline({ histories }: RequestDetailTimelineProps)
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('id-ID', {
       day: '2-digit',
-      month: 'short',
+      month: 'long',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'Asia/Jakarta',
     });
   };
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      submitted: 'Submitted',
-      in_review: 'In Review',
-      approved: 'Approved',
-      rejected: 'Rejected',
-      ongoing: 'Ongoing',
-      on_hold: 'On Hold',
-      done: 'Done',
-    };
-    return labels[status] || status;
-  };
+  if (histories.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Riwayat Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Belum ada riwayat status
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const sorted = [...histories].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
 
   return (
     <Card>
@@ -46,41 +55,56 @@ export function RequestDetailTimeline({ histories }: RequestDetailTimelineProps)
         <CardTitle>Riwayat Status</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {histories.map((history, index) => (
-            <div key={history.id} className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <div className="rounded-full p-1 bg-primary/10">
-                  {index === histories.length - 1 ? (
-                    <CheckCircle2 className="w-5 h-5 text-primary" />
-                  ) : (
-                    <Circle className="w-5 h-5 text-primary" />
+        <div className="space-y-0">
+          {sorted.map((history, index) => {
+            const fromLabel = history.fromStatus ? STATUS_LABELS[history.fromStatus] : null;
+            const isInitial = history.fromStatus === null;
+            const isLatest = index === sorted.length - 1;
+
+            return (
+              <div key={history.id} className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`rounded-full p-1 ${
+                      isLatest ? 'bg-primary/10' : 'bg-muted'
+                    }`}
+                  >
+                    <Circle
+                      className={`w-4 h-4 ${
+                        isLatest
+                          ? 'text-primary fill-primary'
+                          : 'text-muted-foreground fill-muted-foreground/30'
+                      }`}
+                    />
+                  </div>
+                  {index < sorted.length - 1 && <div className="w-px flex-1 bg-border my-1" />}
+                </div>
+                <div className={`flex-1 ${index < sorted.length - 1 ? 'pb-6' : ''}`}>
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="text-sm font-medium">
+                      {isInitial ? 'Request dibuat' : fromLabel}
+                    </span>
+                    {!isInitial && (
+                      <>
+                        <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                        <StatusBadge status={history.toStatus} size="sm" />
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span>{formatDate(history.createdAt)}</span>
+                    <span>•</span>
+                    <span>oleh {history.changedByName}</span>
+                  </div>
+                  {history.note && (
+                    <p className="text-xs text-muted-foreground mt-2 bg-muted/50 p-2 rounded">
+                      {history.note}
+                    </p>
                   )}
                 </div>
-                {index < histories.length - 1 && (
-                  <div className="w-px h-full bg-border mt-2" />
-                )}
               </div>
-              <div className="flex-1 pb-6">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-sm">
-                    {getStatusLabel(history.toStatus)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDate(history.createdAt)}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  oleh {history.changedByName}
-                </p>
-                {history.note && (
-                  <p className="text-sm text-muted-foreground mt-2 bg-muted/50 p-2 rounded">
-                    {history.note}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

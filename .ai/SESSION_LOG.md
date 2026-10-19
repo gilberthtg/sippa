@@ -1,5 +1,43 @@
 # SiPPA AI Session Log
 
+## 2026-10-20 — Workflow Restructure Phase 3: UI & UX Implementation
+
+- Goal: Update all UI to reflect 7-status workflow — status colors per plan spec, Lucide icons on badges, Indonesian status labels everywhere, status history as separate tab on detail pages, context-aware admin action buttons.
+- Changes made:
+  - `lib/constants.ts`: Added `STATUS_LABELS` (Indonesian: Diajukan/Sedang Ditinjau/Disetujui/Ditolak/Sedang Berlangsung/Ditangguhkan/Selesai), `STATUS_CONFIG` (badge Tailwind classes + icon key per status), `STATUS_DESCRIPTIONS`. Colors now match plan spec: submitted=gray, in_review=blue, approved=green, rejected=red, ongoing=amber(yellow), on_hold=orange, done=emerald.
+  - `components/requests/status-badge.tsx`: 7 statuses now render with Lucide icon + Indonesian label; added `size` prop (sm/md/lg); fallback unchanged for unknown status.
+  - `components/requests/request-detail-timeline.tsx`: chronological sort (normalizes asc/desc input sources), latest transition highlighted, transition displayed as `fromStatus → [StatusBadge]`, timestamps formatted id-ID + Asia/Jakarta, `changedByName` + reason (`note`) shown, empty state added.
+  - Detail pages (`app/(user)/requests/[id]`, `app/(admin)/admin/requests/[id]`, `app/(developer)/developer/requests/[id]`): status history moved into separate tab using shadcn/base-ui Tabs. Tabs: Informasi | Dokumen | Riwayat Status (developer adds Progres tab for progress timeline).
+  - Filters — Indonesian labels via `STATUS_LABELS`: `request-filters.tsx` (user list), `admin-request-filters.tsx`, `developer-request-filters.tsx`. All 7 statuses present.
+  - Label consistency (Indonesian): `admin/dashboard-stats.tsx`, `developer/developer-dashboard-stats.tsx`, `admin/recent-activity-widget.tsx`, `settings/applications/application-history-dialog.tsx` (+ inline "Selesai"/"Ditolak" event text).
+  - Bug fix: `request-admin-actions.tsx` — `TeamAssignmentDialog` was imported but never rendered, so the "Assign Tim" button (APPROVED status) did nothing. Dialog now rendered wired to `assignDialogOpen`.
+  - Verified context-aware admin action buttons per workflow: SUBMITTED→Verifikasi; IN_REVIEW→Setujui(audit-free dialogs)+Tolak; APPROVED→Assign Tim; ONGOING→Tahan+Selesaikan(+priority); ON_HOLD→Lanjutkan; REJECTED/DONE→view only (team info still shown where applicable).
+- Files changed: lib/constants.ts, components/requests/status-badge.tsx, components/requests/request-detail-timeline.tsx, components/requests/request-filters.tsx, components/admin/{admin-request-filters,request-admin-actions,dashboard-stats,recent-activity-widget}.tsx, components/developer/{developer-request-filters,developer-dashboard-stats}.tsx, components/settings/applications/application-history-dialog.tsx, app/(user)/requests/[id]/page.tsx, app/(admin)/admin/requests/[id]/page.tsx, app/(developer)/developer/requests/[id]/page.tsx, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Build: SUCCESS (`npm run build`)
+  - ✅ Lint: pre-existing errors only (7 `no-explicit-any`/pre-existing hook errors unchanged by this phase); no new issues introduced
+- Open questions:
+  - `STATUS_DESCRIPTIONS` added to constants but not yet rendered as tooltips anywhere — candidate for follow-up polish if stakeholder wants description display.
+- Next recommended step: Phase 4 (SLA pause/resume calculation verification + notification templates for REQUEST_IN_REVIEW etc.), or manual visual test of all 7 statuses + tabs on detail pages.
+
+## 2026-10-19 — Workflow Restructure Phase 2: Admin Workflow Implementation
+
+- Goal: Implement complete admin workflow for 7-status workflow (approve, reject, assign, hold, resume, complete).
+- Changes made:
+  - `admin-requests.ts`: Added `completeRequest()` action (ONGOING → DONE) with audit log + notification. Re-applied Phase 1 validation wiring (verify/approve/reject/assign/assignTeam) using `validateTransitionWithContext`.
+  - `components/admin/on-hold-dialog.tsx` (new): Hold reason dialog calling `pauseRequest()` (ONGOING → ON_HOLD).
+  - `components/admin/complete-dialog.tsx` (new): Complete dialog with optional note calling `completeRequest()`.
+  - `components/admin/request-admin-actions.tsx`: Added Hold/Resume/Complete action sections with context-aware visibility. Resume uses direct call + toast.
+  - Notifications: Verified `notifyRequestCompleted` exists and wired.
+- Files changed: app/actions/admin-requests.ts, components/admin/on-hold-dialog.tsx, components/admin/complete-dialog.tsx, components/admin/request-admin-actions.tsx, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Build: SUCCESS (`npm run build`)
+- Open questions:
+  - (None)
+- Next recommended step: Manual test full workflow: SUBMITTED → IN_REVIEW → APPROVED → ONGOING → ON_HOLD → ONGOING → DONE, plus rejection flow.
+
 ## 2026-10-19 — Fix: Ketua Tim & Technical Writer muncul di halaman developer
 
 - Goal: Agar developer yang dipilih sebagai Ketua Tim atau Technical Writer dapat melihat request yang di-assign pada halaman developer mereka (sebelumnya hanya developer biasa yang muncul).
@@ -1600,10 +1638,38 @@ See `.ai/PHASE_5_COMPLETE.md` for comprehensive documentation.
   - TypeScript: PASSED (only pre-existing user-filters.tsx asChild error unrelated).
 - Open questions:
   - Document completion is tracking-only (non-blocking) per user decision.
-## 2026-10-19 � Status Workflow Restructure
+## 2026-10-19 � Status Workflow Restructure
 - Replaced status workflow with SUBMITTED, IN_REVIEW, APPROVED, REJECTED, ONGOING, DONE, ON_HOLD.
 - Updated constants, schema, admin/developer/user actions, notifications, UI badges/filters, dashboard stats, permissions.
 - Added pause/resume (ON_HOLD) with reason, actor, SLA pause tracking columns.
 - Added resubmission of rejected requests (REJECTED -> SUBMITTED) with audit trail.
 - Migration SQL: db/migrations/0003_status_workflow_restructure.sql.
 - Updated BUSINESS_RULES.md and DATABASE.md.
+
+## 2026-10-19 — Workflow Restructure Phase 1: Validation Infrastructure
+
+- Goal: Implement server-side transition validation for the 7-status workflow (SUBMITTED, IN_REVIEW, APPROVED, REJECTED, ONGOING, ON_HOLD, DONE).
+- Changes made:
+  - Created `lib/validations/status-transitions.ts`:
+    - `VALID_TRANSITIONS` constant mapping each status to allowed next statuses (REJECTED→SUBMITTED allowed for requester resubmission; DONE is terminal).
+    - `TRANSITION_ROLE_PERMISSIONS` map of transition→allowed roles.
+    - `validateTransition(fromStatus, toStatus)` basic validation.
+    - `validateTransitionWithContext(fromStatus, toStatus, userRole)` role-aware validation.
+    - Helpers: `isTerminalStatus`, `getNextStatuses`, `getTransitionErrorMessage`.
+  - Wired validation into status-changing server actions:
+    - `admin-requests.ts`: `verifyRequest`, `approveRequest`, `rejectRequest`, `assignRequest` (legacy), `assignTeamToRequest`.
+    - `requests.ts`: `resubmitRequest`.
+    - `developer-requests.ts`: `completeRequest`.
+    - `request-hold.ts`: `pauseRequest`, `resumeRequest`.
+  - Replaced direct `status !== X` checks with `validateTransitionWithContext` calls returning clear Indonesian error messages.
+- Files changed: lib/validations/status-transitions.ts (new), app/actions/admin-requests.ts, app/actions/requests.ts, app/actions/developer-requests.ts, app/actions/request-hold.ts, .ai/SESSION_LOG.md.
+- Decisions:
+  - REJECTED→SUBMITTED allowed for USER/ADMIN (requester resubmission), per BUSINESS_RULES.md.
+  - Pause/resume (ONGOING↔ON_HOLD) allowed for ADMIN and DEVELOPER (backward compat with existing assigned-developer pause capability).
+  - DONE is the only truly terminal status; REJECTED allows resubmission.
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Build: SUCCESS (`npm run build`)
+- Open questions:
+  - (None for Phase 1)
+- Next recommended step: Phase 2 — Admin workflow (merge approve+assign, hold/resume/complete actions, UI).

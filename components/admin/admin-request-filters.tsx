@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { STATUS_LABELS } from '@/lib/constants';
 import { Filter } from 'lucide-react';
 
 interface FilterOption {
@@ -29,14 +30,14 @@ interface AdminRequestFiltersProps {
 }
 
 const statusOptions: FilterOption[] = [
-  { value: 'submitted', label: 'Submitted' },
-  { value: 'in_review', label: 'In Review' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Rejected' },
-  { value: 'ongoing', label: 'Ongoing' },
-  { value: 'on_hold', label: 'On Hold' },
-  { value: 'done', label: 'Done' },
-];
+  'submitted',
+  'in_review',
+  'approved',
+  'rejected',
+  'ongoing',
+  'on_hold',
+  'done',
+].map((value) => ({ value, label: STATUS_LABELS[value] || value }));
 
 const typeOptions: FilterOption[] = [
   { value: 'new_application', label: 'New Application' },

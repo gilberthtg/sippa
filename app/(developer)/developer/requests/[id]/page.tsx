@@ -5,6 +5,7 @@ import { getRequiredDocumentTypes, getRequestDocuments } from '@/app/actions/req
 import { db } from '@/lib/db';
 import { requestAttachments } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { RequestDetailHeader } from '@/components/requests/request-detail-header';
 import { RequestDetailInfo } from '@/components/requests/request-detail-info';
 import { RequestDetailTimeline } from '@/components/requests/request-detail-timeline';
@@ -79,41 +80,63 @@ export default async function DeveloperRequestDetailPage({ params }: PageProps) 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content - 2 columns */}
           <div className="space-y-6 lg:col-span-2">
-            {/* Request Info */}
-            <RequestDetailInfo
-              description={request.description}
-              businessNeed={request.businessNeed}
-              objective={request.objective}
-              expectedOutput={request.expectedOutput}
-              urgency={request.urgency}
-              requesterName={request.requesterName || ''}
-              requesterEmail={request.requesterEmail || ''}
-              requesterPhone={request.phoneNumber}
-            />
+            <Tabs defaultValue="informasi" className="gap-6">
+              <TabsList>
+                <TabsTrigger value="informasi">Informasi</TabsTrigger>
+                <TabsTrigger value="progres">Progres</TabsTrigger>
+                <TabsTrigger value="riwayat">Riwayat Status</TabsTrigger>
+                <TabsTrigger value="dokumen">Dokumen</TabsTrigger>
+              </TabsList>
 
-            {/* Progress Timeline */}
-            {progressResult.success && progressResult.data && (
-              <ProgressTimeline progressHistory={progressResult.data} />
-            )}
+              {/* Request Info */}
+              <TabsContent value="informasi">
+                <RequestDetailInfo
+                  description={request.description}
+                  businessNeed={request.businessNeed}
+                  objective={request.objective}
+                  expectedOutput={request.expectedOutput}
+                  urgency={request.urgency}
+                  requesterName={request.requesterName || ''}
+                  requesterEmail={request.requesterEmail || ''}
+                  requesterPhone={request.phoneNumber}
+                />
+              </TabsContent>
 
-            {/* Status Timeline */}
-            {historiesResult.success && historiesResult.data && (
-              <RequestDetailTimeline histories={historiesResult.data} />
-            )}
+              {/* Progress Timeline */}
+              <TabsContent value="progres">
+                {progressResult.success && progressResult.data ? (
+                  <ProgressTimeline progressHistory={progressResult.data} />
+                ) : (
+                  <div className="rounded-md border p-4 text-sm text-muted-foreground text-center py-6">
+                    Belum ada riwayat progres
+                  </div>
+                )}
+              </TabsContent>
 
-            {/* Attachments */}
-            {/* <RequestAttachmentsList attachments={attachments} /> */}
+              {/* Status Timeline */}
+              <TabsContent value="riwayat">
+                {historiesResult.success && historiesResult.data ? (
+                  <RequestDetailTimeline histories={historiesResult.data} />
+                ) : (
+                  <div className="rounded-md border p-4 text-sm text-muted-foreground text-center py-6">
+                    Belum ada riwayat status
+                  </div>
+                )}
+              </TabsContent>
 
-            {/* Document Checklist */}
-            <div className="rounded-md border p-4 space-y-3">
-              <h3 className="font-semibold">Kelengkapan Dokumen</h3>
-              <RequestDocumentsSection
-                requestId={requestId}
-                requiredDocs={requiredDocs as any}
-                uploadedDocs={uploadedDocs as any}
-                canUpload={true}
-              />
-            </div>
+              {/* Document Checklist */}
+              <TabsContent value="dokumen">
+                <div className="rounded-md border p-4 space-y-3">
+                  <h3 className="font-semibold">Kelengkapan Dokumen</h3>
+                  <RequestDocumentsSection
+                    requestId={requestId}
+                    requiredDocs={requiredDocs as any}
+                    uploadedDocs={uploadedDocs as any}
+                    canUpload={true}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Sidebar - 1 column */}

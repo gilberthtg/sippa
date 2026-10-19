@@ -4,6 +4,7 @@ import { PageContainer } from '@/components/layout/page-container';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { getRequestById } from '@/app/actions/requests';
 import { getRequiredDocumentTypes, getRequestDocuments } from '@/app/actions/request-documents';
 import { RequestDetailHeader } from '@/components/requests/request-detail-header';
@@ -71,8 +72,14 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
           updatedAt={request.updatedAt}
         />
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-6">
+        <Tabs defaultValue="informasi" className="gap-6">
+          <TabsList>
+            <TabsTrigger value="informasi">Informasi</TabsTrigger>
+            <TabsTrigger value="dokumen">Dokumen</TabsTrigger>
+            <TabsTrigger value="riwayat">Riwayat Status</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="informasi">
             <RequestDetailInfo
               description={request.description}
               businessNeed={request.businessNeed}
@@ -83,9 +90,9 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
               requesterEmail={request.requesterEmail}
               requesterPhone={request.requesterPhone}
             />
+          </TabsContent>
 
-            {/* <RequestAttachmentsList attachments={request.attachments} /> */}
-
+          <TabsContent value="dokumen">
             <div className="rounded-md border p-4 space-y-3">
               <h3 className="font-semibold">Kelengkapan Dokumen</h3>
               <RequestDocumentsSection
@@ -95,12 +102,12 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
                 canUpload={false}
               />
             </div>
-          </div>
+          </TabsContent>
 
-          <div>
+          <TabsContent value="riwayat">
             <RequestDetailTimeline histories={request.histories} />
-          </div>
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </PageContainer>
   );

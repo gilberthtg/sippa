@@ -11,11 +11,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { STATUS_LABELS } from '@/lib/constants';
 
 const STATUS_OPTIONS = [
-  { value: 'ongoing', label: 'Ongoing' },
-  { value: 'on_hold', label: 'On Hold' },
-  { value: 'done', label: 'Done' },
+  { value: 'ongoing', label: STATUS_LABELS['ongoing'] },
+  { value: 'on_hold', label: STATUS_LABELS['on_hold'] },
+  { value: 'done', label: STATUS_LABELS['done'] },
 ];
 
 const PRIORITY_OPTIONS = [

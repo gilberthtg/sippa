@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useTransition } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -12,15 +13,20 @@ import {
   Flag,
   Users,
   FileText,
-  User
+  User,
+  Play
 } from 'lucide-react';
-import { useState } from 'react';
 import { VerifyDialog } from './verify-dialog';
 import { ApproveDialog } from './approve-dialog';
 import { RejectDialog } from './reject-dialog';
 import { TeamAssignmentDialog } from './team-assignment-dialog';
+import { OnHoldDialog } from './on-hold-dialog';
+import { CompleteDialog } from './complete-dialog';
 import { PrioritySelector } from './priority-selector';
 import { REQUEST_STATUSES } from '@/lib/constants';
+import { resumeRequest } from '@/app/actions/request-hold';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface Assignment {
   id: number;
@@ -64,6 +70,10 @@ export function RequestAdminActions({
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [holdDialogOpen, setHoldDialogOpen] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const canVerify = request.status === REQUEST_STATUSES.SUBMITTED;
   const canApproveReject = request.status === REQUEST_STATUSES.IN_REVIEW;
@@ -71,9 +81,26 @@ export function RequestAdminActions({
     request.status === REQUEST_STATUSES.APPROVED || 
     request.status === REQUEST_STATUSES.ONGOING;
   const canAssign = request.status === REQUEST_STATUSES.APPROVED;
+  const canHold = request.status === REQUEST_STATUSES.ONGOING;
+  const canResume = request.status === REQUEST_STATUSES.ON_HOLD;
+  const canComplete = request.status === REQUEST_STATUSES.ONGOING;
   const isAssigned = request.status === REQUEST_STATUSES.ONGOING || 
                      request.status === REQUEST_STATUSES.ON_HOLD ||
                      request.status === REQUEST_STATUSES.DONE;
+  const isTerminal = request.status === REQUEST_STATUSES.REJECTED || 
+                     request.status === REQUEST_STATUSES.DONE;
+
+  const handleResume = () => {
+    startTransition(async () => {
+      const result = await resumeRequest({ requestId: request.id });
+      if (result.success) {
+        toast.success('Request berhasil dilanjutkan');
+        router.refresh();
+      } else {
+        toast.error(result.error || 'Gagal melanjutkan request');
+      }
+    });
+  };
 
   return (
     <>
@@ -168,6 +195,67 @@ export function RequestAdminActions({
             </>
           )}
 
+          {/* Hold Request */}
+          {canHold && (
+            <>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Request sedang berlangsung. Tahan jika ada kendala.
+                </p>
+                <Button
+                  onClick={() => setHoldDialogOpen(true)}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <Flag className="mr-2 h-4 w-4" />
+                  Tahan Request
+                </Button>
+              </div>
+              <Separator />
+            </>
+          )}
+
+          {/* Resume Request */}
+          {canResume && (
+            <>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Request dalam status ON_HOLD. Lanjutkan pengerjaan.
+                </p>
+                <Button
+                  onClick={handleResume}
+                  className="w-full"
+                  variant="default"
+                  disabled={isPending}
+                >
+                  <Play className="mr-2 h-4 w-4" />
+                  Lanjutkan Request
+                </Button>
+              </div>
+              <Separator />
+            </>
+          )}
+
+          {/* Complete Request */}
+          {canComplete && (
+            <>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Request siap diselesaikan. Tandai sebagai DONE.
+                </p>
+                <Button
+                  onClick={() => setCompleteDialogOpen(true)}
+                  className="w-full"
+                  variant="default"
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Selesaikan Request
+                </Button>
+              </div>
+              <Separator />
+            </>
+          )}
+
           {/* Show Assignment Info */}
           {isAssigned && (devtiUrusan || teamLeader || technicalWriter || assignments.length > 0) && (
             <>
@@ -234,7 +322,7 @@ export function RequestAdminActions({
             </>
           )}
 
-          {!canVerify && !canApproveReject && !canSetPriority && !canAssign && !isAssigned && (
+          {!canVerify && !canApproveReject && !canSetPriority && !canAssign && !canHold && !canResume && !canComplete && !isAssigned && (
             <p className="text-sm text-muted-foreground text-center py-4">
               Tidak ada aksi yang tersedia untuk status saat ini
             </p>
@@ -263,11 +351,25 @@ export function RequestAdminActions({
         onOpenChange={setRejectDialogOpen}
       />
 
+      <OnHoldDialog
+        requestId={request.id}
+        requestNo={request.requestNo}
+        open={holdDialogOpen}
+        onOpenChange={setHoldDialogOpen}
+      />
+
       <TeamAssignmentDialog
         requestId={request.id}
         requestNo={request.requestNo}
         open={assignDialogOpen}
         onOpenChange={setAssignDialogOpen}
+      />
+
+      <CompleteDialog
+        requestId={request.id}
+        requestNo={request.requestNo}
+        open={completeDialogOpen}
+        onOpenChange={setCompleteDialogOpen}
       />
     </>
   );

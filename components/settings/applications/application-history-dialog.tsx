@@ -56,13 +56,13 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  submitted: 'Submitted',
-  in_review: 'In Review',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  ongoing: 'Ongoing',
-  on_hold: 'On Hold',
-  done: 'Done',
+  submitted: 'Diajukan',
+  in_review: 'Sedang Ditinjau',
+  approved: 'Disetujui',
+  rejected: 'Ditolak',
+  ongoing: 'Sedang Berlangsung',
+  on_hold: 'Ditangguhkan',
+  done: 'Selesai',
 };
 
 export function ApplicationHistoryDialog({ applicationId, open, onOpenChange }: Props) {
@@ -219,7 +219,7 @@ export function ApplicationHistoryDialog({ applicationId, open, onOpenChange }: 
                               {request.completedAt && (
                                 <div className="flex items-center gap-1 text-green-600">
                                   <CheckCircle2 className="h-3 w-3" />
-                                  Completed{' '}
+                                  Selesai{' '}
                                   {format(new Date(request.completedAt), 'dd MMM yyyy', {
                                     locale: localeId,
                                   })}
@@ -228,7 +228,7 @@ export function ApplicationHistoryDialog({ applicationId, open, onOpenChange }: 
                               {request.status === 'rejected' && request.approvedAt && (
                                 <div className="flex items-center gap-1 text-red-600">
                                   <XCircle className="h-3 w-3" />
-                                  Rejected{' '}
+                                  Ditolak{' '}
                                   {format(new Date(request.approvedAt), 'dd MMM yyyy', {
                                     locale: localeId,
                                   })}

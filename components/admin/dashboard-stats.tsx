@@ -28,7 +28,7 @@ interface DashboardStatsProps {
 
 const statCards = [
   {
-    title: 'Submitted',
+    title: 'Diajukan',
     key: 'submitted' as const,
     icon: FileText,
     color: 'text-yellow-600',
@@ -36,7 +36,7 @@ const statCards = [
     link: '/admin/requests?status=submitted',
   },
   {
-    title: 'In Review',
+    title: 'Sedang Ditinjau',
     key: 'inReview' as const,
     icon: ClipboardCheck,
     color: 'text-blue-600',
@@ -44,7 +44,7 @@ const statCards = [
     link: '/admin/requests?status=in_review',
   },
   {
-    title: 'Approved',
+    title: 'Disetujui',
     key: 'approved' as const,
     icon: CheckCircle,
     color: 'text-green-600',
@@ -52,7 +52,7 @@ const statCards = [
     link: '/admin/requests?status=approved',
   },
   {
-    title: 'Ongoing',
+    title: 'Sedang Berlangsung',
     key: 'ongoing' as const,
     icon: PlayCircle,
     color: 'text-indigo-600',
@@ -60,7 +60,7 @@ const statCards = [
     link: '/admin/requests?status=ongoing',
   },
   {
-    title: 'On Hold',
+    title: 'Ditangguhkan',
     key: 'onHold' as const,
     icon: Clock,
     color: 'text-orange-600',
@@ -68,7 +68,7 @@ const statCards = [
     link: '/admin/requests?status=on_hold',
   },
   {
-    title: 'Done',
+    title: 'Selesai',
     key: 'done' as const,
     icon: CheckCircle,
     color: 'text-emerald-600',
@@ -76,7 +76,7 @@ const statCards = [
     link: '/admin/requests?status=done',
   },
   {
-    title: 'Rejected',
+    title: 'Ditolak',
     key: 'rejected' as const,
     icon: XCircle,
     color: 'text-red-600',

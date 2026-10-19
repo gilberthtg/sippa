@@ -8,6 +8,64 @@ export const REQUEST_STATUSES = {
   ON_HOLD: 'on_hold',
 } as const;
 
+export const STATUS_LABELS: Record<string, string> = {
+  [REQUEST_STATUSES.SUBMITTED]: 'Diajukan',
+  [REQUEST_STATUSES.IN_REVIEW]: 'Sedang Ditinjau',
+  [REQUEST_STATUSES.APPROVED]: 'Disetujui',
+  [REQUEST_STATUSES.REJECTED]: 'Ditolak',
+  [REQUEST_STATUSES.ONGOING]: 'Sedang Berlangsung',
+  [REQUEST_STATUSES.ON_HOLD]: 'Ditangguhkan',
+  [REQUEST_STATUSES.DONE]: 'Selesai',
+};
+
+export const STATUS_CONFIG: Record<string, { label: string; className: string; icon: string }> = {
+  [REQUEST_STATUSES.SUBMITTED]: {
+    label: 'Diajukan',
+    className: 'bg-gray-100 text-gray-800 hover:bg-gray-100',
+    icon: 'clock',
+  },
+  [REQUEST_STATUSES.IN_REVIEW]: {
+    label: 'Sedang Ditinjau',
+    className: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
+    icon: 'eye',
+  },
+  [REQUEST_STATUSES.APPROVED]: {
+    label: 'Disetujui',
+    className: 'bg-green-100 text-green-800 hover:bg-green-100',
+    icon: 'check-circle',
+  },
+  [REQUEST_STATUSES.REJECTED]: {
+    label: 'Ditolak',
+    className: 'bg-red-100 text-red-800 hover:bg-red-100',
+    icon: 'x-circle',
+  },
+  [REQUEST_STATUSES.ONGOING]: {
+    label: 'Sedang Berlangsung',
+    className: 'bg-amber-100 text-amber-800 hover:bg-amber-100',
+    icon: 'play',
+  },
+  [REQUEST_STATUSES.ON_HOLD]: {
+    label: 'Ditangguhkan',
+    className: 'bg-orange-100 text-orange-800 hover:bg-orange-100',
+    icon: 'pause-circle',
+  },
+  [REQUEST_STATUSES.DONE]: {
+    label: 'Selesai',
+    className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100',
+    icon: 'check-circle-2',
+  },
+};
+
+export const STATUS_DESCRIPTIONS: Record<string, string> = {
+  [REQUEST_STATUSES.SUBMITTED]: 'Request baru dibuat oleh user, menunggu verifikasi admin',
+  [REQUEST_STATUSES.IN_REVIEW]: 'Admin sedang meninjau detail dan kelengkapan request',
+  [REQUEST_STATUSES.APPROVED]: 'Request disetujui, menunggu pembentukan tim',
+  [REQUEST_STATUSES.REJECTED]: 'Request ditolak dan tidak dapat dibuka kembali',
+  [REQUEST_STATUSES.ONGOING]: 'Pengerjaan request sedang berlangsung oleh tim',
+  [REQUEST_STATUSES.ON_HOLD]: 'Pengerjaan ditangguhkan sementara, SLA dijeda',
+  [REQUEST_STATUSES.DONE]: 'Pengerjaan selesai dan request ditutup',
+};
+
 export const REQUEST_TYPES = {
   NEW_APPLICATION: 'new_application',
   RFC: 'rfc',

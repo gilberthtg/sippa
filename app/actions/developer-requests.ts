@@ -5,7 +5,8 @@ import { db } from '@/lib/db';
 import { requests, requestTeamAssignments, requestProgress, requestStatusHistories, users, priorities, units, developerRoles } from '@/lib/db/schema';
 import { eq, and, or, desc, sql, inArray, aliasedTable } from 'drizzle-orm';
 import { logAudit } from '@/lib/utils/audit';
-import { AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
+import { AUDIT_MODULES, AUDIT_ACTIONS, REQUEST_STATUSES, ROLES } from '@/lib/constants';
+import { validateTransitionWithContext } from '@/lib/validations/status-transitions';
 import { notifyProgressUpdated, notifyRequestCompleted } from '@/lib/notifications/templates';
 
 async function checkDeveloperAuth() {
@@ -526,8 +527,13 @@ export async function completeRequest(params: { requestId: number; finalNote: st
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.status !== 'ongoing') {
-      return { success: false, error: 'Hanya request ONGOING yang dapat diselesaikan' };
+    const completeValidation = validateTransitionWithContext(
+      request.status as 'submitted' | 'in_review' | 'approved' | 'rejected' | 'ongoing' | 'done' | 'on_hold',
+      REQUEST_STATUSES.DONE,
+      ROLES.DEVELOPER
+    );
+    if (!completeValidation.valid) {
+      return { success: false, error: completeValidation.error || 'Transisi status tidak valid' };
     }
 
     const completedAt = new Date();

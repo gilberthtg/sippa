@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
   getRequestByIdAdmin, 
   getPriorities,
@@ -72,32 +73,42 @@ export default async function AdminRequestDetailPage({ params }: PageProps) {
             updatedAt={request.updatedAt}
           />
 
-          <RequestDetailInfo
-            description={request.description}
-            businessNeed={request.businessNeed}
-            objective={request.objective}
-            expectedOutput={request.expectedOutput}
-            urgency={request.urgency}
-            requesterName={request.requesterName}
-            requesterEmail={request.requesterEmail}
-            requesterPhone={request.requesterPhone}
-          />
+          <Tabs defaultValue="informasi" className="gap-6">
+            <TabsList>
+              <TabsTrigger value="informasi">Informasi</TabsTrigger>
+              <TabsTrigger value="dokumen">Dokumen</TabsTrigger>
+              <TabsTrigger value="riwayat">Riwayat Status</TabsTrigger>
+            </TabsList>
 
-          {/* {request.attachments && request.attachments.length > 0 && (
-            <RequestAttachmentsList attachments={request.attachments} />
-          )} */}
+            <TabsContent value="informasi">
+              <RequestDetailInfo
+                description={request.description}
+                businessNeed={request.businessNeed}
+                objective={request.objective}
+                expectedOutput={request.expectedOutput}
+                urgency={request.urgency}
+                requesterName={request.requesterName}
+                requesterEmail={request.requesterEmail}
+                requesterPhone={request.requesterPhone}
+              />
+            </TabsContent>
 
-          <div className="rounded-md border p-4 space-y-3">
-            <h3 className="font-semibold">Kelengkapan Dokumen</h3>
-            <RequestDocumentsSection
-              requestId={requestId}
-              requiredDocs={requiredDocs as any}
-              uploadedDocs={uploadedDocs as any}
-              canUpload={true}
-            />
-          </div>
+            <TabsContent value="dokumen">
+              <div className="rounded-md border p-4 space-y-3">
+                <h3 className="font-semibold">Kelengkapan Dokumen</h3>
+                <RequestDocumentsSection
+                  requestId={requestId}
+                  requiredDocs={requiredDocs as any}
+                  uploadedDocs={uploadedDocs as any}
+                  canUpload={true}
+                />
+              </div>
+            </TabsContent>
 
-          <RequestDetailTimeline histories={request.histories || []} />
+            <TabsContent value="riwayat">
+              <RequestDetailTimeline histories={request.histories || []} />
+            </TabsContent>
+          </Tabs>
         </div>
 
         <div className="lg:col-span-1">

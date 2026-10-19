@@ -21,7 +21,7 @@ interface DashboardStatsProps {
 export function DeveloperDashboardStats({ stats, developerRole }: DashboardStatsProps) {
   const statCards = [
     {
-      title: 'Ongoing',
+      title: 'Sedang Berlangsung',
       value: stats.ongoing,
       icon: ClipboardList,
       description: 'Request yang dikerjakan',
@@ -29,7 +29,7 @@ export function DeveloperDashboardStats({ stats, developerRole }: DashboardStats
       color: 'text-blue-600',
     },
     {
-      title: 'On Hold',
+      title: 'Ditangguhkan',
       value: stats.onHold,
       icon: Clock,
       description: 'Ditahan',
@@ -37,7 +37,7 @@ export function DeveloperDashboardStats({ stats, developerRole }: DashboardStats
       color: 'text-orange-600',
     },
     {
-      title: 'Completed This Month',
+      title: 'Selesai Bulan Ini',
       value: stats.completedThisMonth,
       icon: CheckCircle2,
       description: 'Selesai bulan ini',

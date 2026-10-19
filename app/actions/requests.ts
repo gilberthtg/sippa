@@ -9,6 +9,7 @@ import { generateStorageKey } from '@/lib/utils/file-upload';
 import { saveFile } from '@/lib/utils/file-storage';
 import { validateVersionProgression } from '@/lib/utils/version';
 import { REQUEST_STATUSES, FILE_UPLOAD, AUDIT_MODULES, AUDIT_ACTIONS, ROLES } from '@/lib/constants';
+import { validateTransitionWithContext } from '@/lib/validations/status-transitions';
 import { eq, and, desc, or, like, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { logAudit } from '@/lib/utils/audit';
@@ -206,8 +207,13 @@ export async function resubmitRequest(params: { requestId: number; note?: string
     if (request.requesterId !== session.user.id) {
       return { success: false, error: 'Hanya pemohon yang dapat mengajukan ulang' };
     }
-    if (request.status !== REQUEST_STATUSES.REJECTED) {
-      return { success: false, error: 'Hanya request REJECTED yang dapat diajukan ulang' };
+    const resubmitValidation = validateTransitionWithContext(
+      request.status as 'submitted' | 'in_review' | 'approved' | 'rejected' | 'ongoing' | 'done' | 'on_hold',
+      REQUEST_STATUSES.SUBMITTED,
+      (session.user.roleCode as 'user' | 'admin' | 'developer') || ROLES.USER
+    );
+    if (!resubmitValidation.valid) {
+      return { success: false, error: resubmitValidation.error || 'Transisi status tidak valid' };
     }
 
     const now = new Date();
