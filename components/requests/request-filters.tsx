@@ -11,11 +11,12 @@ interface RequestFiltersProps {
 const FILTERS = [
   { value: 'all', label: 'Semua' },
   { value: REQUEST_STATUSES.SUBMITTED, label: 'Submitted' },
-  { value: REQUEST_STATUSES.VERIFICATION, label: 'Verifikasi' },
-  { value: REQUEST_STATUSES.APPROVED, label: 'Disetujui' },
-  { value: REQUEST_STATUSES.IN_PROGRESS, label: 'Dikerjakan' },
-  { value: REQUEST_STATUSES.COMPLETED, label: 'Selesai' },
-  { value: REQUEST_STATUSES.REJECTED, label: 'Ditolak' },
+  { value: REQUEST_STATUSES.IN_REVIEW, label: 'In Review' },
+  { value: REQUEST_STATUSES.APPROVED, label: 'Approved' },
+  { value: REQUEST_STATUSES.ONGOING, label: 'Ongoing' },
+  { value: REQUEST_STATUSES.ON_HOLD, label: 'On Hold' },
+  { value: REQUEST_STATUSES.DONE, label: 'Done' },
+  { value: REQUEST_STATUSES.REJECTED, label: 'Rejected' },
 ];
 
 export function RequestFilters({ activeFilter, onFilterChange }: RequestFiltersProps) {

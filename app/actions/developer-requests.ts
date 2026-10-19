@@ -31,8 +31,21 @@ async function checkRequestAssignment(requestId: number, developerId: number) {
       )
     )
     .limit(1);
-  
-  return !!assignment;
+
+  if (assignment) return true;
+
+  // Allow access if developer is the team leader or technical writer of the request
+  const [request] = await db
+    .select({
+      teamLeaderId: requests.teamLeaderId,
+      technicalWriterId: requests.technicalWriterId,
+    })
+    .from(requests)
+    .where(eq(requests.id, requestId))
+    .limit(1);
+
+  if (!request) return false;
+  return request.teamLeaderId === developerId || request.technicalWriterId === developerId;
 }
 
 export async function getDeveloperDashboardStats() {
@@ -54,22 +67,29 @@ export async function getDeveloperDashboardStats() {
       .where(eq(users.id, authCheck.userId!))
       .limit(1);
 
+    const dashboardFilter = or(
+      and(eq(requestTeamAssignments.assignedUserId, authCheck.userId!), sql`${requestTeamAssignments.unassignedAt} IS NULL`),
+      eq(requests.teamLeaderId, authCheck.userId!),
+      eq(requests.technicalWriterId, authCheck.userId!)
+    );
+
     const [stats] = await db
       .select({
-        assigned: sql<number>`SUM(CASE WHEN ${requests.status} = 'assigned' THEN 1 ELSE 0 END)`,
-        inProgress: sql<number>`SUM(CASE WHEN ${requests.status} = 'in_progress' THEN 1 ELSE 0 END)`,
-        completedThisMonth: sql<number>`SUM(CASE WHEN ${requests.status} = 'completed' AND MONTH(${requests.completedAt}) = MONTH(CURRENT_DATE()) AND YEAR(${requests.completedAt}) = YEAR(CURRENT_DATE()) THEN 1 ELSE 0 END)`,
-        total: sql<number>`COUNT(*)`,
+        ongoing: sql<number>`SUM(CASE WHEN ${requests.status} = 'ongoing' THEN 1 ELSE 0 END)`,
+        onHold: sql<number>`SUM(CASE WHEN ${requests.status} = 'on_hold' THEN 1 ELSE 0 END)`,
+        completedThisMonth: sql<number>`SUM(CASE WHEN ${requests.status} = 'done' AND MONTH(${requests.completedAt}) = MONTH(CURRENT_DATE()) AND YEAR(${requests.completedAt}) = YEAR(CURRENT_DATE()) THEN 1 ELSE 0 END)`,
+        total: sql<number>`COUNT(DISTINCT ${requests.id})`,
       })
       .from(requests)
-      .innerJoin(
+      .leftJoin(
         requestTeamAssignments,
         and(
           eq(requests.id, requestTeamAssignments.requestId),
           eq(requestTeamAssignments.assignedUserId, authCheck.userId!),
           sql`${requestTeamAssignments.unassignedAt} IS NULL`
         )
-      );
+      )
+      .where(dashboardFilter);
 
     const overdueRequests = await db
       .select({
@@ -81,7 +101,7 @@ export async function getDeveloperDashboardStats() {
         targetSlaHours: requests.targetSlaHours,
       })
       .from(requests)
-      .innerJoin(
+      .leftJoin(
         requestTeamAssignments,
         and(
           eq(requests.id, requestTeamAssignments.requestId),
@@ -91,7 +111,8 @@ export async function getDeveloperDashboardStats() {
       )
       .where(
         and(
-          inArray(requests.status, ['assigned', 'in_progress']),
+          dashboardFilter,
+          inArray(requests.status, ['ongoing']),
           sql`${requests.targetSlaHours} IS NOT NULL`,
           sql`TIMESTAMPDIFF(HOUR, ${requests.submittedAt}, NOW()) > ${requests.targetSlaHours}`
         )
@@ -102,8 +123,8 @@ export async function getDeveloperDashboardStats() {
     return {
       success: true,
       stats: {
-        assigned: Number(stats?.assigned || 0),
-        inProgress: Number(stats?.inProgress || 0),
+        ongoing: Number(stats?.ongoing || 0),
+        onHold: Number(stats?.onHold || 0),
         completedThisMonth: Number(stats?.completedThisMonth || 0),
         total: Number(stats?.total || 0),
         overdue: overdueRequests.length,
@@ -138,13 +159,25 @@ export async function getAssignedRequests(params?: {
     const limit = params?.limit || 20;
     const offset = (page - 1) * limit;
 
-    const conditions = [
-      eq(requestTeamAssignments.assignedUserId, authCheck.userId!),
-      sql`${requestTeamAssignments.unassignedAt} IS NULL`,
-    ];
+    // Fetch current developer's own role (used as fallback for team leader/technical writer)
+    const [me] = await db
+      .select({ developerRoleCode: developerRoles.code, developerRoleName: developerRoles.name })
+      .from(users)
+      .leftJoin(developerRoles, eq(users.developerRoleId, developerRoles.id))
+      .where(eq(users.id, authCheck.userId!))
+      .limit(1);
+
+    // Filter condition: request is assigned to current user as developer, OR user is team leader, OR user is technical writer
+    const assignmentFilter = or(
+      and(eq(requestTeamAssignments.assignedUserId, authCheck.userId!), sql`${requestTeamAssignments.unassignedAt} IS NULL`),
+      eq(requests.teamLeaderId, authCheck.userId!),
+      eq(requests.technicalWriterId, authCheck.userId!)
+    );
+
+    const conditions = [assignmentFilter!];
 
     if (params?.status && params.status.length > 0) {
-      conditions.push(inArray(requests.status, params.status as ('submitted' | 'verification' | 'rejected' | 'approved' | 'assigned' | 'in_progress' | 'completed')[]));
+      conditions.push(inArray(requests.status, params.status as ('submitted' | 'in_review' | 'rejected' | 'approved' | 'ongoing' | 'done' | 'on_hold')[]));
     }
 
     if (params?.priorityId && params.priorityId.length > 0) {
@@ -165,7 +198,7 @@ export async function getAssignedRequests(params?: {
     }
 
     const results = await db
-      .select({
+      .selectDistinct({
         id: requests.id,
         requestNo: requests.requestNo,
         requestType: requests.requestType,
@@ -177,11 +210,11 @@ export async function getAssignedRequests(params?: {
         targetSlaHours: requests.targetSlaHours,
         requesterName: users.name,
         unitName: units.name,
-        myRoleCode: developerRoles.code,
-        myRoleName: developerRoles.name,
+        myRoleCode: sql<string | null>`COALESCE(${developerRoles.code}, ${me?.developerRoleCode ?? null})`,
+        myRoleName: sql<string | null>`COALESCE(${developerRoles.name}, ${me?.developerRoleName ?? null})`,
       })
       .from(requests)
-      .innerJoin(requestTeamAssignments, eq(requests.id, requestTeamAssignments.requestId))
+      .leftJoin(requestTeamAssignments, and(eq(requests.id, requestTeamAssignments.requestId), eq(requestTeamAssignments.assignedUserId, authCheck.userId!), sql`${requestTeamAssignments.unassignedAt} IS NULL`))
       .leftJoin(priorities, eq(requests.priorityId, priorities.id))
       .leftJoin(users, eq(requests.requesterId, users.id))
       .leftJoin(units, eq(requests.requesterUnitId, units.id))
@@ -192,9 +225,9 @@ export async function getAssignedRequests(params?: {
       .offset(offset);
 
     const [{ count }] = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: sql<number>`COUNT(DISTINCT ${requests.id})` })
       .from(requests)
-      .innerJoin(requestTeamAssignments, eq(requests.id, requestTeamAssignments.requestId))
+      .leftJoin(requestTeamAssignments, and(eq(requests.id, requestTeamAssignments.requestId), eq(requestTeamAssignments.assignedUserId, authCheck.userId!), sql`${requestTeamAssignments.unassignedAt} IS NULL`))
       .where(and(...conditions));
 
     return {
@@ -358,19 +391,15 @@ export async function startRequest(params: { requestId: number; note?: string })
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.status !== 'assigned') {
-      return { success: false, error: 'Hanya request dengan status ASSIGNED yang dapat dimulai' };
+    if (request.status !== 'ongoing') {
+      return { success: false, error: 'Hanya request dengan status ONGOING yang dapat dimulai' };
     }
-
-    await db.update(requests)
-      .set({ status: 'in_progress' })
-      .where(eq(requests.id, requestId));
 
     const session = await auth();
     await db.insert(requestStatusHistories).values({
       requestId,
-      fromStatus: 'assigned',
-      toStatus: 'in_progress',
+      fromStatus: 'ongoing',
+      toStatus: 'ongoing',
       changedBy: authCheck.userId!,
       changedByName: session?.user?.name || 'Developer',
       note: note || 'Developer memulai pekerjaan',
@@ -392,7 +421,7 @@ export async function startRequest(params: { requestId: number; note?: string })
       entityId: String(requestId),
       action: AUDIT_ACTIONS.START,
       beforeData: { status: request.status },
-      afterData: { status: 'in_progress', note },
+      afterData: { status: 'ongoing', note },
     });
 
     return { success: true, message: 'Request berhasil dimulai' };
@@ -434,8 +463,8 @@ export async function updateProgress(params: {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.status !== 'in_progress') {
-      return { success: false, error: 'Hanya request IN_PROGRESS yang dapat diupdate progressnya' };
+    if (request.status !== 'ongoing') {
+      return { success: false, error: 'Hanya request ONGOING yang dapat diupdate progressnya' };
     }
 
     const session = await auth();
@@ -497,22 +526,33 @@ export async function completeRequest(params: { requestId: number; finalNote: st
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.status !== 'in_progress') {
-      return { success: false, error: 'Hanya request IN_PROGRESS yang dapat diselesaikan' };
+    if (request.status !== 'ongoing') {
+      return { success: false, error: 'Hanya request ONGOING yang dapat diselesaikan' };
     }
+
+    const completedAt = new Date();
+    // Compute actual duration accounting for on-hold pauses
+    const submittedAt = request.submittedAt ? new Date(request.submittedAt) : completedAt;
+    const totalMs = completedAt.getTime() - submittedAt.getTime();
+    const totalHours = Math.round(totalMs / (1000 * 60 * 60));
+    const pausedHours = request.slaPausedDurationHours || 0;
+    const actualHours = Math.max(0, totalHours - pausedHours);
+    const slaMet = request.targetSlaHours ? actualHours <= request.targetSlaHours : null;
 
     await db.update(requests)
       .set({ 
-        status: 'completed',
-        completedAt: new Date(),
+        status: 'done',
+        completedAt,
+        actualDurationHours: actualHours,
+        slaMet,
       })
       .where(eq(requests.id, requestId));
 
     const session = await auth();
     await db.insert(requestStatusHistories).values({
       requestId,
-      fromStatus: 'in_progress',
-      toStatus: 'completed',
+      fromStatus: 'ongoing',
+      toStatus: 'done',
       changedBy: authCheck.userId!,
       changedByName: session?.user?.name || 'Developer',
       note: finalNote.trim(),
@@ -534,7 +574,7 @@ export async function completeRequest(params: { requestId: number; finalNote: st
       entityId: String(requestId),
       action: AUDIT_ACTIONS.COMPLETE,
       beforeData: { status: request.status },
-      afterData: { status: 'completed', finalNote: finalNote.trim() },
+      afterData: { status: 'done', finalNote: finalNote.trim() },
     });
 
     notifyRequestCompleted({

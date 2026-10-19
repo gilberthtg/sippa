@@ -1,11 +1,11 @@
 export const REQUEST_STATUSES = {
   SUBMITTED: 'submitted',
-  VERIFICATION: 'verification',
-  REJECTED: 'rejected',
+  IN_REVIEW: 'in_review',
   APPROVED: 'approved',
-  ASSIGNED: 'assigned',
-  IN_PROGRESS: 'in_progress',
-  COMPLETED: 'completed',
+  REJECTED: 'rejected',
+  ONGOING: 'ongoing',
+  DONE: 'done',
+  ON_HOLD: 'on_hold',
 } as const;
 
 export const REQUEST_TYPES = {
@@ -63,6 +63,8 @@ export const NOTIFICATION_EVENTS = {
   DEVELOPER_ASSIGNED: 'developer_assigned',
   PROGRESS_UPDATED: 'progress_updated',
   REQUEST_COMPLETED: 'request_completed',
+  REQUEST_ON_HOLD: 'request_on_hold',
+  REQUEST_RESUMED: 'request_resumed',
 } as const;
 
 export const AUDIT_MODULES = {
@@ -83,6 +85,9 @@ export const AUDIT_ACTIONS = {
   ASSIGN: 'assign',
   START: 'start',
   COMPLETE: 'complete',
+  PAUSE: 'pause',
+  RESUME: 'resume',
+  RESUBMIT: 'resubmit',
   PROGRESS: 'progress',
   LOGIN_SUCCESS: 'login_success',
   LOGIN_FAILED: 'login_failed',

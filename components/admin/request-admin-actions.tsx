@@ -66,15 +66,14 @@ export function RequestAdminActions({
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
   const canVerify = request.status === REQUEST_STATUSES.SUBMITTED;
-  const canApproveReject = request.status === REQUEST_STATUSES.VERIFICATION;
+  const canApproveReject = request.status === REQUEST_STATUSES.IN_REVIEW;
   const canSetPriority = 
     request.status === REQUEST_STATUSES.APPROVED || 
-    request.status === REQUEST_STATUSES.ASSIGNED ||
-    request.status === REQUEST_STATUSES.IN_PROGRESS;
+    request.status === REQUEST_STATUSES.ONGOING;
   const canAssign = request.status === REQUEST_STATUSES.APPROVED;
-  const isAssigned = request.status === REQUEST_STATUSES.ASSIGNED || 
-                     request.status === REQUEST_STATUSES.IN_PROGRESS ||
-                     request.status === REQUEST_STATUSES.COMPLETED;
+  const isAssigned = request.status === REQUEST_STATUSES.ONGOING || 
+                     request.status === REQUEST_STATUSES.ON_HOLD ||
+                     request.status === REQUEST_STATUSES.DONE;
 
   return (
     <>

@@ -337,9 +337,9 @@ export async function getUserStats(id: number) {
     .groupBy(requests.status);
 
   const totalSubmitted = stats.reduce((sum, stat) => sum + stat.count, 0);
-  const completed = stats.find(s => s.status === 'completed')?.count || 0;
-  const inProgress = stats.find(s => s.status === 'in_progress')?.count || 0;
-  const pending = stats.filter(s => ['submitted', 'verification', 'approved', 'assigned'].includes(s.status))
+  const completed = stats.find(s => s.status === 'done')?.count || 0;
+  const inProgress = stats.find(s => s.status === 'ongoing')?.count || 0;
+  const pending = stats.filter(s => ['submitted', 'in_review', 'approved'].includes(s.status))
     .reduce((sum, stat) => sum + stat.count, 0);
 
   return {

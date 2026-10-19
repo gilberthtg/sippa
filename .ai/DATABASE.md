@@ -92,10 +92,13 @@ This document describes the production database schema for SIPPA after the Phase
 - **devti_urusan_id** (FK → units, NULLABLE)
 - **technical_writer_id** (FK → users with developer_role=TW)
 - **team_leader_id** (FK → users, any role)
-- status (ENUM: SUBMITTED, VERIFICATION, APPROVED, REJECTED, IN_PROGRESS, COMPLETED)
+- status (ENUM: SUBMITTED, IN_REVIEW, APPROVED, REJECTED, ONGOING, DONE, ON_HOLD)
 - target_sla_hours
 - actual_completion_hours
 - sla_start_date
+- sla_paused_at
+- sla_paused_duration_hours
+- on_hold_reason
 - submitted_at
 - approved_at
 - rejected_at

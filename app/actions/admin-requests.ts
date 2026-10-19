@@ -57,7 +57,7 @@ export async function getAllRequests(params?: {
     const conditions = [];
 
     if (params?.status && params.status.length > 0) {
-      conditions.push(inArray(requests.status, params.status as ('submitted' | 'verification' | 'rejected' | 'approved' | 'assigned' | 'in_progress' | 'completed')[]));
+      conditions.push(inArray(requests.status, params.status as ('submitted' | 'in_review' | 'rejected' | 'approved' | 'ongoing' | 'done' | 'on_hold')[]));
     }
 
     if (params?.priority && params.priority.length > 0) {
@@ -149,11 +149,11 @@ export async function getAdminDashboardStats() {
     const [stats] = await db
       .select({
         submitted: sql<number>`SUM(CASE WHEN status = 'submitted' THEN 1 ELSE 0 END)`,
-        verification: sql<number>`SUM(CASE WHEN status = 'verification' THEN 1 ELSE 0 END)`,
+        inReview: sql<number>`SUM(CASE WHEN status = 'in_review' THEN 1 ELSE 0 END)`,
         approved: sql<number>`SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END)`,
-        assigned: sql<number>`SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END)`,
-        inProgress: sql<number>`SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END)`,
-        completed: sql<number>`SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END)`,
+        ongoing: sql<number>`SUM(CASE WHEN status = 'ongoing' THEN 1 ELSE 0 END)`,
+        onHold: sql<number>`SUM(CASE WHEN status = 'on_hold' THEN 1 ELSE 0 END)`,
+        done: sql<number>`SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END)`,
         rejected: sql<number>`SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END)`,
         total: sql<number>`COUNT(*)`,
       })
@@ -177,7 +177,7 @@ export async function getAdminDashboardStats() {
       success: true,
       data: {
         ...stats,
-        approvedNotAssigned: Number(approvedNotAssignedResult.count),
+        approvedNotAssigned: Number(stats.approved || 0),
       },
     };
   } catch (error) {
@@ -233,7 +233,7 @@ export async function getSLAAttentionRequests() {
       .from(requests)
       .where(
         and(
-          inArray(requests.status, ['verification', 'approved', 'assigned', 'in_progress']),
+          inArray(requests.status, ['in_review', 'approved', 'ongoing']),
           sql`${requests.targetSlaHours} IS NOT NULL`
         )
       )
@@ -401,7 +401,7 @@ export async function verifyRequest(requestId: number, note?: string) {
     await db
       .update(requests)
       .set({ 
-        status: REQUEST_STATUSES.VERIFICATION,
+        status: REQUEST_STATUSES.IN_REVIEW,
         updatedAt: new Date(),
       })
       .where(eq(requests.id, requestId));
@@ -409,7 +409,7 @@ export async function verifyRequest(requestId: number, note?: string) {
     await db.insert(requestStatusHistories).values({
       requestId,
       fromStatus: REQUEST_STATUSES.SUBMITTED,
-      toStatus: REQUEST_STATUSES.VERIFICATION,
+      toStatus: REQUEST_STATUSES.IN_REVIEW,
       changedBy: authCheck.session!.user.id,
       changedByName: authCheck.session!.user.name,
       note: note || 'Request diverifikasi oleh admin',
@@ -423,7 +423,7 @@ export async function verifyRequest(requestId: number, note?: string) {
       entityId: String(requestId),
       action: AUDIT_ACTIONS.VERIFY,
       beforeData: { status: request.status },
-      afterData: { status: REQUEST_STATUSES.VERIFICATION, note },
+      afterData: { status: REQUEST_STATUSES.IN_REVIEW, note },
     });
 
     revalidatePath('/admin/requests');
@@ -452,8 +452,8 @@ export async function approveRequest(requestId: number, note?: string) {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.status !== REQUEST_STATUSES.VERIFICATION) {
-      return { success: false, error: 'Request harus berstatus VERIFICATION' };
+    if (request.status !== REQUEST_STATUSES.IN_REVIEW) {
+      return { success: false, error: 'Request harus berstatus IN_REVIEW' };
     }
 
     // PHASE 3: Auto-create application master for NEW_APPLICATION
@@ -522,7 +522,7 @@ export async function approveRequest(requestId: number, note?: string) {
 
     await db.insert(requestStatusHistories).values({
       requestId,
-      fromStatus: REQUEST_STATUSES.VERIFICATION,
+      fromStatus: REQUEST_STATUSES.IN_REVIEW,
       toStatus: REQUEST_STATUSES.APPROVED,
       changedBy: authCheck.session!.user.id,
       changedByName: authCheck.session!.user.name,
@@ -582,8 +582,8 @@ export async function rejectRequest(requestId: number, reason: string) {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.status !== REQUEST_STATUSES.VERIFICATION) {
-      return { success: false, error: 'Request harus berstatus VERIFICATION' };
+    if (request.status !== REQUEST_STATUSES.IN_REVIEW) {
+      return { success: false, error: 'Request harus berstatus IN_REVIEW' };
     }
 
     await db
@@ -598,7 +598,7 @@ export async function rejectRequest(requestId: number, reason: string) {
 
     await db.insert(requestStatusHistories).values({
       requestId,
-      fromStatus: REQUEST_STATUSES.VERIFICATION,
+      fromStatus: REQUEST_STATUSES.IN_REVIEW,
       toStatus: REQUEST_STATUSES.REJECTED,
       changedBy: authCheck.session!.user.id,
       changedByName: authCheck.session!.user.name,
@@ -650,8 +650,8 @@ export async function setPriority(requestId: number, priorityId: number) {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
-    if (request.status !== REQUEST_STATUSES.APPROVED && request.status !== REQUEST_STATUSES.ASSIGNED) {
-      return { success: false, error: 'Priority hanya dapat diset untuk request APPROVED atau ASSIGNED' };
+    if (request.status !== REQUEST_STATUSES.APPROVED && request.status !== REQUEST_STATUSES.ONGOING) {
+      return { success: false, error: 'Priority hanya dapat diset untuk request APPROVED atau ONGOING' };
     }
 
     const [priority] = await db
@@ -773,7 +773,7 @@ export async function assignRequest(params: {
     await db
       .update(requests)
       .set({ 
-        status: REQUEST_STATUSES.ASSIGNED,
+        status: REQUEST_STATUSES.ONGOING,
         assignedAt: new Date(),
         updatedAt: new Date(),
       })
@@ -794,7 +794,7 @@ export async function assignRequest(params: {
     await db.insert(requestStatusHistories).values({
       requestId,
       fromStatus: REQUEST_STATUSES.APPROVED,
-      toStatus: REQUEST_STATUSES.ASSIGNED,
+      toStatus: REQUEST_STATUSES.ONGOING,
       changedBy: authCheck.session!.user.id,
       changedByName: authCheck.session!.user.name,
       note: assignmentNote,
@@ -808,7 +808,7 @@ export async function assignRequest(params: {
       entityId: String(requestId),
       action: AUDIT_ACTIONS.ASSIGN,
       beforeData: { status: request.status },
-      afterData: { status: REQUEST_STATUSES.ASSIGNED, teamId, developerId, note },
+      afterData: { status: REQUEST_STATUSES.ONGOING, teamId, developerId, note },
     });
 
     if (developerId) {
@@ -1139,8 +1139,38 @@ export async function assignTeamToRequest(params: {
         )
       );
 
+    // Build full assignment list: developers + team leader (if developer) + technical writer (if not already)
+    const assignedUserIds = new Set(developerAssignments.map(a => a.userId));
+    const extraAssignments: Array<{ userId: number; developerRoleId: number }> = [];
+
+    // Team leader: if a developer, add to assignments with their own role
+    const [tlUser] = await db
+      .select({ id: users.id, roleId: users.roleId, developerRoleId: users.developerRoleId })
+      .from(users)
+      .where(eq(users.id, teamLeaderId))
+      .limit(1);
+    if (tlUser && tlUser.roleId === 3 && tlUser.developerRoleId && !assignedUserIds.has(tlUser.id)) {
+      extraAssignments.push({ userId: tlUser.id, developerRoleId: tlUser.developerRoleId });
+      assignedUserIds.add(tlUser.id);
+    }
+
+    // Technical writer: add to assignments with TW role (if not already assigned)
+    if (!assignedUserIds.has(technicalWriterId)) {
+      const [twUser] = await db
+        .select({ developerRoleId: users.developerRoleId })
+        .from(users)
+        .where(eq(users.id, technicalWriterId))
+        .limit(1);
+      if (twUser?.developerRoleId) {
+        extraAssignments.push({ userId: technicalWriterId, developerRoleId: twUser.developerRoleId });
+        assignedUserIds.add(technicalWriterId);
+      }
+    }
+
+    const allAssignments = [...developerAssignments, ...extraAssignments];
+
     // Create new assignments
-    const assignmentRecords = developerAssignments.map(assignment => ({
+    const assignmentRecords = allAssignments.map(assignment => ({
       requestId,
       assignedUserId: assignment.userId,
       developerRoleId: assignment.developerRoleId,
@@ -1154,7 +1184,7 @@ export async function assignTeamToRequest(params: {
     await db
       .update(requests)
       .set({
-        status: REQUEST_STATUSES.ASSIGNED,
+        status: REQUEST_STATUSES.ONGOING,
         devtiUrusanId,
         teamLeaderId,
         technicalWriterId,
@@ -1185,7 +1215,7 @@ export async function assignTeamToRequest(params: {
     await db.insert(requestStatusHistories).values({
       requestId,
       fromStatus: REQUEST_STATUSES.APPROVED,
-      toStatus: REQUEST_STATUSES.ASSIGNED,
+      toStatus: REQUEST_STATUSES.ONGOING,
       changedBy: authCheck.session!.user.id,
       changedByName: authCheck.session!.user.name,
       actorRole: ROLES.ADMIN,
@@ -1202,7 +1232,7 @@ export async function assignTeamToRequest(params: {
       action: AUDIT_ACTIONS.ASSIGN,
       beforeData: { status: request.status },
       afterData: {
-        status: REQUEST_STATUSES.ASSIGNED,
+        status: REQUEST_STATUSES.ONGOING,
         devtiUrusanId,
         unitName: unit.name,
         teamLeaderId,
@@ -1277,7 +1307,7 @@ export async function getDeveloperRoleDistribution() {
         requests,
         and(
           eq(requests.id, requestTeamAssignments.requestId),
-          inArray(requests.status, ['assigned', 'in_progress'])
+          inArray(requests.status, ['ongoing'])
         )
       )
       .where(eq(developerRoles.isActive, true))

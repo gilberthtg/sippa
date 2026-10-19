@@ -29,17 +29,9 @@ import { REQUEST_TYPES, FILE_UPLOAD } from '@/lib/constants';
 import {
   Send,
   Loader2,
-  FileText,
   Info,
-  Upload,
-  X,
   AlertCircle,
 } from 'lucide-react';
-
-interface FileWithPreview extends File {
-  preview?: string;
-  id: string;
-}
 
 interface Application {
   id: number;
@@ -76,7 +68,6 @@ export function RequestFormSingle() {
   const [businessNeed, setBusinessNeed] = useState('');
   const [objective, setObjective] = useState('');
   const [expectedOutput, setExpectedOutput] = useState('');
-  const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [permintaanAplikasiFile, setPermintaanAplikasiFile] = useState<File | null>(null);
 
   // Load applications when RFC is selected
@@ -138,28 +129,6 @@ export function RequestFormSingle() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
-    
-    if (files.length + selectedFiles.length > FILE_UPLOAD.MAX_FILES) {
-      setGeneralError(`Maksimal ${FILE_UPLOAD.MAX_FILES} file`);
-      return;
-    }
-    
-    const newFiles: FileWithPreview[] = selectedFiles.map((file) => {
-      const fileWithId = file as FileWithPreview;
-      fileWithId.id = Math.random().toString(36).substring(7);
-      return fileWithId;
-    });
-    
-    setFiles([...files, ...newFiles]);
-    setGeneralError('');
-  };
-
-  const removeFile = (fileId: string) => {
-    setFiles(files.filter((f) => f.id !== fileId));
-  };
-
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -215,10 +184,6 @@ export function RequestFormSingle() {
       if (businessNeed) formData.append('businessNeed', businessNeed);
       if (objective) formData.append('objective', objective);
       if (expectedOutput) formData.append('expectedOutput', expectedOutput);
-
-       files.forEach((file) => {
-        formData.append('files', file);
-      });
 
       if (permintaanAplikasiFile) {
         formData.append('permintaanAplikasi', permintaanAplikasiFile);
@@ -523,70 +488,15 @@ export function RequestFormSingle() {
         </CardContent>
       </Card>
 
-      {/* Section 4: Attachments */}
+      {/* Section 4: Document */}
       <Card>
         <CardHeader>
-          <CardTitle>4. Lampiran</CardTitle>
+          <CardTitle>4. Dokumen Permintaan Aplikasi</CardTitle>
           <CardDescription>
-            Upload dokumen pendukung (maksimal {FILE_UPLOAD.MAX_FILES} file, 10MB per file)
+            Upload dokumen permintaan aplikasi (opsional)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="files">
-              <div className="flex items-center gap-2 cursor-pointer rounded-lg border-2 border-dashed p-6 text-center hover:bg-muted/50">
-                <Upload className="h-5 w-5" />
-                <span>Klik untuk upload atau drag & drop file</span>
-              </div>
-            </Label>
-            <Input
-              id="files"
-              type="file"
-              multiple
-              onChange={handleFileChange}
-              className="hidden"
-              accept={FILE_UPLOAD.ALLOWED_TYPES.join(',')}
-            />
-            <p className="text-sm text-muted-foreground">
-              Format yang diterima: PDF, Word, Excel, PowerPoint, gambar
-            </p>
-          </div>
-
-          {/* File List */}
-          {files.length > 0 && (
-            <div className="space-y-2">
-              <Label>File Terpilih ({files.length})</Label>
-              <div className="space-y-2">
-                {files.map((file) => (
-                  <div
-                    key={file.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile(file.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <Separator />
-
           <div className="space-y-2">
             <Label htmlFor="permintaanAplikasi">
               Dokumen Permintaan Aplikasi (opsional)
@@ -602,6 +512,9 @@ export function RequestFormSingle() {
                 Terpilih: {permintaanAplikasiFile.name}
               </p>
             )}
+            <p className="text-sm text-muted-foreground">
+              Format yang diterima: PDF, Word, Excel, PowerPoint, gambar
+            </p>
           </div>
         </CardContent>
       </Card>

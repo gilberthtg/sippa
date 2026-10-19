@@ -8,7 +8,7 @@ import { generateRequestNumber } from '@/lib/utils/request-number';
 import { generateStorageKey } from '@/lib/utils/file-upload';
 import { saveFile } from '@/lib/utils/file-storage';
 import { validateVersionProgression } from '@/lib/utils/version';
-import { REQUEST_STATUSES, FILE_UPLOAD, AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
+import { REQUEST_STATUSES, FILE_UPLOAD, AUDIT_MODULES, AUDIT_ACTIONS, ROLES } from '@/lib/constants';
 import { eq, and, desc, or, like, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { logAudit } from '@/lib/utils/audit';
@@ -81,20 +81,6 @@ export async function createRequest(formData: FormData) {
       ? validatedData.title
       : applicationName || 'RFC';
 
-    const files = formData.getAll('files') as File[];
-    const validFiles = files.filter((f) => f.size > 0);
-    if (validFiles.length > FILE_UPLOAD.MAX_FILES) {
-      return { success: false, error: `Maksimal ${FILE_UPLOAD.MAX_FILES} file` };
-    }
-    for (const file of validFiles) {
-      if (file.size > FILE_UPLOAD.MAX_FILE_SIZE) {
-        return { success: false, error: `File "${file.name}" melebihi batas 10MB` };
-      }
-      if (!FILE_UPLOAD.ALLOWED_TYPES.includes(file.type as typeof FILE_UPLOAD.ALLOWED_TYPES[number])) {
-        return { success: false, error: `Tipe file "${file.name}" tidak diizinkan` };
-      }
-    }
-
     const requestNo = await generateRequestNumber();
 
     // Build insert values based on request type
@@ -138,25 +124,17 @@ export async function createRequest(formData: FormData) {
       changedBy: session.user.id,
       changedByName: session.user.name,
       note: 'Request dibuat',
-    });
-
-    for (const file of validFiles) {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const storageKey = generateStorageKey(file.name);
-      await saveFile(buffer, storageKey);
-      await db.insert(requestAttachments).values({
-        requestId: Number(requestId),
-        originalName: file.name,
-        storageKey,
-        mimeType: file.type,
-        sizeBytes: file.size,
-        uploadedBy: session.user.id,
       });
-    }
 
     // Optional: upload "Permintaan Aplikasi" document type if provided
     const permintaanAplikasiFile = formData.get('permintaanAplikasi') as File | null;
     if (permintaanAplikasiFile && permintaanAplikasiFile.size > 0) {
+      if (permintaanAplikasiFile.size > FILE_UPLOAD.MAX_FILE_SIZE) {
+        return { success: false, error: `File "${permintaanAplikasiFile.name}" melebihi batas 10MB` };
+      }
+      if (!FILE_UPLOAD.ALLOWED_TYPES.includes(permintaanAplikasiFile.type as typeof FILE_UPLOAD.ALLOWED_TYPES[number])) {
+        return { success: false, error: `Tipe file "${permintaanAplikasiFile.name}" tidak diizinkan` };
+      }
       const [dt] = await db
         .select({ id: documentTypes.id })
         .from(documentTypes)
@@ -212,6 +190,75 @@ export async function createRequest(formData: FormData) {
   }
 }
 
+export async function resubmitRequest(params: { requestId: number; note?: string }) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const { requestId, note } = params;
+    const [request] = await db.select().from(requests).where(eq(requests.id, requestId)).limit(1);
+    if (!request) {
+      return { success: false, error: 'Request tidak ditemukan' };
+    }
+    // Only requester can resubmit their own rejected request
+    if (request.requesterId !== session.user.id) {
+      return { success: false, error: 'Hanya pemohon yang dapat mengajukan ulang' };
+    }
+    if (request.status !== REQUEST_STATUSES.REJECTED) {
+      return { success: false, error: 'Hanya request REJECTED yang dapat diajukan ulang' };
+    }
+
+    const now = new Date();
+    await db.update(requests)
+      .set({
+        status: REQUEST_STATUSES.SUBMITTED,
+        rejectedAt: null,
+        rejectionNote: null,
+        submittedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(requests.id, requestId));
+
+    await db.insert(requestStatusHistories).values({
+      requestId,
+      fromStatus: REQUEST_STATUSES.REJECTED,
+      toStatus: REQUEST_STATUSES.SUBMITTED,
+      changedBy: session.user.id,
+      changedByName: session.user.name,
+      actorRole: ROLES.USER,
+      note: note || 'Request diajukan ulang setelah perbaikan',
+      metadata: JSON.stringify({ resubmittedAt: now.toISOString() }),
+    });
+
+    logAudit({
+      actorUserId: session.user.id,
+      actorName: session.user.name,
+      module: AUDIT_MODULES.REQUESTS,
+      entityType: 'request',
+      entityId: String(requestId),
+      action: AUDIT_ACTIONS.RESUBMIT,
+      beforeData: { status: request.status },
+      afterData: { status: REQUEST_STATUSES.SUBMITTED },
+    });
+
+    notifyRequestSubmitted({
+      requestId,
+      requestNo: request.requestNo,
+      title: request.title,
+      requesterName: session.user.name,
+    });
+
+    revalidatePath('/requests');
+    revalidatePath(`/requests/${requestId}`);
+    return { success: true, message: 'Request berhasil diajukan ulang' };
+  } catch (error) {
+    console.error('Resubmit request error:', error);
+    return { success: false, error: 'Gagal mengajukan ulang request' };
+  }
+}
+
 export async function getRequestsByUserId(params?: {
   status?: string;
   search?: string;
@@ -233,7 +280,7 @@ export async function getRequestsByUserId(params?: {
     if (params?.status && params.status !== 'all') {
       whereConditions = and(
         whereConditions,
-        eq(requests.status, params.status as 'submitted' | 'verification' | 'rejected' | 'approved' | 'assigned' | 'in_progress' | 'completed')
+        eq(requests.status, params.status as 'submitted' | 'in_review' | 'rejected' | 'approved' | 'ongoing' | 'done' | 'on_hold')
       ) as typeof whereConditions;
     }
 

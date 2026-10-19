@@ -54,7 +54,7 @@ export function VerifyDialog({
         <DialogHeader>
           <DialogTitle>Verifikasi Request</DialogTitle>
           <DialogDescription>
-            Verifikasi kelengkapan request {requestNo}. Request akan berpindah ke status VERIFICATION.
+            Verifikasi kelengkapan request {requestNo}. Request akan berpindah ke status IN_REVIEW.
           </DialogDescription>
         </DialogHeader>
 

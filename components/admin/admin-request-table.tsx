@@ -118,7 +118,7 @@ export function AdminRequestTable({
                 <span className="text-sm">{request.requesterName}</span>
               </TableCell>
               <TableCell>
-                <StatusBadge status={request.status as 'submitted' | 'verification' | 'rejected' | 'approved' | 'assigned' | 'in_progress' | 'completed'} />
+                <StatusBadge status={request.status as 'submitted' | 'in_review' | 'rejected' | 'approved' | 'ongoing' | 'on_hold' | 'done'} />
               </TableCell>
               <TableCell>
                 {request.priorityId ? (

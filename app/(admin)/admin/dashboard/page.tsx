@@ -26,11 +26,11 @@ export default async function AdminDashboardPage() {
 
   const stats = statsResult.data || {
     submitted: 0,
-    verification: 0,
+    inReview: 0,
     approved: 0,
-    assigned: 0,
-    inProgress: 0,
-    completed: 0,
+    ongoing: 0,
+    onHold: 0,
+    done: 0,
     rejected: 0,
     total: 0,
     approvedNotAssigned: 0,

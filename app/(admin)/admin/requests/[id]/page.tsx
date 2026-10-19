@@ -12,7 +12,7 @@ import { getRequiredDocumentTypes, getRequestDocuments } from '@/app/actions/req
 import { RequestDetailHeader } from '@/components/requests/request-detail-header';
 import { RequestDetailInfo } from '@/components/requests/request-detail-info';
 import { RequestDetailTimeline } from '@/components/requests/request-detail-timeline';
-import { RequestAttachmentsList } from '@/components/requests/request-attachments-list';
+// import { RequestAttachmentsList } from '@/components/requests/request-attachments-list';
 import { RequestAdminActions } from '@/components/admin/request-admin-actions';
 import { RequestDocumentsSection } from '@/components/requests/request-documents-section';
 
@@ -83,9 +83,9 @@ export default async function AdminRequestDetailPage({ params }: PageProps) {
             requesterPhone={request.requesterPhone}
           />
 
-          {request.attachments && request.attachments.length > 0 && (
+          {/* {request.attachments && request.attachments.length > 0 && (
             <RequestAttachmentsList attachments={request.attachments} />
-          )}
+          )} */}
 
           <div className="rounded-md border p-4 space-y-3">
             <h3 className="font-semibold">Kelengkapan Dokumen</h3>

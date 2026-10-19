@@ -13,9 +13,9 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const STATUS_OPTIONS = [
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'ongoing', label: 'Ongoing' },
+  { value: 'on_hold', label: 'On Hold' },
+  { value: 'done', label: 'Done' },
 ];
 
 const PRIORITY_OPTIONS = [

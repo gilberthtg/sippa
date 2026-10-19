@@ -29,13 +29,13 @@ export function RequestDetailTimeline({ histories }: RequestDetailTimelineProps)
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
-      submitted: 'Diajukan',
-      verification: 'Verifikasi',
-      approved: 'Disetujui',
-      rejected: 'Ditolak',
-      assigned: 'Ditugaskan',
-      in_progress: 'Dikerjakan',
-      completed: 'Selesai',
+      submitted: 'Submitted',
+      in_review: 'In Review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+      ongoing: 'Ongoing',
+      on_hold: 'On Hold',
+      done: 'Done',
     };
     return labels[status] || status;
   };

@@ -29,13 +29,13 @@ interface AdminRequestFiltersProps {
 }
 
 const statusOptions: FilterOption[] = [
-  { value: 'submitted', label: 'Diajukan' },
-  { value: 'verification', label: 'Verifikasi' },
-  { value: 'approved', label: 'Disetujui' },
-  { value: 'rejected', label: 'Ditolak' },
-  { value: 'assigned', label: 'Ditugaskan' },
-  { value: 'in_progress', label: 'Dalam Proses' },
-  { value: 'completed', label: 'Selesai' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'in_review', label: 'In Review' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'ongoing', label: 'Ongoing' },
+  { value: 'on_hold', label: 'On Hold' },
+  { value: 'done', label: 'Done' },
 ];
 
 const typeOptions: FilterOption[] = [

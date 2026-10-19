@@ -368,7 +368,7 @@ export async function verifyMigration(): Promise<{
       SELECT COUNT(*) as count
       FROM requests
       WHERE request_type = 'NEW_APPLICATION'
-      AND status IN ('APPROVED', 'IN_PROGRESS', 'COMPLETED')
+      AND status IN ('APPROVED', 'ONGOING', 'DONE')
       AND application_id IS NULL
     `) as unknown as [any[], any];
     

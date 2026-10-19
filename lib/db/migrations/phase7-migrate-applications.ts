@@ -128,7 +128,7 @@ export async function migrateApplications(
       where: and(
         eq(requests.requestType, 'new_application'),
         isNull(requests.applicationId),
-        inArray(requests.status, ['approved', 'in_progress', 'completed'])
+        inArray(requests.status, ['approved', 'ongoing', 'done'])
       ),
       orderBy: (requests, { asc }) => [asc(requests.submittedAt)],
     });

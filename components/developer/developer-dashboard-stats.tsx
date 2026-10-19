@@ -7,8 +7,8 @@ import { RoleBadge } from '@/components/shared/role-badge';
 
 interface DashboardStatsProps {
   stats: {
-    assigned: number;
-    inProgress: number;
+    ongoing: number;
+    onHold: number;
     completedThisMonth: number;
     overdue: number;
   };
@@ -21,27 +21,27 @@ interface DashboardStatsProps {
 export function DeveloperDashboardStats({ stats, developerRole }: DashboardStatsProps) {
   const statCards = [
     {
-      title: 'Assigned',
-      value: stats.assigned,
+      title: 'Ongoing',
+      value: stats.ongoing,
       icon: ClipboardList,
-      description: 'Request yang di-assign',
-      href: '/developer/assignments?status=assigned',
+      description: 'Request yang dikerjakan',
+      href: '/developer/assignments?status=ongoing',
       color: 'text-blue-600',
     },
     {
-      title: 'In Progress',
-      value: stats.inProgress,
+      title: 'On Hold',
+      value: stats.onHold,
       icon: Clock,
-      description: 'Sedang dikerjakan',
-      href: '/developer/assignments?status=in_progress',
-      color: 'text-primary',
+      description: 'Ditahan',
+      href: '/developer/assignments?status=on_hold',
+      color: 'text-orange-600',
     },
     {
       title: 'Completed This Month',
       value: stats.completedThisMonth,
       icon: CheckCircle2,
       description: 'Selesai bulan ini',
-      href: '/developer/assignments?status=completed',
+      href: '/developer/assignments?status=done',
       color: 'text-green-600',
     },
     {
@@ -66,7 +66,7 @@ export function DeveloperDashboardStats({ stats, developerRole }: DashboardStats
                 <RoleBadge roleCode={developerRole.code} size="lg" />
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold">{stats.assigned + stats.inProgress}</p>
+                <p className="text-2xl font-bold">{stats.ongoing + stats.onHold}</p>
                 <p className="text-xs text-muted-foreground">Active Assignments</p>
               </div>
             </div>

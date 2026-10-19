@@ -117,6 +117,43 @@ export async function notifyRequestCompleted(params: {
 /**
  * PHASE 3: Notify team members (team leader, technical writer, requester)
  */
+export async function notifyRequestOnHold(params: {
+  requestId: number;
+  requestNo: string;
+  title: string;
+  requesterId: number;
+  reason: string;
+}) {
+  const adminIds = await getAdminUserIds();
+  const recipientIds = [...new Set([params.requesterId, ...adminIds])];
+  await sendNotification({
+    type: NOTIFICATION_EVENTS.REQUEST_ON_HOLD,
+    recipientUserIds: recipientIds,
+    title: `Permintaan Ditahan: ${params.requestNo}`,
+    message: `Permintaan "${params.title}" ditahan. Alasan: ${params.reason}`,
+    entityType: 'request',
+    entityId: String(params.requestId),
+  });
+}
+
+export async function notifyRequestResumed(params: {
+  requestId: number;
+  requestNo: string;
+  title: string;
+  requesterId: number;
+}) {
+  const adminIds = await getAdminUserIds();
+  const recipientIds = [...new Set([params.requesterId, ...adminIds])];
+  await sendNotification({
+    type: NOTIFICATION_EVENTS.REQUEST_RESUMED,
+    recipientUserIds: recipientIds,
+    title: `Permintaan Dilanjutkan: ${params.requestNo}`,
+    message: `Permintaan "${params.title}" dilanjutkan kembali`,
+    entityType: 'request',
+    entityId: String(params.requestId),
+  });
+}
+
 export async function notifyTeamAssigned(params: {
   requestId: number;
   requestNo: string;

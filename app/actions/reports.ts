@@ -22,7 +22,7 @@ export async function getLaptriData(filters: {
   await checkAdminAuth();
 
   const conditions = [
-    eq(requests.status, 'completed'),
+    eq(requests.status, 'done'),
     sql`YEAR(${requests.completedAt}) = ${filters.year}`,
   ];
 
@@ -74,7 +74,7 @@ export async function getLaptriSummary(year: number) {
     .from(requests)
     .where(
       and(
-        eq(requests.status, 'completed'),
+        eq(requests.status, 'done'),
         sql`YEAR(${requests.completedAt}) = ${year}`
       )
     );
@@ -136,7 +136,7 @@ export async function getLaptriSummary(year: number) {
     .leftJoin(developerRoles, eq(requestTeamAssignments.developerRoleId, developerRoles.id))
     .where(
       and(
-        eq(requests.status, 'completed'),
+        eq(requests.status, 'done'),
         sql`YEAR(${requests.completedAt}) = ${year}`,
         isNull(requestTeamAssignments.unassignedAt)
       )
@@ -216,7 +216,7 @@ export async function getSLAReport(filters: {
   const limit = filters.limit || 20;
   const offset = (page - 1) * limit;
 
-  const conditions = [eq(requests.status, 'completed')];
+  const conditions = [eq(requests.status, 'done')];
 
   if (filters.startDate && filters.endDate) {
     conditions.push(
@@ -292,7 +292,7 @@ export async function getSLASummary(filters: {
 }) {
   await checkAdminAuth();
 
-  const conditions = [eq(requests.status, 'completed')];
+  const conditions = [eq(requests.status, 'done')];
 
   if (filters.startDate && filters.endDate) {
     conditions.push(
@@ -392,7 +392,7 @@ export async function getSLASummary(filters: {
     .leftJoin(developerRoles, eq(requestTeamAssignments.developerRoleId, developerRoles.id))
     .where(
       and(
-        eq(requests.status, 'completed'),
+        eq(requests.status, 'done'),
         ...(filters.startDate && filters.endDate 
           ? [gte(requests.completedAt, filters.startDate), lte(requests.completedAt, filters.endDate)]
           : [sql`YEAR(${requests.completedAt}) = ${filters.year}`]

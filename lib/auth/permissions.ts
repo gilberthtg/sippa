@@ -87,23 +87,23 @@ export function getAvailableActions(
   const actions: string[] = [];
   
   if (role === ROLES.ADMIN) {
-    if (status === 'submitted' || status === 'verification') {
+    if (status === 'submitted' || status === 'in_review') {
       actions.push('verify', 'approve', 'reject', 'set_priority');
     }
     if (status === 'approved') {
       actions.push('assign', 'set_priority');
     }
-    if (status === 'assigned' || status === 'in_progress') {
-      actions.push('reassign');
+    if (status === 'ongoing' || status === 'on_hold') {
+      actions.push('reassign', 'pause', 'resume');
     }
   }
   
   if (role === ROLES.DEVELOPER && assignedDeveloperId === currentUserId) {
-    if (status === 'assigned') {
-      actions.push('start_work');
+    if (status === 'ongoing') {
+      actions.push('update_progress', 'complete', 'pause');
     }
-    if (status === 'in_progress') {
-      actions.push('update_progress', 'complete');
+    if (status === 'on_hold') {
+      actions.push('resume');
     }
   }
   

@@ -169,3 +169,9 @@ Format:
      - Prevents race conditions or stale client data
 - Alternatives considered: Server-only validation, client-only validation
 - Benefits: Best UX (immediate feedback), data integrity (server validation), type safety (schema)
+
+## ADR-0017 — Request Status Workflow Restructure
+- Status: Confirmed
+- Date: 2026-10-19
+- Decision: Replace status workflow with SUBMITTED, IN_REVIEW, APPROVED, REJECTED, ONGOING, DONE, ON_HOLD. Consolidate ASSIGNED+IN_PROGRESS into ONGOING. Add ON_HOLD with reason and SLA pause. Allow rejected request resubmission.
+- Impact: Database enum migration, server-side transition validation, new pause/resume actions, notification events.

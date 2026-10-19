@@ -1,5 +1,59 @@
 # SiPPA AI Session Log
 
+## 2026-10-19 — Fix: Ketua Tim & Technical Writer muncul di halaman developer
+
+- Goal: Agar developer yang dipilih sebagai Ketua Tim atau Technical Writer dapat melihat request yang di-assign pada halaman developer mereka (sebelumnya hanya developer biasa yang muncul).
+- Changes made:
+  - `admin-requests.ts` (`assignTeamToRequest`): Ketua Tim (jika role DEVELOPER) dan Technical Writer otomatis ditambahkan ke `request_team_assignments` (dengan role mereka sendiri / TW), selain developer biasa. Dedup via set agar tidak duplikat.
+  - `developer-requests.ts` (`checkRequestAssignment`): akses detail diizinkan jika user adalah developer di assignment, ATAU team leader, ATAU technical writer.
+  - `developer-requests.ts` (`getAssignedRequests`): query diubah dari INNER JOIN ke LEFT JOIN + filter OR (assigned user / team_leader_id / technical_writer_id), sehingga request muncul untuk TL/TW (termasuk data lama). `myRoleCode`/`myRoleName` coalesce ke role developer user jika tidak ada assignment row.
+  - `developer-requests.ts` (`getDeveloperDashboardStats`): stats & overdue requests ikut memperhitungkan TL/TW.
+- Files changed: app/actions/admin-requests.ts, app/actions/developer-requests.ts, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Build: SUCCESS
+- Open questions:
+  - (None)
+- Next recommended step: Test manual: assign request dengan Ketua Tim = developer X dan TW = developer Y, lalu login sebagai X/Y dan pastikan request muncul di /developer/requests.
+
+## 2026-10-19 — Exclude Ketua Tim/TW dari daftar Assign Developers
+- Goal: Di dialog assign tim, user yang sudah dipilih sebagai Ketua Tim atau Technical Writer tidak lagi tampil pada daftar "Assign Developers".
+- Changes made:
+  - `team-assignment-dialog.tsx`: tambah derivasi `assignedRoleUserIds` (dari `teamLeaderId` + `technicalWriterId`) dan `availableDevelopers` (developers dikurangi user terpilih sebagai Ketua Tim/TW); grouping per role (`developersByRole`) dan empty-state ("Tidak ada developer tersedia") kini memakai `availableDevelopers`.
+  - Tambah `useEffect` auto-deselect: jika seorang developer yang sudah tercentang kemudian dipilih sebagai Ketua Tim/TW, dia otomatis dihapus dari `selectedDevelopers` (konsisten saat ganti pilihan TL/TW).
+  - Update teks petunjuk section Assign Developers: user sebagai Ketua Tim/TW tidak muncul di daftar.
+- Files changed: components/admin/team-assignment-dialog.tsx, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+- Open questions:
+  - (None)
+- Next recommended step: Test manual: centang developer X → pilih X sebagai Ketua Tim → pastikan X hilang dari list dan dari selection.
+
+## 2026-10-19 — DevTI Urusan select diberi standar UI ala Team Leader
+- Goal: Pada `components/admin/team-assignment-dialog.tsx`, samakan tampilan select "DevTI Urusan" dengan pattern select "Ketua Tim" (item list dua baris + nilai terpilih tampil di trigger).
+- Changes made:
+  - `team-assignment-dialog.tsx`: SelectItem DevTI Urusan kini flex-column: nama unit (font-medium) + kode unit (text-xs muted, mirip nama+email di Ketua Tim). Trigger `className="w-full"` dan `SelectValue` tampilkan `Nama (kode)` unit terpilih, fallback placeholder "Pilih unit...".
+  - Tambah `selectedUnit` (derivasi sama seperti `selectedTeamLeader`) dan preview "DevTI Urusan" memakai `selectedUnit?.name` (menggantikan lookup inline `units.find(...)`).
+- Files changed: components/admin/team-assignment-dialog.tsx, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+- Open questions:
+  - (None)
+- Next recommended step: Test manual UI dialog assign tim di halaman admin (queue approved-but-unassigned).
+
+## 2026-10-19 — Removed dokumen pendukung upload from Request Baru form
+- Goal: Pada page `/requests/new`, hapus upload "dokumen pendukung" (Lampiran multi-file), sisakan hanya upload "Dokumen Permintaan Aplikasi".
+- Changes made:
+  - `components/requests/request-form-single.tsx`: Hapus state `files` (FileWithPreview), `handleFileChange`, `removeFile`, UI drag&drop Lampiran + daftar file terpilih, dan `formData.append('files')`. Section 4 diubah dari "Lampiran" menjadi "4. Dokumen Permintaan Aplikasi" (single file, opsional). Hapus import icon `Upload`, `X`, `FileText`.
+  - `app/actions/requests.ts` (`createRequest`): Hapus validasi & insert loop untuk `files` (dulu membuat record `request_attachments`). Tambah validasi server-side untuk `permintaanAplikasi` (max 10MB + allowed MIME types) sebelum insert ke `request_documents` dengan document type "Permintaan Aplikasi".
+  - Data `request_attachments` lama tetap dapat ditampilkan/download di halaman detail (tidak dihapus).
+- Files changed: components/requests/request-form-single.tsx, app/actions/requests.ts, .ai/BUSINESS_RULES.md, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+- Open questions:
+  - (None) — dokumen pendukung dihapus dari form; jika suatu saat dibutuhkan lagi, gunakan mekanisme document types (`service_document_types`).
+- Next recommended step: Manual test submit request NEW_APPLICATION & RFC dengan dan tanpa file Dokumen Permintaan Aplikasi.
+
 ## 2026-10-19 — DevTI Urusan converted from text input to units dropdown
 
 - Goal: Ubah konsep DevTI Urusan dari teks yang diketik admin menjadi pilihan (option) dari master units; tipe data diubah dari varchar ke integer (FK ke units).
@@ -14,7 +68,7 @@
 - Tests/checks:
   - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
 - Open questions:
-  - Migration belum dijalankan ke DB production; jalankan `0002_devti_urusan_to_unit.sql` saat deploy.
+  - (Resolved) Migration `0002_devti_urusan_to_unit.sql` sudah dijalankan ke database lokal; column `devti_urusan` (varchar) diganti `devti_urusan_id` (int FK → units).
 - Next recommended step: Jalankan migration SQL ke database, lalu test flow assignment end-to-end.
 ## Template
 ### YYYY-MM-DD — Session title
@@ -1546,3 +1600,10 @@ See `.ai/PHASE_5_COMPLETE.md` for comprehensive documentation.
   - TypeScript: PASSED (only pre-existing user-filters.tsx asChild error unrelated).
 - Open questions:
   - Document completion is tracking-only (non-blocking) per user decision.
+## 2026-10-19 � Status Workflow Restructure
+- Replaced status workflow with SUBMITTED, IN_REVIEW, APPROVED, REJECTED, ONGOING, DONE, ON_HOLD.
+- Updated constants, schema, admin/developer/user actions, notifications, UI badges/filters, dashboard stats, permissions.
+- Added pause/resume (ON_HOLD) with reason, actor, SLA pause tracking columns.
+- Added resubmission of rejected requests (REJECTED -> SUBMITTED) with audit trail.
+- Migration SQL: db/migrations/0003_status_workflow_restructure.sql.
+- Updated BUSINESS_RULES.md and DATABASE.md.

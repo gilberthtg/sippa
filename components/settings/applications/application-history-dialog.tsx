@@ -47,20 +47,22 @@ type ApplicationHistory = {
 
 const statusColors: Record<string, string> = {
   submitted: 'bg-blue-100 text-blue-800',
-  verification: 'bg-yellow-100 text-yellow-800',
+  in_review: 'bg-yellow-100 text-yellow-800',
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
-  in_progress: 'bg-purple-100 text-purple-800',
-  completed: 'bg-green-100 text-green-800',
+  ongoing: 'bg-purple-100 text-purple-800',
+  on_hold: 'bg-orange-100 text-orange-800',
+  done: 'bg-green-100 text-green-800',
 };
 
 const statusLabels: Record<string, string> = {
   submitted: 'Submitted',
-  verification: 'Verification',
+  in_review: 'In Review',
   approved: 'Approved',
   rejected: 'Rejected',
-  in_progress: 'In Progress',
-  completed: 'Completed',
+  ongoing: 'Ongoing',
+  on_hold: 'On Hold',
+  done: 'Done',
 };
 
 export function ApplicationHistoryDialog({ applicationId, open, onOpenChange }: Props) {

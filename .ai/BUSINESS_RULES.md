@@ -35,7 +35,7 @@
 - Title (application name)
 - Description (requirements)
 - Urgency (LOW, MEDIUM, HIGH)
-- Attachments (optional but recommended)
+- Dokumen Permintaan Aplikasi (optional upload)
 
 **On Approval:**
 - Entry created in `request_applications` table
@@ -51,7 +51,7 @@
 - Requested version (semantic versioning x.y.z)
 - Description (changes requested)
 - Urgency (LOW, MEDIUM, HIGH)
-- Attachments (optional but recommended)
+- Dokumen Permintaan Aplikasi (optional upload)
 
 **Validation Rules:**
 - Application must exist in `request_applications`
@@ -73,7 +73,7 @@
 - Fill single-page form (not multi-step wizard)
 - Select request type with conditional rendering
 - For RFC: select application and enter version
-- Upload attachments (max 5 files, 10 MB each)
+- Upload Dokumen Permintaan Aplikasi (optional, 1 file, 10 MB)
 - View own request list and status only
 - Track progress and team assignment
 - Receive notifications on status changes
@@ -129,19 +129,23 @@
 
 ### Status Values
 1. **SUBMITTED** - User submitted request
-2. **VERIFICATION** - Admin reviewing
+2. **IN_REVIEW** - Admin reviewing
 3. **APPROVED** - Admin approved, ready for assignment
 4. **REJECTED** - Admin rejected with reason
-5. **IN_PROGRESS** - Team assigned, work in progress
-6. **COMPLETED** - Work finished, request closed
+5. **ONGOING** - Team assigned, work in progress
+6. **ON_HOLD** - Work paused (requires reason)
+7. **DONE** - Work finished, request closed
 
 ### Status Transitions
 - User → SUBMITTED (on submit)
-- SUBMITTED → VERIFICATION (admin opens)
-- VERIFICATION → APPROVED (admin approves)
-- VERIFICATION → REJECTED (admin rejects with reason)
-- APPROVED → IN_PROGRESS (admin assigns team)
-- IN_PROGRESS → COMPLETED (work finished)
+- SUBMITTED → IN_REVIEW (admin opens)
+- IN_REVIEW → APPROVED (admin approves)
+- IN_REVIEW → REJECTED (admin rejects with reason)
+- APPROVED → ONGOING (admin assigns team)
+- ONGOING → ON_HOLD (pause, reason required)
+- ON_HOLD → ONGOING (resume)
+- ONGOING → DONE (work finished)
+- REJECTED → SUBMITTED (requester resubmits)
 
 ### Status History
 - All transitions recorded in `request_status_histories`
@@ -222,7 +226,7 @@ Defined in `sla_policies` table:
    - Priority (if not already set)
 4. Admin submits assignment
 5. Entries created in `request_team_assignments`
-6. Request status → IN_PROGRESS
+6. Request status → ONGOING
 7. Notifications sent to:
    - All assigned developers
    - Technical writer
@@ -335,20 +339,21 @@ In-app notifications are triggered automatically on the following transitions:
 - Description: required, min 20 chars
 - Urgency: required (LOW, MEDIUM, HIGH)
 - Version: auto-set to "1.0.0" (not editable)
-- Attachments: optional, max 5 files, 10 MB each
+- Dokumen Permintaan Aplikasi: optional, 1 file, 10 MB
 
 ### RFC Form
 - Application: required (dropdown from request_applications)
 - Requested Version: required, format x.y.z, must be > current
 - Description: required, min 20 chars
 - Urgency: required (LOW, MEDIUM, HIGH)
-- Attachments: optional, max 5 files, 10 MB each
+- Dokumen Permintaan Aplikasi: optional, 1 file, 10 MB
 
 ### File Upload Validation
+- **Uploaded Document:** Only "Dokumen Permintaan Aplikasi" (single file, optional) — dokumen pendukung upload was removed
 - **Allowed Types:** .pdf, .doc, .docx, .xls, .xlsx, .png, .jpg, .jpeg
 - **Max Size:** 10 MB per file
-- **Max Count:** 5 files per request
-- **Validation:** MIME type check + extension check (server-side)
+- **Max Count:** 1 file per request
+- **Validation:** MIME type check (server-side)
 
 ## Deferred Requirements (v1.1+)
 

@@ -12,8 +12,8 @@ const statusConfig = {
     label: 'Submitted',
     className: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
   },
-  [REQUEST_STATUSES.VERIFICATION]: {
-    label: 'Verification',
+  [REQUEST_STATUSES.IN_REVIEW]: {
+    label: 'In Review',
     className: 'bg-amber-100 text-amber-800 hover:bg-amber-100',
   },
   [REQUEST_STATUSES.REJECTED]: {
@@ -24,16 +24,16 @@ const statusConfig = {
     label: 'Approved',
     className: 'bg-green-100 text-green-800 hover:bg-green-100',
   },
-  [REQUEST_STATUSES.ASSIGNED]: {
-    label: 'Assigned',
+  [REQUEST_STATUSES.ONGOING]: {
+    label: 'Ongoing',
     className: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
   },
-  [REQUEST_STATUSES.IN_PROGRESS]: {
-    label: 'In Progress',
-    className: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
+  [REQUEST_STATUSES.ON_HOLD]: {
+    label: 'On Hold',
+    className: 'bg-orange-100 text-orange-800 hover:bg-orange-100',
   },
-  [REQUEST_STATUSES.COMPLETED]: {
-    label: 'Completed',
+  [REQUEST_STATUSES.DONE]: {
+    label: 'Done',
     className: 'bg-green-100 text-green-800 hover:bg-green-100',
   },
 };

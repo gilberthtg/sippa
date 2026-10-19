@@ -21,10 +21,11 @@ export function DeveloperRequestActions({
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
 
-  const canStart = status === 'assigned';
-  const canUpdate = status === 'in_progress';
-  const canComplete = status === 'in_progress';
-  const isCompleted = status === 'completed';
+  const canStart = false;
+  const canUpdate = status === 'ongoing';
+  const canComplete = status === 'ongoing';
+  const isCompleted = status === 'done';
+  const isOnHold = status === 'on_hold';
 
   if (isCompleted) {
     return (

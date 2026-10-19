@@ -98,7 +98,7 @@ export function SLAAttentionWidget({ requests }: SLAAttentionWidgetProps) {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <StatusBadge status={request.status as 'submitted' | 'verification' | 'rejected' | 'approved' | 'assigned' | 'in_progress' | 'completed'} />
+                    <StatusBadge status={request.status as 'submitted' | 'in_review' | 'rejected' | 'approved' | 'ongoing' | 'on_hold' | 'done'} />
                     {request.priorityId && (
                       <PriorityBadge priorityId={request.priorityId} />
                     )}

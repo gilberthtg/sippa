@@ -14,7 +14,7 @@ export default async function DeveloperDashboardPage() {
   }
 
   const recentRequests = await getAssignedRequests({
-    status: ['assigned', 'in_progress'],
+    status: ['ongoing', 'on_hold'],
     limit: 5,
   });
 

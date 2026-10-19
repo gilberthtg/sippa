@@ -131,6 +131,26 @@ export function TeamAssignmentDialog({
     }
   }, [open]);
 
+  // Auto-deselect developers yang dipilih sebagai Ketua Tim atau Technical Writer
+  useEffect(() => {
+    const excluded = new Set<number>();
+    if (teamLeaderId) excluded.add(parseInt(teamLeaderId));
+    if (technicalWriterId) excluded.add(parseInt(technicalWriterId));
+    if (excluded.size === 0) return;
+
+    setSelectedDevelopers(prev => {
+      const next = new Set(prev);
+      let changed = false;
+      prev.forEach(id => {
+        if (excluded.has(id)) {
+          next.delete(id);
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [teamLeaderId, technicalWriterId]);
+
   const handleDeveloperToggle = (developerId: number) => {
     const newSelected = new Set(selectedDevelopers);
     if (newSelected.has(developerId)) {
@@ -212,13 +232,20 @@ export function TeamAssignmentDialog({
   };
 
   // Get selected data for preview
+  const selectedUnit = units.find(u => u.id.toString() === devtiUrusanId);
   const selectedTeamLeader = teamLeaders.find(tl => tl.id.toString() === teamLeaderId);
   const selectedTechnicalWriter = technicalWriters.find(tw => tw.id.toString() === technicalWriterId);
   const selectedDevelopersList = developers.filter(d => selectedDevelopers.has(d.id));
 
+  // Developers yang tersedia untuk di-assign: kecualikan yg sudah jadi Ketua Tim / Technical Writer
+  const assignedRoleUserIds = new Set<number>();
+  if (teamLeaderId) assignedRoleUserIds.add(parseInt(teamLeaderId));
+  if (technicalWriterId) assignedRoleUserIds.add(parseInt(technicalWriterId));
+  const availableDevelopers = developers.filter(d => !assignedRoleUserIds.has(d.id));
+
   // Group developers by role
   const developersByRole = developerRoles.reduce((acc, role) => {
-    acc[role.code] = developers.filter(d => d.developerRoleCode === role.code);
+    acc[role.code] = availableDevelopers.filter(d => d.developerRoleCode === role.code);
     return acc;
   }, {} as Record<string, Developer[]>);
 
@@ -253,13 +280,18 @@ export function TeamAssignmentDialog({
                 onValueChange={(val) => setDevtiUrusanId(val || '')} 
                 disabled={isPending}
               >
-                <SelectTrigger id="devti-urusan">
-                  <SelectValue placeholder="Pilih unit..." />
+                <SelectTrigger id="devti-urusan" className="w-full">
+                  <SelectValue placeholder="Pilih unit...">
+                    {selectedUnit ? `${selectedUnit.name} (${selectedUnit.code})` : 'Pilih unit...'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {units.map((u) => (
                     <SelectItem key={u.id} value={u.id.toString()}>
-                      {u.name}
+                      <div className="flex flex-col py-1">
+                        <span className="font-medium">{u.name}</span>
+                        <span className="text-xs text-muted-foreground">{u.code}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -350,7 +382,8 @@ export function TeamAssignmentDialog({
                 Assign Developers <span className="text-destructive">*</span>
               </Label>
               <p className="text-sm text-muted-foreground">
-                Pilih minimal 1 developer untuk di-assign ke request ini
+                Pilih minimal 1 developer untuk di-assign ke request ini. User yang sudah dipilih sebagai
+                Ketua Tim atau Technical Writer tidak muncul di daftar ini.
               </p>
 
               {/* Developers grouped by role */}
@@ -386,7 +419,7 @@ export function TeamAssignmentDialog({
                   );
                 })}
 
-                {developers.length === 0 && (
+                {availableDevelopers.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-4">
                     Tidak ada developer tersedia
                   </p>
@@ -414,7 +447,7 @@ export function TeamAssignmentDialog({
                 
                 {devtiUrusanId && (
                   <p className="text-sm">
-                    <span className="text-muted-foreground">DevTI Urusan:</span> {units.find(u => u.id === parseInt(devtiUrusanId))?.name || ''}
+                    <span className="text-muted-foreground">DevTI Urusan:</span> {selectedUnit?.name || ''}
                   </p>
                 )}
                 

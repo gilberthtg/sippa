@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm';
 import { RequestDetailHeader } from '@/components/requests/request-detail-header';
 import { RequestDetailInfo } from '@/components/requests/request-detail-info';
 import { RequestDetailTimeline } from '@/components/requests/request-detail-timeline';
-import { RequestAttachmentsList } from '@/components/requests/request-attachments-list';
+// import { RequestAttachmentsList } from '@/components/requests/request-attachments-list';
 import { RequestDocumentsSection } from '@/components/requests/request-documents-section';
 import { ProgressTimeline } from '@/components/requests/progress-timeline';
 import { DeveloperRequestActions } from '@/components/developer/developer-request-actions';
@@ -102,7 +102,7 @@ export default async function DeveloperRequestDetailPage({ params }: PageProps) 
             )}
 
             {/* Attachments */}
-            <RequestAttachmentsList attachments={attachments} />
+            {/* <RequestAttachmentsList attachments={attachments} /> */}
 
             {/* Document Checklist */}
             <div className="rounded-md border p-4 space-y-3">

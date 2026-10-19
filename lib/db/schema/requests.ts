@@ -41,12 +41,12 @@ export const requests = mysqlTable('requests', {
   priorityId: smallint('priority_id').references(() => priorities.id),
   status: mysqlEnum('status', [
     'submitted',
-    'verification',
-    'rejected',
+    'in_review',
     'approved',
-    'assigned',
-    'in_progress',
-    'completed'
+    'rejected',
+    'ongoing',
+    'done',
+    'on_hold'
   ]).notNull().default('submitted'),
   
   submittedAt: timestamp('submitted_at').notNull().defaultNow(),
@@ -60,9 +60,12 @@ export const requests = mysqlTable('requests', {
   targetSlaHours: int('target_sla_hours'),
   actualDurationHours: int('actual_duration_hours'),
   slaMet: boolean('sla_met'),
+  slaPausedAt: timestamp('sla_paused_at'),
+  slaPausedDurationHours: int('sla_paused_duration_hours').default(0),
   
   rejectionNote: text('rejection_note'),
   completionNote: text('completion_note'),
+  onHoldReason: text('on_hold_reason'),
   
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),

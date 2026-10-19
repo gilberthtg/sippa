@@ -15,11 +15,11 @@ import Link from 'next/link';
 interface DashboardStatsProps {
   stats: {
     submitted: number;
-    verification: number;
+    inReview: number;
     approved: number;
-    assigned: number;
-    inProgress: number;
-    completed: number;
+    ongoing: number;
+    onHold: number;
+    done: number;
     rejected: number;
     total: number;
     approvedNotAssigned: number;
@@ -28,7 +28,7 @@ interface DashboardStatsProps {
 
 const statCards = [
   {
-    title: 'Butuh Verifikasi',
+    title: 'Submitted',
     key: 'submitted' as const,
     icon: FileText,
     color: 'text-yellow-600',
@@ -36,15 +36,15 @@ const statCards = [
     link: '/admin/requests?status=submitted',
   },
   {
-    title: 'Dalam Verifikasi',
-    key: 'verification' as const,
+    title: 'In Review',
+    key: 'inReview' as const,
     icon: ClipboardCheck,
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
-    link: '/admin/requests?status=verification',
+    link: '/admin/requests?status=in_review',
   },
   {
-    title: 'Disetujui',
+    title: 'Approved',
     key: 'approved' as const,
     icon: CheckCircle,
     color: 'text-green-600',
@@ -52,39 +52,31 @@ const statCards = [
     link: '/admin/requests?status=approved',
   },
   {
-    title: 'Belum Di-assign',
-    key: 'approvedNotAssigned' as const,
-    icon: Clock,
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-50',
-    link: '/admin/requests?status=approved',
-  },
-  {
-    title: 'Ditugaskan',
-    key: 'assigned' as const,
-    icon: UserCheck,
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50',
-    link: '/admin/requests?status=assigned',
-  },
-  {
-    title: 'Dalam Proses',
-    key: 'inProgress' as const,
+    title: 'Ongoing',
+    key: 'ongoing' as const,
     icon: PlayCircle,
     color: 'text-indigo-600',
     bgColor: 'bg-indigo-50',
-    link: '/admin/requests?status=in_progress',
+    link: '/admin/requests?status=ongoing',
   },
   {
-    title: 'Selesai',
-    key: 'completed' as const,
+    title: 'On Hold',
+    key: 'onHold' as const,
+    icon: Clock,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+    link: '/admin/requests?status=on_hold',
+  },
+  {
+    title: 'Done',
+    key: 'done' as const,
     icon: CheckCircle,
     color: 'text-emerald-600',
     bgColor: 'bg-emerald-50',
-    link: '/admin/requests?status=completed',
+    link: '/admin/requests?status=done',
   },
   {
-    title: 'Ditolak',
+    title: 'Rejected',
     key: 'rejected' as const,
     icon: XCircle,
     color: 'text-red-600',

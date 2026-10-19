@@ -26,23 +26,23 @@ interface RecentActivityWidgetProps {
 }
 
 const statusLabels: Record<string, string> = {
-  submitted: 'Diajukan',
-  verification: 'Verifikasi',
-  approved: 'Disetujui',
-  rejected: 'Ditolak',
-  assigned: 'Ditugaskan',
-  in_progress: 'Dalam Proses',
-  completed: 'Selesai',
+  submitted: 'Submitted',
+  in_review: 'In Review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  ongoing: 'Ongoing',
+  on_hold: 'On Hold',
+  done: 'Done',
 };
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   submitted: 'outline',
-  verification: 'secondary',
+  in_review: 'secondary',
   approved: 'default',
   rejected: 'destructive',
-  assigned: 'default',
-  in_progress: 'secondary',
-  completed: 'default',
+  ongoing: 'default',
+  on_hold: 'secondary',
+  done: 'default',
 };
 
 export function RecentActivityWidget({ activities }: RecentActivityWidgetProps) {
