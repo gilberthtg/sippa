@@ -1,6 +1,7 @@
 import { PageContainer } from '@/components/layout/page-container';
 import { getRequestByIdDeveloper, getProgressHistory } from '@/app/actions/developer-requests';
 import { getRequestStatusHistories } from '@/app/actions/requests';
+import { getRequiredDocumentTypes, getRequestDocuments } from '@/app/actions/request-documents';
 import { db } from '@/lib/db';
 import { requestAttachments } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -8,6 +9,7 @@ import { RequestDetailHeader } from '@/components/requests/request-detail-header
 import { RequestDetailInfo } from '@/components/requests/request-detail-info';
 import { RequestDetailTimeline } from '@/components/requests/request-detail-timeline';
 import { RequestAttachmentsList } from '@/components/requests/request-attachments-list';
+import { RequestDocumentsSection } from '@/components/requests/request-documents-section';
 import { ProgressTimeline } from '@/components/requests/progress-timeline';
 import { DeveloperRequestActions } from '@/components/developer/developer-request-actions';
 import { TeamInfoCard } from '@/components/shared/team-info-card';
@@ -53,6 +55,12 @@ export default async function DeveloperRequestDetailPage({ params }: PageProps) 
     db.select().from(requestAttachments).where(eq(requestAttachments.requestId, requestId)),
   ]);
 
+  const requestType = request.requestType as 'new_application' | 'rfc';
+  const [requiredDocs, uploadedDocs] = await Promise.all([
+    getRequiredDocumentTypes(requestType),
+    getRequestDocuments(requestId),
+  ]);
+
   return (
     <PageContainer>
       <div className="space-y-6">
@@ -95,6 +103,17 @@ export default async function DeveloperRequestDetailPage({ params }: PageProps) 
 
             {/* Attachments */}
             <RequestAttachmentsList attachments={attachments} />
+
+            {/* Document Checklist */}
+            <div className="rounded-md border p-4 space-y-3">
+              <h3 className="font-semibold">Kelengkapan Dokumen</h3>
+              <RequestDocumentsSection
+                requestId={requestId}
+                requiredDocs={requiredDocs as any}
+                uploadedDocs={uploadedDocs as any}
+                canUpload={true}
+              />
+            </div>
           </div>
 
           {/* Sidebar - 1 column */}

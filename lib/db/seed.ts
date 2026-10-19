@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
 import { db } from './index';
-import { roles, priorities, units, users, slaPolicies, requests, requestStatusHistories, requestTeamAssignments, requestProgress, requestAttachments, requestApplications } from './schema';
+import { roles, priorities, units, users, slaPolicies, requests, requestStatusHistories, requestTeamAssignments, requestProgress, requestAttachments, requestApplications, documentTypes, serviceDocumentTypes } from './schema';
 import bcrypt from 'bcryptjs';
 import { sql } from 'drizzle-orm';
 
@@ -68,6 +68,41 @@ async function seed() {
       name: sql`VALUES(name)`,
     },
   });
+
+  // Seed Document Types
+  console.log('  → Seeding document types...');
+  await db.insert(documentTypes).values([
+    { id: 1, name: 'Permintaan Aplikasi', sortOrder: 1, isActive: true },
+    { id: 2, name: 'Project Plan', sortOrder: 2, isActive: true },
+    { id: 3, name: 'Spesifikasi dan Desain Kebutuhan Perangkat Lunak (SDKPL)', sortOrder: 3, isActive: true },
+    { id: 4, name: 'Appendix', sortOrder: 4, isActive: true },
+    { id: 5, name: 'Notulensi', sortOrder: 5, isActive: true },
+    { id: 6, name: 'User Acceptance Testing (UAT)', sortOrder: 6, isActive: true },
+    { id: 7, name: 'Security Test', sortOrder: 7, isActive: true },
+    { id: 8, name: 'Berita Acara Serah Terima (BAST)', sortOrder: 8, isActive: true },
+    { id: 9, name: 'User Manual', sortOrder: 9, isActive: true },
+  ]).onDuplicateKeyUpdate({ set: { name: sql`VALUES(name)` } });
+
+  // Seed Service Document Types
+  console.log('  → Seeding service document types...');
+  const pengembanganDocs = [1, 2, 3, 5, 6, 7, 8, 9];
+  for (let i = 0; i < pengembanganDocs.length; i++) {
+    await db.insert(serviceDocumentTypes).values({
+      requestType: 'new_application',
+      documentTypeId: pengembanganDocs[i],
+      isRequired: true,
+      sortOrder: i + 1,
+    }).onDuplicateKeyUpdate({ set: { isRequired: sql`VALUES(is_required)` } });
+  }
+  const rfcDocs = [1, 4, 5, 6, 7, 8, 9];
+  for (let i = 0; i < rfcDocs.length; i++) {
+    await db.insert(serviceDocumentTypes).values({
+      requestType: 'rfc',
+      documentTypeId: rfcDocs[i],
+      isRequired: true,
+      sortOrder: i + 1,
+    }).onDuplicateKeyUpdate({ set: { isRequired: sql`VALUES(is_required)` } });
+  }
 
   // Seed Users
   console.log('  → Seeding users...');

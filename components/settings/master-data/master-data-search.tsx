@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 
 type Props = {
-  type: 'units' | 'teams' | 'priorities' | 'developer-roles' | 'applications' | 'sla-holidays';
+  type: 'units' | 'teams' | 'priorities' | 'developer-roles' | 'applications' | 'sla-holidays' | 'document-types' | 'service-document-types';
 };
 
 export function MasterDataSearch({ type }: Props) {

@@ -8,11 +8,13 @@ import {
   getRequestByIdAdmin, 
   getPriorities,
 } from '@/app/actions/admin-requests';
+import { getRequiredDocumentTypes, getRequestDocuments } from '@/app/actions/request-documents';
 import { RequestDetailHeader } from '@/components/requests/request-detail-header';
 import { RequestDetailInfo } from '@/components/requests/request-detail-info';
 import { RequestDetailTimeline } from '@/components/requests/request-detail-timeline';
 import { RequestAttachmentsList } from '@/components/requests/request-attachments-list';
 import { RequestAdminActions } from '@/components/admin/request-admin-actions';
+import { RequestDocumentsSection } from '@/components/requests/request-documents-section';
 
 interface PageProps {
   params: Promise<{
@@ -35,6 +37,12 @@ export default async function AdminRequestDetailPage({ params }: PageProps) {
 
   const request = requestResult.data;
   const priorities = prioritiesResult.success && prioritiesResult.data ? prioritiesResult.data : [];
+
+  const requestType = request.requestType as 'new_application' | 'rfc';
+  const [requiredDocs, uploadedDocs] = await Promise.all([
+    getRequiredDocumentTypes(requestType),
+    getRequestDocuments(requestId),
+  ]);
 
   return (
     <PageContainer>
@@ -78,6 +86,16 @@ export default async function AdminRequestDetailPage({ params }: PageProps) {
           {request.attachments && request.attachments.length > 0 && (
             <RequestAttachmentsList attachments={request.attachments} />
           )}
+
+          <div className="rounded-md border p-4 space-y-3">
+            <h3 className="font-semibold">Kelengkapan Dokumen</h3>
+            <RequestDocumentsSection
+              requestId={requestId}
+              requiredDocs={requiredDocs as any}
+              uploadedDocs={uploadedDocs as any}
+              canUpload={true}
+            />
+          </div>
 
           <RequestDetailTimeline histories={request.histories || []} />
         </div>

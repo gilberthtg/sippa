@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getRequestById } from '@/app/actions/requests';
+import { getRequiredDocumentTypes, getRequestDocuments } from '@/app/actions/request-documents';
 import { RequestDetailHeader } from '@/components/requests/request-detail-header';
 import { RequestDetailInfo } from '@/components/requests/request-detail-info';
 import { RequestDetailTimeline } from '@/components/requests/request-detail-timeline';
 import { RequestAttachmentsList } from '@/components/requests/request-attachments-list';
+import { RequestDocumentsSection } from '@/components/requests/request-documents-section';
 
 export default async function RequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -40,6 +42,12 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   }
 
   const request = result.data;
+
+  const requestType = request.requestType as 'new_application' | 'rfc';
+  const [requiredDocs, uploadedDocs] = await Promise.all([
+    getRequiredDocumentTypes(requestType).catch(() => []),
+    getRequestDocuments(requestId).catch(() => []),
+  ]);
 
   return (
     <PageContainer>
@@ -77,6 +85,16 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
             />
 
             <RequestAttachmentsList attachments={request.attachments} />
+
+            <div className="rounded-md border p-4 space-y-3">
+              <h3 className="font-semibold">Kelengkapan Dokumen</h3>
+              <RequestDocumentsSection
+                requestId={requestId}
+                requiredDocs={requiredDocs as any}
+                uploadedDocs={uploadedDocs as any}
+                canUpload={false}
+              />
+            </div>
           </div>
 
           <div>

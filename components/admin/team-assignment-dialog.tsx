@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -27,7 +26,8 @@ import {
   getDevelopersByRole, 
   getTeamLeaderOptions, 
   getTechnicalWriters, 
-  getDeveloperRoles 
+  getDeveloperRoles,
+  getUnits
 } from '@/app/actions/admin-requests';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -73,7 +73,7 @@ export function TeamAssignmentDialog({
   const [isLoading, setIsLoading] = useState(true);
   
   // Form state
-  const [devtiUrusan, setDevtiUrusan] = useState('');
+  const [devtiUrusanId, setDevtiUrusanId] = useState<string>('');
   const [teamLeaderId, setTeamLeaderId] = useState<string>('');
   const [technicalWriterId, setTechnicalWriterId] = useState<string>('');
   const [selectedDevelopers, setSelectedDevelopers] = useState<Set<number>>(new Set());
@@ -84,22 +84,17 @@ export function TeamAssignmentDialog({
   const [technicalWriters, setTechnicalWriters] = useState<Developer[]>([]);
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [developerRoles, setDeveloperRoles] = useState<DeveloperRole[]>([]);
+  const [units, setUnits] = useState<Array<{ id: number; code: string; name: string }>>([]);
 
-  // Load data when dialog opens
-  useEffect(() => {
-    if (open) {
-      loadData();
-    }
-  }, [open]);
-
-  const loadData = async () => {
+  async function loadData() {
     setIsLoading(true);
     try {
-      const [leadersResult, writersResult, devsResult, rolesResult] = await Promise.all([
+      const [leadersResult, writersResult, devsResult, rolesResult, unitsResult] = await Promise.all([
         getTeamLeaderOptions(),
         getTechnicalWriters(),
         getDevelopersByRole(),
         getDeveloperRoles(),
+        getUnits(),
       ]);
 
       if (leadersResult.success && leadersResult.data) {
@@ -117,6 +112,10 @@ export function TeamAssignmentDialog({
       if (rolesResult.success && rolesResult.data) {
         setDeveloperRoles(rolesResult.data as DeveloperRole[]);
       }
+
+      if (unitsResult.success && unitsResult.data) {
+        setUnits(unitsResult.data as Array<{ id: number; code: string; name: string }>);
+      }
     } catch (error) {
       console.error('Load data error:', error);
       toast.error('Gagal memuat data');
@@ -124,6 +123,13 @@ export function TeamAssignmentDialog({
       setIsLoading(false);
     }
   };
+
+  // Load data when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadData();
+    }
+  }, [open]);
 
   const handleDeveloperToggle = (developerId: number) => {
     const newSelected = new Set(selectedDevelopers);
@@ -137,8 +143,8 @@ export function TeamAssignmentDialog({
 
   const handleAssign = () => {
     // Validation
-    if (!devtiUrusan.trim()) {
-      toast.error('DevTI Urusan wajib diisi');
+    if (!devtiUrusanId) {
+      toast.error('DevTI Urusan wajib dipilih');
       return;
     }
 
@@ -178,7 +184,7 @@ export function TeamAssignmentDialog({
     startTransition(async () => {
       const result = await assignTeamToRequest({
         requestId,
-        devtiUrusan: devtiUrusan.trim(),
+        devtiUrusanId: parseInt(devtiUrusanId),
         teamLeaderId: parseInt(teamLeaderId),
         technicalWriterId: parseInt(technicalWriterId),
         developerAssignments,
@@ -198,7 +204,7 @@ export function TeamAssignmentDialog({
   const handleClose = () => {
     onOpenChange(false);
     // Reset form
-    setDevtiUrusan('');
+    setDevtiUrusanId('');
     setTeamLeaderId('');
     setTechnicalWriterId('');
     setSelectedDevelopers(new Set());
@@ -242,13 +248,22 @@ export function TeamAssignmentDialog({
                 <Users className="h-4 w-4" />
                 DevTI Urusan <span className="text-destructive">*</span>
               </Label>
-              <Input
-                id="devti-urusan"
-                placeholder="Contoh: Pengembangan Aplikasi Internal"
-                value={devtiUrusan}
-                onChange={(e) => setDevtiUrusan(e.target.value)}
+              <Select 
+                value={devtiUrusanId} 
+                onValueChange={(val) => setDevtiUrusanId(val || '')} 
                 disabled={isPending}
-              />
+              >
+                <SelectTrigger id="devti-urusan">
+                  <SelectValue placeholder="Pilih unit..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {units.map((u) => (
+                    <SelectItem key={u.id} value={u.id.toString()}>
+                      {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground">
                 Urusan/divisi di DevTI yang menangani request ini
               </p>
@@ -397,9 +412,9 @@ export function TeamAssignmentDialog({
               <div className="rounded-lg bg-muted p-4 space-y-2">
                 <p className="text-sm font-medium">Preview Assignment:</p>
                 
-                {devtiUrusan && (
+                {devtiUrusanId && (
                   <p className="text-sm">
-                    <span className="text-muted-foreground">DevTI Urusan:</span> {devtiUrusan}
+                    <span className="text-muted-foreground">DevTI Urusan:</span> {units.find(u => u.id === parseInt(devtiUrusanId))?.name || ''}
                   </p>
                 )}
                 
@@ -442,7 +457,7 @@ export function TeamAssignmentDialog({
           </Button>
           <Button
             onClick={handleAssign}
-            disabled={isPending || isLoading || !devtiUrusan || !teamLeaderId || !technicalWriterId || selectedDevelopers.size === 0}
+            disabled={isPending || isLoading || !devtiUrusanId || !teamLeaderId || !technicalWriterId || selectedDevelopers.size === 0}
           >
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Assign Tim

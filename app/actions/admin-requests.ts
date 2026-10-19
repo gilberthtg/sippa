@@ -348,10 +348,22 @@ export async function getRequestByIdAdmin(id: number) {
       technicalWriter = writer || null;
     }
 
+    // Fetch DevTI unit name if assigned
+    let devtiUrusan = null;
+    if (request.devtiUrusanId) {
+      const [unit] = await db
+        .select({ name: units.name })
+        .from(units)
+        .where(eq(units.id, request.devtiUrusanId))
+        .limit(1);
+      devtiUrusan = unit?.name || null;
+    }
+
     return {
       success: true,
       data: {
         ...request,
+        devtiUrusan,
         attachments,
         histories,
         assignments,
@@ -1019,14 +1031,14 @@ export async function getDeveloperWorkload() {
 /**
  * Assign team to request (new flow)
  * @param requestId - Request ID
- * @param devtiUrusan - DevTI urusan/division
+ * @param devtiUrusanId - DevTI urusan/unit id (FK to units)
  * @param teamLeaderId - Team leader user ID (any role)
  * @param technicalWriterId - Technical writer ID (must have TW role)
  * @param developerAssignments - Array of { userId, developerRoleId }
  */
 export async function assignTeamToRequest(params: {
   requestId: number;
-  devtiUrusan: string;
+  devtiUrusanId: number;
   teamLeaderId: number;
   technicalWriterId: number;
   developerAssignments: Array<{ userId: number; developerRoleId: number }>;
@@ -1038,11 +1050,23 @@ export async function assignTeamToRequest(params: {
       return { success: false, error: authCheck.error };
     }
 
-    const { requestId, devtiUrusan, teamLeaderId, technicalWriterId, developerAssignments, note } = params;
+    const { requestId, devtiUrusanId, teamLeaderId, technicalWriterId, developerAssignments, note } = params;
 
     // Validation
-    if (!devtiUrusan || devtiUrusan.trim().length === 0) {
-      return { success: false, error: 'DevTI Urusan wajib diisi' };
+    if (!devtiUrusanId) {
+      return { success: false, error: 'DevTI Urusan wajib dipilih' };
+    }
+
+    // Verify unit exists
+    const { units } = await import('@/lib/db/schema');
+    const [unit] = await db
+      .select({ id: units.id, name: units.name })
+      .from(units)
+      .where(eq(units.id, devtiUrusanId))
+      .limit(1);
+
+    if (!unit) {
+      return { success: false, error: 'Unit tidak ditemukan' };
     }
 
     if (!teamLeaderId) {
@@ -1131,7 +1155,7 @@ export async function assignTeamToRequest(params: {
       .update(requests)
       .set({
         status: REQUEST_STATUSES.ASSIGNED,
-        devtiUrusan,
+        devtiUrusanId,
         teamLeaderId,
         technicalWriterId,
         assignedAt: new Date(),
@@ -1155,7 +1179,7 @@ export async function assignTeamToRequest(params: {
       `- Ketua Tim: ${teamLeader.name}\n` +
       `- Technical Writer: ${techWriter.name}\n` +
       `- Developers: ${developerNames.join(', ')}\n` +
-      `- DevTI Urusan: ${devtiUrusan}` +
+      `- DevTI Urusan: ${unit.name}` +
       (note ? `\n- Catatan: ${note}` : '');
 
     await db.insert(requestStatusHistories).values({
@@ -1179,7 +1203,8 @@ export async function assignTeamToRequest(params: {
       beforeData: { status: request.status },
       afterData: {
         status: REQUEST_STATUSES.ASSIGNED,
-        devtiUrusan,
+        devtiUrusanId,
+        unitName: unit.name,
         teamLeaderId,
         technicalWriterId,
         developerAssignments: developerAssignments.length,

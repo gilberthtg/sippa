@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { units, priorities, developerRoles, users, requestApplications, requests, slaHolidays } from '@/lib/db/schema';
+import { units, priorities, developerRoles, users, requestApplications, requests, slaHolidays, documentTypes, serviceDocumentTypes } from '@/lib/db/schema';
 import { eq, and, or, like, desc, asc, count, sql, gte, lte, between } from 'drizzle-orm';
 import { auth } from '@/lib/auth/config';
 import { revalidatePath } from 'next/cache';
@@ -1060,4 +1060,379 @@ export async function importIndonesianHolidays(year: number) {
       description: h.description,
     }))
   );
+}
+
+
+
+// ==================== DOCUMENT TYPES ====================
+
+export async function getDocumentTypes(params?: {
+  isActive?: boolean | null;
+  search?: string;
+  page?: number;
+  limit?: number;
+}) {
+  await checkAdminAuth();
+
+  const {
+    isActive = null,
+    search = '',
+    page = 1,
+    limit = 50,
+  } = params || {};
+
+  const offset = (page - 1) * limit;
+  const conditions = [];
+
+  if (isActive !== null) {
+    conditions.push(eq(documentTypes.isActive, isActive));
+  }
+
+  if (search) {
+    conditions.push(like(documentTypes.name, `%${search}%`));
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [list, totalCountResult] = await Promise.all([
+    db
+      .select()
+      .from(documentTypes)
+      .where(whereClause)
+      .orderBy(asc(documentTypes.sortOrder), asc(documentTypes.name))
+      .limit(limit)
+      .offset(offset),
+    db.select({ count: count() }).from(documentTypes).where(whereClause),
+  ]);
+
+  return {
+    documentTypes: list,
+    total: totalCountResult[0]?.count || 0,
+    page,
+    limit,
+    totalPages: Math.ceil((totalCountResult[0]?.count || 0) / limit),
+  };
+}
+
+export async function createDocumentType(data: {
+  name: string;
+  sortOrder?: number;
+}) {
+  const adminUser = await checkAdminAuth();
+
+  const existing = await db
+    .select({ id: documentTypes.id })
+    .from(documentTypes)
+    .where(eq(documentTypes.name, data.name))
+    .limit(1);
+
+  if (existing.length > 0) {
+    throw new Error('Document type name already exists');
+  }
+
+  let sortOrder = data.sortOrder || 0;
+  if (!data.sortOrder) {
+    const maxResult = await db
+      .select({ max: sql<number>`MAX(${documentTypes.sortOrder})` })
+      .from(documentTypes);
+    sortOrder = (maxResult[0]?.max || 0) + 1;
+  }
+
+  const result = await db.insert(documentTypes).values({
+    name: data.name,
+    sortOrder,
+    isActive: true,
+  });
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'document_type',
+    entityId: String(result[0].insertId),
+    action: AUDIT_ACTIONS.CREATE,
+    afterData: { name: data.name, sortOrder },
+  });
+
+  revalidatePath('/admin/settings/document-types');
+
+  return { success: true, id: result[0].insertId };
+}
+
+export async function updateDocumentType(
+  id: number,
+  data: {
+    name?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  }
+) {
+  const adminUser = await checkAdminAuth();
+
+  if (data.name) {
+    const existing = await db
+      .select({ id: documentTypes.id })
+      .from(documentTypes)
+      .where(and(eq(documentTypes.name, data.name), sql`${documentTypes.id} != ${id}`))
+      .limit(1);
+
+    if (existing.length > 0) {
+      throw new Error('Document type name already exists');
+    }
+  }
+
+  await db
+    .update(documentTypes)
+    .set({
+      ...(data.name && { name: data.name }),
+      ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+      ...(data.isActive !== undefined && { isActive: data.isActive }),
+      updatedAt: new Date(),
+    })
+    .where(eq(documentTypes.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'document_type',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.UPDATE,
+    afterData: data,
+  });
+
+  revalidatePath('/admin/settings/document-types');
+
+  return { success: true };
+}
+
+export async function toggleDocumentTypeActive(id: number, isActive: boolean) {
+  const adminUser = await checkAdminAuth();
+
+  if (!isActive) {
+    const mappings = await db
+      .select({ count: count() })
+      .from(serviceDocumentTypes)
+      .where(eq(serviceDocumentTypes.documentTypeId, id));
+
+    if (mappings[0]?.count > 0) {
+      throw new Error(
+        `Cannot deactivate: document type is used in ${mappings[0].count} service mapping(s)`
+      );
+    }
+  }
+
+  await db
+    .update(documentTypes)
+    .set({ isActive, updatedAt: new Date() })
+    .where(eq(documentTypes.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'document_type',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.TOGGLE_ACTIVE,
+    afterData: { isActive },
+  });
+
+  revalidatePath('/admin/settings/document-types');
+
+  return { success: true };
+}
+
+export async function deleteDocumentType(id: number) {
+  const adminUser = await checkAdminAuth();
+
+  const mappings = await db
+    .select({ count: count() })
+    .from(serviceDocumentTypes)
+    .where(eq(serviceDocumentTypes.documentTypeId, id));
+
+  if (mappings[0]?.count > 0) {
+    throw new Error(
+      `Cannot delete: document type is used in ${mappings[0].count} service mapping(s)`
+    );
+  }
+
+  await db.delete(documentTypes).where(eq(documentTypes.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'document_type',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.DELETE,
+  });
+
+  revalidatePath('/admin/settings/document-types');
+
+  return { success: true };
+}
+
+// ==================== SERVICE DOCUMENT TYPES ====================
+
+export async function getServiceDocumentTypes(params?: {
+  requestType?: 'new_application' | 'rfc' | null;
+  page?: number;
+  limit?: number;
+}) {
+  await checkAdminAuth();
+
+  const {
+    requestType = null,
+    page = 1,
+    limit = 50,
+  } = params || {};
+
+  const offset = (page - 1) * limit;
+  const conditions = [];
+
+  if (requestType) {
+    conditions.push(eq(serviceDocumentTypes.requestType, requestType));
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [list, totalCountResult] = await Promise.all([
+    db
+      .select({
+        id: serviceDocumentTypes.id,
+        requestType: serviceDocumentTypes.requestType,
+        documentTypeId: serviceDocumentTypes.documentTypeId,
+        isRequired: serviceDocumentTypes.isRequired,
+        sortOrder: serviceDocumentTypes.sortOrder,
+        createdAt: serviceDocumentTypes.createdAt,
+        documentTypeName: documentTypes.name,
+        documentTypeActive: documentTypes.isActive,
+      })
+      .from(serviceDocumentTypes)
+      .leftJoin(documentTypes, eq(serviceDocumentTypes.documentTypeId, documentTypes.id))
+      .where(whereClause)
+      .orderBy(asc(serviceDocumentTypes.requestType), asc(serviceDocumentTypes.sortOrder))
+      .limit(limit)
+      .offset(offset),
+    db.select({ count: count() }).from(serviceDocumentTypes).where(whereClause),
+  ]);
+
+  return {
+    serviceDocumentTypes: list,
+    total: totalCountResult[0]?.count || 0,
+    page,
+    limit,
+    totalPages: Math.ceil((totalCountResult[0]?.count || 0) / limit),
+  };
+}
+
+export async function addServiceDocumentType(data: {
+  requestType: 'new_application' | 'rfc';
+  documentTypeId: number;
+  isRequired?: boolean;
+  sortOrder?: number;
+}) {
+  const adminUser = await checkAdminAuth();
+
+  const existing = await db
+    .select({ id: serviceDocumentTypes.id })
+    .from(serviceDocumentTypes)
+    .where(
+      and(
+        eq(serviceDocumentTypes.requestType, data.requestType),
+        eq(serviceDocumentTypes.documentTypeId, data.documentTypeId)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    throw new Error('Document type already mapped to this request type');
+  }
+
+  let sortOrder = data.sortOrder || 0;
+  if (!data.sortOrder) {
+    const maxResult = await db
+      .select({ max: sql<number>`MAX(${serviceDocumentTypes.sortOrder})` })
+      .from(serviceDocumentTypes)
+      .where(eq(serviceDocumentTypes.requestType, data.requestType));
+    sortOrder = (maxResult[0]?.max || 0) + 1;
+  }
+
+  const result = await db.insert(serviceDocumentTypes).values({
+    requestType: data.requestType,
+    documentTypeId: data.documentTypeId,
+    isRequired: data.isRequired ?? true,
+    sortOrder,
+  });
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'service_document_type',
+    entityId: String(result[0].insertId),
+    action: AUDIT_ACTIONS.CREATE,
+    afterData: { requestType: data.requestType, documentTypeId: data.documentTypeId, isRequired: data.isRequired },
+  });
+
+  revalidatePath('/admin/settings/service-document-types');
+
+  return { success: true, id: result[0].insertId };
+}
+
+export async function removeServiceDocumentType(id: number) {
+  const adminUser = await checkAdminAuth();
+
+  await db.delete(serviceDocumentTypes).where(eq(serviceDocumentTypes.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'service_document_type',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.DELETE,
+  });
+
+  revalidatePath('/admin/settings/service-document-types');
+
+  return { success: true };
+}
+
+export async function reorderServiceDocumentTypes(requestType: 'new_application' | 'rfc', reorderedIds: number[]) {
+  await checkAdminAuth();
+
+  for (let i = 0; i < reorderedIds.length; i++) {
+    await db
+      .update(serviceDocumentTypes)
+      .set({ sortOrder: i })
+      .where(eq(serviceDocumentTypes.id, reorderedIds[i]));
+  }
+
+  revalidatePath('/admin/settings/service-document-types');
+
+  return { success: true };
+}
+
+export async function toggleServiceDocumentTypeRequired(id: number, isRequired: boolean) {
+  const adminUser = await checkAdminAuth();
+
+  await db
+    .update(serviceDocumentTypes)
+    .set({ isRequired })
+    .where(eq(serviceDocumentTypes.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'service_document_type',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.UPDATE,
+    afterData: { isRequired },
+  });
+
+  revalidatePath('/admin/settings/service-document-types');
+
+  return { success: true };
 }

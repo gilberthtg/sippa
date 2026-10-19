@@ -3,10 +3,10 @@ import { redirect } from 'next/navigation';
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Building2, Flag, Target, Shield, Code2, Package, CalendarOff } from 'lucide-react';
+import { Users, Building2, Flag, Target, Shield, Code2, Package, CalendarOff, FileText, Files } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/db';
-import { users, units, priorities, slaPolicies, auditLogs, developerRoles, requestApplications, slaHolidays } from '@/lib/db/schema';
+import { users, units, priorities, slaPolicies, auditLogs, developerRoles, requestApplications, slaHolidays, documentTypes, serviceDocumentTypes } from '@/lib/db/schema';
 import { count, eq, gte } from 'drizzle-orm';
 
 async function getSettingsStats() {
@@ -30,6 +30,8 @@ async function getSettingsStats() {
     totalApplications,
     totalHolidays,
     currentYearHolidays,
+    totalDocumentTypes,
+    totalServiceDocumentTypes,
   ] = await Promise.all([
     db.select({ count: count() }).from(users),
     db.select({ count: count() }).from(users).where(eq(users.isActive, true)),
@@ -45,6 +47,8 @@ async function getSettingsStats() {
     db.select({ count: count() }).from(slaHolidays).where(
       eq(slaHolidays.isActive, true)
     ),
+    db.select({ count: count() }).from(documentTypes),
+    db.select({ count: count() }).from(serviceDocumentTypes),
   ]);
 
   return {
@@ -60,6 +64,8 @@ async function getSettingsStats() {
     totalApplications: totalApplications[0].count,
     totalHolidays: totalHolidays[0].count,
     currentYearHolidays: currentYearHolidays[0].count,
+    totalDocumentTypes: totalDocumentTypes[0].count,
+    totalServiceDocumentTypes: totalServiceDocumentTypes[0].count,
   };
 }
 
@@ -129,6 +135,20 @@ export default async function SettingsPage() {
         { label: 'Total Holidays', value: stats.totalHolidays },
         { label: 'Active This Year', value: stats.currentYearHolidays },
       ],
+    },
+    {
+      title: 'Document Types',
+      description: 'Manage document types required for service requests',
+      icon: FileText,
+      href: '/admin/settings/document-types',
+      stats: [{ label: 'Total Types', value: stats.totalDocumentTypes }],
+    },
+    {
+      title: 'Service Document Types',
+      description: 'Manage which document types are required per request type',
+      icon: Files,
+      href: '/admin/settings/service-document-types',
+      stats: [{ label: 'Total Mappings', value: stats.totalServiceDocumentTypes }],
     },
     {
       title: 'Audit Logs',

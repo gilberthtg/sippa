@@ -2,7 +2,7 @@
 
 import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
-import { requests, requestStatusHistories, requestAttachments, requestApplications } from '@/lib/db/schema';
+import { requests, requestStatusHistories, requestAttachments, requestApplications, requestDocuments, documentTypes } from '@/lib/db/schema';
 import { createRequestSchema } from '@/lib/validations/request';
 import { generateRequestNumber } from '@/lib/utils/request-number';
 import { generateStorageKey } from '@/lib/utils/file-upload';
@@ -152,6 +152,30 @@ export async function createRequest(formData: FormData) {
         sizeBytes: file.size,
         uploadedBy: session.user.id,
       });
+    }
+
+    // Optional: upload "Permintaan Aplikasi" document type if provided
+    const permintaanAplikasiFile = formData.get('permintaanAplikasi') as File | null;
+    if (permintaanAplikasiFile && permintaanAplikasiFile.size > 0) {
+      const [dt] = await db
+        .select({ id: documentTypes.id })
+        .from(documentTypes)
+        .where(eq(documentTypes.name, 'Permintaan Aplikasi'))
+        .limit(1);
+      if (dt) {
+        const buffer = Buffer.from(await permintaanAplikasiFile.arrayBuffer());
+        const storageKey = generateStorageKey(permintaanAplikasiFile.name);
+        await saveFile(buffer, storageKey);
+        await db.insert(requestDocuments).values({
+          requestId: Number(requestId),
+          documentTypeId: dt.id,
+          originalName: permintaanAplikasiFile.name,
+          storageKey,
+          mimeType: permintaanAplikasiFile.type,
+          sizeBytes: permintaanAplikasiFile.size,
+          uploadedBy: session.user.id,
+        });
+      }
     }
 
     logAudit({

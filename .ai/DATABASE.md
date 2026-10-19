@@ -89,7 +89,7 @@ This document describes the production database schema for SIPPA after the Phase
 - requester_unit_id (FK → units)
 - urgency (ENUM: LOW, MEDIUM, HIGH)
 - priority_id (FK → priorities, set by admin)
-- **devti_urusan** (DevTI division handling request)
+- **devti_urusan_id** (FK → units, NULLABLE)
 - **technical_writer_id** (FK → users with developer_role=TW)
 - **team_leader_id** (FK → users, any role)
 - status (ENUM: SUBMITTED, VERIFICATION, APPROVED, REJECTED, IN_PROGRESS, COMPLETED)
@@ -301,3 +301,35 @@ priorities (1) ──< sla_policies (N)
 - Composite indexes on frequently filtered columns
 - Date range indexes for reporting
 - Business days calculation cached for common date ranges
+
+---
+
+## New Tables (Document Management)
+
+### document_types
+- id (PK, smallint, auto)
+- name (varchar 200, UNIQUE)
+- sort_order (smallint, default 0)
+- is_active (boolean, default true)
+- created_at, updated_at
+
+### service_document_types
+- id (PK, smallint, auto)
+- request_type (ENUM: new_application, rfc)
+- document_type_id (FK ? document_types)
+- is_required (boolean, default true)
+- sort_order (smallint, default 0)
+- created_at
+- UNIQUE(request_type, document_type_id)
+
+### request_documents
+- id (PK, bigint, auto)
+- request_id (FK ? requests, CASCADE DELETE)
+- document_type_id (FK ? document_types)
+- original_name (varchar 255)
+- storage_key (varchar 500, UNIQUE)
+- mime_type (varchar 100)
+- size_bytes (bigint)
+- uploaded_by (FK ? users)
+- uploaded_at (timestamp)
+- UNIQUE(request_id, document_type_id) -- 1 file per type per request

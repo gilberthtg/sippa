@@ -6,3 +6,4 @@ export * from './sla-holidays';
 export * from './requests';
 export * from './sla';
 export * from './notifications';
+export * from './document-types';

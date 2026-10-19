@@ -34,7 +34,7 @@ export const requests = mysqlTable('requests', {
   requesterPhone: varchar('requester_phone', { length: 50 }),
   
   // Admin assignment fields
-  devtiUrusan: varchar('devti_urusan', { length: 255 }),
+  devtiUrusanId: int('devti_urusan_id').references(() => units.id),
   technicalWriterId: int('technical_writer_id').references(() => users.id),
   teamLeaderId: int('team_leader_id').references(() => users.id),
   

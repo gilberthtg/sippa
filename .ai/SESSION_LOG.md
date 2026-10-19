@@ -1,5 +1,21 @@
 # SiPPA AI Session Log
 
+## 2026-10-19 — DevTI Urusan converted from text input to units dropdown
+
+- Goal: Ubah konsep DevTI Urusan dari teks yang diketik admin menjadi pilihan (option) dari master units; tipe data diubah dari varchar ke integer (FK ke units).
+- Changes made:
+  - Schema `requests.devtiUrusan` (varchar 255) → `requests.devtiUrusanId` (int FK → units.id).
+  - Migration `db/migrations/0002_devti_urusan_to_unit.sql`: drop column lama, tambah column integer + index + FK.
+  - `assignTeamToRequest`: param `devtiUrusan: string` → `devtiUrusanId: number`; validasi unit exists; tulis id; status history & audit log pakai nama unit (resolved).
+  - `getRequestByIdAdmin`: resolve nama unit dari id sebelum dikirim ke UI.
+  - `getRequestByIdDeveloper`: JOIN `units` (aliased) untuk resolve nama unit.
+  - `team-assignment-dialog.tsx`: ganti `<Input>` text → `<Select>` dropdown unit; state jadi id (string); load units via `getUnits()`.
+- Files changed: lib/db/schema/requests.ts, app/actions/admin-requests.ts, app/actions/developer-requests.ts, components/admin/team-assignment-dialog.tsx, .ai/DATABASE.md, .ai/SESSION_LOG.md, db/migrations/0002_devti_urusan_to_unit.sql
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+- Open questions:
+  - Migration belum dijalankan ke DB production; jalankan `0002_devti_urusan_to_unit.sql` saat deploy.
+- Next recommended step: Jalankan migration SQL ke database, lalu test flow assignment end-to-end.
 ## Template
 ### YYYY-MM-DD — Session title
 - Goal:
@@ -1512,3 +1528,21 @@ See `.ai/PHASE_5_COMPLETE.md` for comprehensive documentation.
   - TypeScript compilation: Not run (minor cleanup, no breaking changes expected)
   - Build: Not run (cleanup only)
 - Next recommended step: **Run TypeScript check and build to verify no broken references**
+
+## 2026-10-18 � Document Types Master + Request Document Checklist
+
+- Goal: Create master tables for document types and service document types (per request type), CRUD in admin settings, and document completion checklist per request.
+- Changes made:
+  - DB: Added 3 tables: document_types, service_document_types, request_documents (migration + manual seed).
+  - Schema: lib/db/schema/document-types.ts + export in index.ts.
+  - Server actions: master-data.ts (CRUD for document types + service document types); request-documents.ts (upload/download/delete per request).
+  - Admin pages: /admin/settings/document-types, /admin/settings/service-document-types.
+  - Components: document-type-list-client/dialog, service-document-type-list-client, request-documents-section.
+  - Detail pages: admin, developer, user request detail now show document checklist.
+  - User create request: optional upload of "Permintaan Aplikasi" document.
+  - Download API: /api/documents/[id]/download.
+  - Settings index: 2 new cards.
+- Tests/checks:
+  - TypeScript: PASSED (only pre-existing user-filters.tsx asChild error unrelated).
+- Open questions:
+  - Document completion is tracking-only (non-blocking) per user decision.

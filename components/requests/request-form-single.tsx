@@ -77,6 +77,7 @@ export function RequestFormSingle() {
   const [objective, setObjective] = useState('');
   const [expectedOutput, setExpectedOutput] = useState('');
   const [files, setFiles] = useState<FileWithPreview[]>([]);
+  const [permintaanAplikasiFile, setPermintaanAplikasiFile] = useState<File | null>(null);
 
   // Load applications when RFC is selected
   useEffect(() => {
@@ -215,9 +216,13 @@ export function RequestFormSingle() {
       if (objective) formData.append('objective', objective);
       if (expectedOutput) formData.append('expectedOutput', expectedOutput);
 
-      files.forEach((file) => {
+       files.forEach((file) => {
         formData.append('files', file);
       });
+
+      if (permintaanAplikasiFile) {
+        formData.append('permintaanAplikasi', permintaanAplikasiFile);
+      }
 
       const result = await createRequest(formData);
 
@@ -579,6 +584,25 @@ export function RequestFormSingle() {
               </div>
             </div>
           )}
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label htmlFor="permintaanAplikasi">
+              Dokumen Permintaan Aplikasi (opsional)
+            </Label>
+            <Input
+              id="permintaanAplikasi"
+              type="file"
+              onChange={(e) => setPermintaanAplikasiFile(e.target.files?.[0] || null)}
+              accept={FILE_UPLOAD.ALLOWED_TYPES.join(',')}
+            />
+            {permintaanAplikasiFile && (
+              <p className="text-sm text-muted-foreground">
+                Terpilih: {permintaanAplikasiFile.name}
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
       
