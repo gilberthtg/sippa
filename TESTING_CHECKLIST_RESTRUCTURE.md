@@ -1492,6 +1492,78 @@ All authorization checks on server-side:
 
 ---
 
+## SECTION 14: Request Status Workflow (7-Status Restructure, Phase 5)
+
+Reference: `.ai/STATUS_WORKFLOW.md` (state machine + transition table).
+Automation: `npx jest` → 202 tests covering the transition matrix and admin
+workflows (see `__tests__/actions/`). The manual scenarios below verify the
+runtime/UI behavior around them.
+
+### 14.1 User Role — Submission & Visibility `• CRITICAL`
+
+- [ ] Submit NEW_APPLICATION request → status badge "Diajukan" (SUBMITTED), gray
+- [ ] Submit RFC request (existing application, version > current) → status "Diajukan"
+- [ ] Request detail shows status prominently; no status-change controls for user
+- [ ] Request detail "Riwayat Status" tab lists every transition with timestamp + actor
+- [ ] Request list filters include all 7 Indonesian status labels; counts update per filter
+- [ ] Receive notification when admin verifies request ("sedang ditinjau")
+- [ ] Receive notification with reason when request is rejected
+- [ ] Receive notification when request is completed
+- [ ] Resubmit rejected request (REJECTED → SUBMITTED) allowed via own-request flow
+
+### 14.2 Admin Role — Verification, Approve, Reject `• CRITICAL`
+
+- [ ] Admin dashboard shows request stats and SLA At-Risk widget (pause-aware)
+- [ ] "Verifikasi" on SUBMITTED → IN_REVIEW ("Sedang Ditinjau", blue), button disappears
+- [ ] After verify: requester gets IN_REVIEW notification; status history gets entry
+- [ ] "Tolak" requires reason → REJECTED ("Ditolak", red); reason visible on detail
+- [ ] Rejection notification to requester includes reason
+- [ ] REJECTED request shows no further action buttons (except resubmission path)
+- [ ] Approve on IN_REVIEW → "Disetujui" (green); NEW_APPLICATION auto-creates
+      application master in Settings → Applications (name = title, version 1.0.0)
+
+### 14.3 Admin Role — Team Assignment (APPROVED → ONGOING) `• CRITICAL`
+
+- [ ] Assignment dialog loads units, users, developers grouped by role
+- [ ] Approve without assign leaves APPROVED status with "Assign Tim" button
+- [ ] DevTI Urusan is a units dropdown (required)
+- [ ] Technical Writer dropdown only lists users with TW role
+- [ ] Submitting without TW or without ≥1 developer → error, no status change
+- [ ] Submitting TW with non-TW role via other means → server error "bukan Technical Writer"
+- [ ] After assignment: ONGOING ("Sedang Berlangsung", amber), team visible on detail
+- [ ] Each assigned developer + TL + TW + requester receive assignment notifications
+- [ ] Previously assigned team (re-assignment) gets unassigned_at set and is replaced
+
+### 14.4 Admin & Developer Role — Hold / Resume `• CRITICAL`
+
+- [ ] "Tahan" requires reason (error if < 10 chars) → ON_HOLD ("Ditangguhkan", orange)
+- [ ] ON_HOLD: slaPausedAt recorded (DB), status history logs reason
+- [ ] Hold/resume notification sent to requester + team members + admins
+- [ ] Domain validation: submit with < 10 chars reason shows error "Alasan penahanan minimal 10 karakter"
+- [ ] "Lanjutkan" on ON_HOLD → ONGOING; slaPausedDurationHours accumulates; history logs cycle
+- [ ] Multiple hold/resume cycles all appear in status history with reasons
+- [ ] Assigned developer / TL / TW can hold + resume; unassigned developer gets "Forbidden"
+
+### 14.5 Admin & Developer Role — Completion (ONGOING → DONE) `• CRITICAL`
+
+- [ ] "Selesaikan" on ONGOING → DONE ("Selesai", emerald); no further admin buttons
+- [ ] completion persists actualDurationHours (business hours − pauses) and slaMet
+- [ ] If pauses existed, actualDurationHours excludes accumulated pause hours
+- [ ] Completion notification sent to requester + team members + admins
+- [ ] DONE request cannot change status again (server blocks; UI shows no actions)
+
+### 14.6 Transition & Edge-Case Guards `• CRITICAL`
+
+- [ ] SUBMITTED request cannot be approved/done directly (server action rejected, Indonesian error)
+- [ ] IN_REVIEW cannot jump to ONGOING/DONE; ON_HOLD cannot be rejected/done directly
+- [ ] ONGOING cannot revert to SUBMITTED/IN_REVIEW/APPROVED
+- [ ] REJECTED → anything except resubmission is blocked ("status final" message)
+- [ ] DONE → any status blocked ("status final" message)
+- [ ] Two tabs on same request: second status write surfaces validation error from latest server state (last write wins, history intact)
+- [ ] `npx jest` → all suites pass (202 tests) — transition matrix + admin workflows + SLA
+
+---
+
 ## Test Execution Log
 
 Use this section to track testing progress:

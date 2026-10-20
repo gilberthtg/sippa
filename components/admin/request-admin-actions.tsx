@@ -87,8 +87,14 @@ export function RequestAdminActions({
   const isAssigned = request.status === REQUEST_STATUSES.ONGOING || 
                      request.status === REQUEST_STATUSES.ON_HOLD ||
                      request.status === REQUEST_STATUSES.DONE;
-  const isTerminal = request.status === REQUEST_STATUSES.REJECTED || 
+  const isTerminal = request.status === REQUEST_STATUSES.REJECTED ||
                      request.status === REQUEST_STATUSES.DONE;
+
+  const developerAssignments = assignments.filter(
+    (assignment) =>
+      (!teamLeader || assignment.id !== teamLeader.id) &&
+      (!technicalWriter || assignment.id !== technicalWriter.id)
+  );
 
   const handleResume = () => {
     startTransition(async () => {
@@ -293,30 +299,46 @@ export function RequestAdminActions({
                     <p className="text-muted-foreground text-xs">{technicalWriter.email}</p>
                   </div>
                 )}
+                {(() => {
+                  const filteredDevelopers = developerAssignments.filter(
+                    (assignment) =>
+                      assignment.assignedUserId !== teamLeader?.id &&
+                      assignment.assignedUserId !== technicalWriter?.id
+                  );
 
-                {assignments.length > 0 && (
-                  <div className="text-sm">
-                    <p className="text-muted-foreground text-xs mb-2 flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      Developers ({assignments.length}):
-                    </p>
-                    <div className="space-y-2">
-                      {assignments.map((assignment) => (
-                        <div key={assignment.id} className="flex items-start gap-2 p-2 rounded bg-muted/50">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{assignment.assignedUserName}</p>
-                            <p className="text-xs text-muted-foreground">{assignment.assignedUserEmail}</p>
+                  return filteredDevelopers.length > 0 && (
+                    <div className="text-sm">
+                      <p className="text-muted-foreground text-xs mb-2 flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        Developers ({filteredDevelopers.length}):
+                      </p>
+
+                      <div className="space-y-2">
+                        {filteredDevelopers.map((assignment) => (
+                          <div
+                            key={assignment.id}
+                            className="flex items-start gap-2 p-2 rounded bg-muted/50"
+                          >
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">
+                                {assignment.assignedUserName}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {assignment.assignedUserEmail}
+                              </p>
+                            </div>
+
+                            {assignment.developerRoleName && (
+                              <Badge variant="secondary" className="text-xs">
+                                {assignment.developerRoleCode}
+                              </Badge>
+                            )}
                           </div>
-                          {assignment.developerRoleName && (
-                            <Badge variant="secondary" className="text-xs">
-                              {assignment.developerRoleCode}
-                            </Badge>
-                          )}
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
               <Separator />
             </>

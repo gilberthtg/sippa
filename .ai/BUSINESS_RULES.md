@@ -136,21 +136,56 @@
 6. **ON_HOLD** - Work paused (requires reason)
 7. **DONE** - Work finished, request closed
 
-### Status Transitions
-- User → SUBMITTED (on submit)
-- SUBMITTED → IN_REVIEW (admin opens)
-- IN_REVIEW → APPROVED (admin approves)
-- IN_REVIEW → REJECTED (admin rejects with reason)
-- APPROVED → ONGOING (admin assigns team)
-- ONGOING → ON_HOLD (pause, reason required)
-- ON_HOLD → ONGOING (resume)
-- ONGOING → DONE (work finished)
-- REJECTED → SUBMITTED (requester resubmits)
+### Workflow Diagram
+```
+SUBMITTED (user creates)
+    ↓
+IN_REVIEW (admin verifies completeness)
+    ↓
+    ├→ APPROVED (admin approves) → ONGOING (admin assigns team)
+    │
+    └→ REJECTED (admin rejects with reason) → SUBMITTED (requester resubmits)
+
+ONGOING (work in progress)
+    ↓
+    ├→ ON_HOLD (hold with reason, SLA pauses) → ONGOING (resume, SLA continues)
+    │
+    └→ DONE (work finished - FINAL STATUS, cannot change)
+```
+
+### Status Transitions (validated server-side)
+All transitions are validated before update via `validateTransitionWithContext()`
+(`lib/validations/status-transitions.ts`). Invalid transitions return an Indonesian
+error message and never write to the database.
+
+| # | Transition | Role | Notes |
+|---|-----------|------|-------|
+| 1 | `SUBMITTED → IN_REVIEW` | Admin | Verify completeness (verifyRequest) |
+| 2 | `IN_REVIEW → APPROVED` | Admin | Approve (approveRequest); NEW_APPLICATION auto-creates application master |
+| 3 | `IN_REVIEW → REJECTED` | Admin | Requires reason (rejectRequest); stored in rejectionNote |
+| 4 | `APPROVED → ONGOING` | Admin | Team assignment (assignTeamToRequest); min 1 developer, TW must have TW role |
+| 5 | `ONGOING → ON_HOLD` | Admin or assigned team | Requires reason (min 10 chars); sets slaPausedAt |
+| 6 | `ON_HOLD → ONGOING` | Admin or assigned team | Resume; accumulates paused business-day hours |
+| 7 | `ONGOING → DONE` | Admin | Complete (completeRequest) — admin quality gate; a developer completion path also exists (discrepancy vs original decision #5, see SESSION_LOG/Open Questions) |
+| 8 | `REJECTED → SUBMITTED` | User (requester) or Admin | Resubmission of rejected request |
+| 9 | `DONE → *(none)*` | — | DONE is FINAL, no transitions out |
+
+**Blocked transitions** (examples):
+- SUBMITTED → APPROVED / ONGOING / DONE (must follow the chain)
+- IN_REVIEW → ONGOING / DONE (must approve/assign first)
+- ON_HOLD → REJECTED / DONE (can only resume to ONGOING)
+- ONGOING → SUBMITTED / IN_REVIEW / APPROVED (cannot revert)
+- DONE → anything (final)
+
+### Final Statuses
+- **DONE** is a terminal status — no transitions out, validated and blocked server-side.
+- **REJECTED** allows only one transition: resubmission (`REJECTED → SUBMITTED`) once,
+  which restarts the review cycle from the beginning.
 
 ### Status History
 - All transitions recorded in `request_status_histories`
-- Includes: from_status, to_status, changed_by, actor_role, note, metadata
-- Metadata stores rejection reasons, approval notes, etc.
+- Includes: from_status, to_status, changed_by, changed_by_name, actor_role, note, metadata
+- Metadata stores rejection reasons, hold reasons, resume timestamps, pause durations, etc.
 
 ## SLA Calculation
 
@@ -160,6 +195,12 @@
 - **Start Point:** submitted_at timestamp
 - **End Point:** completed_at timestamp (or NOW for ongoing)
 - **Formula:** Count business days between start and end
+
+### Pause (ON_HOLD) Exclusion
+- When request is paused (ONGOING → ON_HOLD): `sla_paused_at` is recorded, reason is required and stored (`on_hold_reason`) and logged in status history
+- When request is resumed (ON_HOLD → ONGOING): pause duration in business-day hours is accumulated into `sla_paused_duration_hours`; multiple pause cycles sum up, each cycle logged in status history
+- Completion formula: `actual_duration_hours = business hours (submitted_at → completed_at) − sla_paused_duration_hours` (bounded ≥ 0)
+- `actual_duration_hours` and `sla_met` are persisted at completion (both admin and developer completion paths)
 
 ### SLA Targets
 Defined in `sla_policies` table:
@@ -276,12 +317,18 @@ In-app notifications are triggered automatically on the following transitions:
 
 | Event | Trigger | Recipients | Message |
 |-------|---------|------------|---------|
-| `REQUEST_SUBMITTED` | User submits request | All active admins | "Request baru memerlukan verifikasi: [request_no]" |
-| `REQUEST_APPROVED` | Admin approves | Requester | "Permintaan Anda telah disetujui: [request_no]" |
-| `REQUEST_REJECTED` | Admin rejects | Requester | "Permintaan Anda ditolak: [request_no]. Alasan: [reason]" |
-| `TEAM_ASSIGNED` | Admin assigns team | All assigned team members + requester | "Anda ditugaskan ke permintaan [request_no] sebagai [role]" |
-| `PROGRESS_UPDATED` | Developer updates progress | Requester | "Progress permintaan [request_no]: [progress_percent]%" |
-| `REQUEST_COMPLETED` | Request completed | Requester + all active admins | "Permintaan [request_no] telah selesai" |
+| `REQUEST_SUBMITTED` | User submits request | All active admins | "[requester] mengajukan permintaan \"[title]\"" |
+| `REQUEST_IN_REVIEW` | Admin verifies (SUBMITTED → IN_REVIEW) | Requester | "Permintaan \"[title]\" sedang ditinjau oleh admin" |
+| `REQUEST_APPROVED` | Admin approves | Requester | "Permintaan \"[title]\" telah disetujui" |
+| `REQUEST_REJECTED` | Admin rejects | Requester | "Permintaan \"[title]\" ditolak. Alasan: [reason]" |
+| `TEAM_ASSIGNED` / `DEVELOPER_ASSIGNED` | Admin assigns team | Assigned developers + team leader + technical writer + requester | "Anda ditugaskan / Ditunjuk sebagai Ketua Tim / Technical Writer" |
+| `PROGRESS_UPDATED` | Developer updates progress | Requester | "Progress [percent]%: [note]" |
+| `REQUEST_ON_HOLD` | Hold (ONGOING → ON_HOLD) | Requester + team members + admins | "Permintaan \"[title]\" ditahan. Alasan: [reason]" |
+| `REQUEST_RESUMED` | Resume (ON_HOLD → ONGOING) | Requester + team members + admins | "Permintaan \"[title]\" dilanjutkan kembali" |
+| `REQUEST_COMPLETED` | Complete (ONGOING → DONE) | Requester + team members + all active admins | "Permintaan \"[title]\" telah diselesaikan" |
+
+**Team members recipients** (per ADR-0018): active `request_team_assignments` rows
+plus team leader and technical writer (even if those are not regular developers).
 
 **Notification System:**
 - In-app only (v1.0)

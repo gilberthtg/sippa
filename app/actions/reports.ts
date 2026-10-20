@@ -61,8 +61,29 @@ export async function getLaptriData(filters: {
   return result;
 }
 
-export async function getLaptriSummary(year: number) {
+export async function getLaptriSummary(filters: {
+  year: number;
+  quarter?: 1 | 2 | 3 | 4;
+  requestType?: 'new_application' | 'rfc';
+}) {
   await checkAdminAuth();
+
+  const year = filters.year;
+  const quarterStart = filters.quarter ? (filters.quarter - 1) * 3 + 1 : null;
+  const quarterEnd = filters.quarter ? filters.quarter * 3 : null;
+
+  const summaryConditions = [
+    eq(requests.status, 'done'),
+    sql`YEAR(${requests.completedAt}) = ${year}`,
+    ...(quarterStart !== null && quarterEnd !== null
+      ? [
+          sql`MONTH(${requests.completedAt}) >= ${quarterStart} AND MONTH(${requests.completedAt}) <= ${quarterEnd}`,
+        ]
+      : []),
+    ...(filters.requestType
+      ? [eq(requests.requestType, filters.requestType)]
+      : []),
+  ];
 
   const allCompleted = await db
     .select({
@@ -72,12 +93,7 @@ export async function getLaptriSummary(year: number) {
       actualDurationHours: requests.actualDurationHours,
     })
     .from(requests)
-    .where(
-      and(
-        eq(requests.status, 'done'),
-        sql`YEAR(${requests.completedAt}) = ${year}`
-      )
-    );
+    .where(and(...summaryConditions));
 
   const quarterCounts = { Q1: 0, Q2: 0, Q3: 0, Q4: 0 };
   const typeBreakdown = { new_application: 0, rfc: 0 };
@@ -138,6 +154,14 @@ export async function getLaptriSummary(year: number) {
       and(
         eq(requests.status, 'done'),
         sql`YEAR(${requests.completedAt}) = ${year}`,
+        ...(quarterStart !== null && quarterEnd !== null
+          ? [
+              sql`MONTH(${requests.completedAt}) >= ${quarterStart} AND MONTH(${requests.completedAt}) <= ${quarterEnd}`,
+            ]
+          : []),
+        ...(filters.requestType
+          ? [eq(requests.requestType, filters.requestType)]
+          : []),
         isNull(requestTeamAssignments.unassignedAt)
       )
     );
@@ -289,6 +313,9 @@ export async function getSLASummary(filters: {
   year: number;
   startDate?: Date;
   endDate?: Date;
+  requestType?: 'new_application' | 'rfc';
+  priorityId?: number;
+  slaStatus?: 'met' | 'exceeded';
 }) {
   await checkAdminAuth();
 
@@ -301,6 +328,20 @@ export async function getSLASummary(filters: {
     );
   } else {
     conditions.push(sql`YEAR(${requests.completedAt}) = ${filters.year}`);
+  }
+
+  if (filters.requestType) {
+    conditions.push(eq(requests.requestType, filters.requestType));
+  }
+
+  if (filters.priorityId) {
+    conditions.push(eq(requests.priorityId, filters.priorityId));
+  }
+
+  if (filters.slaStatus === 'met') {
+    conditions.push(eq(requests.slaMet, true));
+  } else if (filters.slaStatus === 'exceeded') {
+    conditions.push(eq(requests.slaMet, false));
   }
 
   const allCompleted = await db
@@ -397,6 +438,10 @@ export async function getSLASummary(filters: {
           ? [gte(requests.completedAt, filters.startDate), lte(requests.completedAt, filters.endDate)]
           : [sql`YEAR(${requests.completedAt}) = ${filters.year}`]
         ),
+        ...(filters.requestType ? [eq(requests.requestType, filters.requestType)] : []),
+        ...(filters.priorityId ? [eq(requests.priorityId, filters.priorityId)] : []),
+        ...(filters.slaStatus === 'met' ? [eq(requests.slaMet, true)] : []),
+        ...(filters.slaStatus === 'exceeded' ? [eq(requests.slaMet, false)] : []),
         isNull(requestTeamAssignments.unassignedAt)
       )
     );

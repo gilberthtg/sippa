@@ -17,7 +17,8 @@ import { validateTransitionWithContext } from '@/lib/validations/status-transiti
 import { eq, and, desc, or, like, sql, gte, lte, inArray, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { logAudit } from '@/lib/utils/audit';
-import { notifyRequestApproved, notifyRequestRejected, notifyDeveloperAssigned, notifyRequestCompleted } from '@/lib/notifications/templates';
+import { notifyRequestApproved, notifyRequestRejected, notifyDeveloperAssigned, notifyRequestCompleted, notifyRequestInReview } from '@/lib/notifications/templates';
+import { getActiveHolidays, calculateActualDurationBusinessHours, evaluateSla } from '@/lib/utils/sla';
 
 async function checkAdminAuth() {
   const session = await auth();
@@ -243,10 +244,12 @@ export async function getSLAAttentionRequests() {
     const now = new Date();
     const attentionRequests = activeRequests.filter(req => {
       if (!req.targetSlaHours || !req.submittedAt) return false;
-      
+
+      // PHASE 4: Subtract accumulated on-hold (pause) hours from elapsed time
       const elapsedHours = (now.getTime() - req.submittedAt.getTime()) / (1000 * 60 * 60);
-      const percentUsed = (elapsedHours / req.targetSlaHours) * 100;
-      
+      const effectiveHours = Math.max(0, elapsedHours - (req.slaPausedDurationHours || 0));
+      const percentUsed = (effectiveHours / req.targetSlaHours) * 100;
+
       return percentUsed >= 80;
     });
 
@@ -414,7 +417,7 @@ export async function verifyRequest(requestId: number, note?: string) {
 
     await db.insert(requestStatusHistories).values({
       requestId,
-      fromStatus: REQUEST_STATUSES.SUBMITTED,
+      fromStatus: request.status,
       toStatus: REQUEST_STATUSES.IN_REVIEW,
       changedBy: authCheck.session!.user.id,
       changedByName: authCheck.session!.user.name,
@@ -430,6 +433,13 @@ export async function verifyRequest(requestId: number, note?: string) {
       action: AUDIT_ACTIONS.VERIFY,
       beforeData: { status: request.status },
       afterData: { status: REQUEST_STATUSES.IN_REVIEW, note },
+    });
+
+    notifyRequestInReview({
+      requestId,
+      requestNo: request.requestNo,
+      title: request.title,
+      requesterId: request.requesterId,
     });
 
     revalidatePath('/admin/requests');
@@ -676,11 +686,25 @@ export async function completeRequest(requestId: number, note?: string) {
     }
 
     const now = new Date();
+    const submittedAt = request.submittedAt ? new Date(request.submittedAt) : now;
+    // PHASE 4: Actual duration in business-day hours (excludes weekends/holidays),
+    // minus accumulated on-hold (pause) hours. Pause cycles logged in status history.
+    const holidays = await getActiveHolidays();
+    const actualHours = calculateActualDurationBusinessHours(
+      submittedAt,
+      now,
+      request.slaPausedDurationHours || 0,
+      holidays
+    );
+    const slaMet = evaluateSla(actualHours, request.targetSlaHours);
+
     await db
       .update(requests)
       .set({
         status: REQUEST_STATUSES.DONE,
         completedAt: now,
+        actualDurationHours: actualHours,
+        slaMet,
         updatedAt: now,
       })
       .where(eq(requests.id, requestId));
@@ -702,7 +726,13 @@ export async function completeRequest(requestId: number, note?: string) {
       entityId: String(requestId),
       action: AUDIT_ACTIONS.COMPLETE,
       beforeData: { status: request.status },
-      afterData: { status: REQUEST_STATUSES.DONE, note },
+      afterData: {
+        status: REQUEST_STATUSES.DONE,
+        note,
+        actualDurationHours: actualHours,
+        slaMet,
+        slaPausedDurationHours: request.slaPausedDurationHours || 0,
+      },
     });
 
     notifyRequestCompleted({

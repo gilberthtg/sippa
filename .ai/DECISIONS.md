@@ -170,8 +170,26 @@ Format:
 - Alternatives considered: Server-only validation, client-only validation
 - Benefits: Best UX (immediate feedback), data integrity (server validation), type safety (schema)
 
-## ADR-0017 � Request Status Workflow Restructure
+## ADR-0017 � Request Status Workflow Restructure
 - Status: Confirmed
 - Date: 2026-10-19
 - Decision: Replace status workflow with SUBMITTED, IN_REVIEW, APPROVED, REJECTED, ONGOING, DONE, ON_HOLD. Consolidate ASSIGNED+IN_PROGRESS into ONGOING. Add ON_HOLD with reason and SLA pause. Allow rejected request resubmission.
 - Impact: Database enum migration, server-side transition validation, new pause/resume actions, notification events.
+
+## ADR-0018 — SLA Pause/Resume Calculation & Notification Recipients
+- Status: Confirmed
+- Date: 2026-10-20
+- Decision:
+  1. SLA actual duration measured in **business-day hours**: 1 business day (Mon-Fri) = 24 hours, excluding `sla_holidays` — consistent with `targetSlaHours = targetBusinessDays * 24` used at priority assignment.
+  2. On-hold pauses: each pause cycle's duration is computed in business-day hours at resume time (`slaPausedAt` → resume) and **accumulated** into `slaPausedDurationHours`. Precision beyond day granularity is not required per stakeholder. Each pause cycle is logged individually in `request_status_histories` with its reason (given at pause time) in `note` + `metadata`.
+  3. Final completion formula: `actualDurationHours = businessHours(submitted → completed) − slaPausedDurationHours` (bounded ≥ 0); `slaMet = actualDurationHours ≤ targetSlaHours` (null when no target).
+  4. Notification recipients: REQUEST_IN_REVIEW → requester only (new event `request_in_review`); REQUEST_ON_HOLD, REQUEST_RESUMED, REQUEST_COMPLETED → requester + team members (active assignments + team leader + technical writer) + admins.
+- Reason: Stakeholder confirmed business-hours/holidays accounting, keeping pause accumulation coarse-grained; unify admin and developer completion SLA in one utility (`lib/utils/sla.ts`).
+- Impact: No schema change (fields already existed). `completeRequest()` (admin + developer paths) now persists `actualDurationHours` + `slaMet`. Dashboard SLA At-Risk widget excludes pause hours from usage percentage. `verifyRequest()` now notifies the requester and records correct `fromStatus` history.
+
+## ADR-0019 — Test Infrastructure for Workflow Tests
+- Status: Confirmed
+- Date: 2026-10-20
+- Decision: Implement workflow tests with jest + mocked drizzle DB (`__/tests__/actions/__helpers__/mock-db.ts`) instead of a live DB/testcontainers. DB interactions rely on a FIFO select-queue keyed by table; updates/inserts are recorded for assertions. Server actions remain the integration boundary (auth, audit, notifications, SLA utils are module mocks).
+- Reason: Fast, dependency-free CI tests covering transition validation wiring, permission gating, notification triggers and history writes of `admin-requests.ts` / `request-hold.ts` without a running MySQL instance.
+- Impact: `jest.config.js` gains `testPathIgnorePatterns: ['/node_modules/', '/__helpers__/']`. New suites: `__tests__/actions/request-status-transitions.test.ts` (transition matrix) and `__tests__/actions/request-admin-workflows.test.ts` (action flows, 202 total tests with previous suites). Select-queue tests are order-sensitive: any action query-order change requires updating queues.

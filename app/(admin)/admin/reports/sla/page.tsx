@@ -24,7 +24,7 @@ export default async function SLAPage({ searchParams }: SLAPageProps) {
 
   const [reportData, summary] = await Promise.all([
     getSLAReport({ year, requestType, priorityId, slaStatus, page }),
-    getSLASummary({ year }),
+    getSLASummary({ year, requestType, priorityId, slaStatus }),
   ]);
 
   return (

@@ -20,7 +20,7 @@ export default async function LaptriPage({ searchParams }: LaptriPageProps) {
 
   const [requests, summary] = await Promise.all([
     getLaptriData({ year, quarter, requestType }),
-    getLaptriSummary(year),
+    getLaptriSummary({ year, quarter, requestType }),
   ]);
 
   return (

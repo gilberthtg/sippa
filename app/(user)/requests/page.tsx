@@ -11,7 +11,7 @@ import { RequestListClient } from '@/components/requests/request-list-client';
 export default async function RequestsPage({
   searchParams,
 }: {
-  searchParams: { status?: string; search?: string };
+  searchParams: Promise<{ status?: string; search?: string }>;
 }) {
   const session = await auth();
 
@@ -19,9 +19,11 @@ export default async function RequestsPage({
     redirect('/login');
   }
 
+  const params = await searchParams;
+
   const result = await getRequestsByUserId({
-    status: searchParams.status,
-    search: searchParams.search,
+    status: params.status,
+    search: params.search,
     page: 1,
     limit: 20,
   });

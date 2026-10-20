@@ -1,5 +1,156 @@
 # SiPPA AI Session Log
 
+## 2026-10-20 — Fix: Filter jenis/prioritas/status tidak memengaruhi summary report SLA
+
+- Goal: Perbaiki halaman `/admin/reports/sla` — filter Jenis, Prioritas, dan Status SLA mengubah URL tapi summary (kartu metrics, chart, monthly trend, role metrics) tidak berubah; hanya tabel detail yang terfilter.
+- Root cause:
+  - `page.tsx` memanggil `getSLASummary({ year })` TANPA meneruskan `requestType`/`priorityId`/`slaStatus`, sehingga summary selalu dihitung dari seluruh data tahun tersebut — pola bug yang sama dengan kasus Laptri yang sudah diperbaiki pagi ini.
+  - `getSLASummary` di `app/actions/reports.ts` juga belum menerima parameter filter tersebut di signature-nya.
+- Changes made:
+  - `app/actions/reports.ts`:
+    - Signature `getSLASummary` diubah dari `{ year, startDate?, endDate? }` menjadi `{ year, startDate?, endDate?, requestType?, priorityId?, slaStatus? }` (konsisten dengan `getSLAReport`).
+    - Query `allCompleted` kini menerapkan kondisi requestType, priorityId, dan slaStatus (met → `slaMet = true`, exceeded → `slaMet = false`) yang sama dengan `getSLAReport` — kartu summary, avg by type/priority, dan monthly trend ikut terfilter.
+    - Query `roleSLAAssignments` (developer role SLA metrics) diberi filter kondisi yang sama agar role metrics konsisten dengan summary.
+  - `app/(admin)/admin/reports/sla/page.tsx`:
+    - Pemanggilan `getSLASummary({ year })` → `getSLASummary({ year, requestType, priorityId, slaStatus })`.
+- Files changed: app/actions/reports.ts, app/(admin)/admin/reports/sla/page.tsx, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Lint: PASSED (`npx eslint` kedua file, no error)
+  - Satu-satunya pemanggil `getSLASummary` adalah page tersebut; params baru optional sehingga backward compatible.
+- Open questions:
+  - (None)
+
+## 2026-10-20 — Fix: Filter kuartal & jenis tidak memengaruhi summary report Laptri
+
+- Goal: Perbaiki halaman `/admin/reports/laptri` — filter Kuartal (Q1-Q4) dan Jenis (New Application/RFC) mengubah URL tapi data tidak berubah.
+- Root cause:
+  - `page.tsx` memanggil `getLaptriSummary(year)` TANPA meneruskan `quarter`/`requestType`, sehingga summary (quarter counts, type breakdown, monthly trend, role metrics) selalu dihitung dari seluruh data tahun tersebut, hanya tabel detail (`getLaptriData`) yang terfilter.
+- Changes made:
+  - `app/actions/reports.ts`:
+    - Signature `getLaptriSummary` diubah dari `(year: number)` menjadi `{ year, quarter?, requestType? }` (konsisten dengan `getLaptriData`).
+    - Query `allCompleted` memakai kondisi quarter (MONTH range) + requestType yang sama.
+    - Query developer role distribution juga diterapkan filter yang sama supaya role metrics konsisten dengan summary.
+  - `app/(admin)/admin/reports/laptri/page.tsx`:
+    - Pemanggilan `getLaptriSummary(year)` → `getLaptriSummary({ year, quarter, requestType })`.
+- Files changed: app/actions/reports.ts, app/(admin)/admin/reports/laptri/page.tsx, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Lint: PASSED (`npx eslint` kedua file, no error)
+- Open questions:
+  - (None)
+
+## 2026-10-20 — Fix: Daftar "Developers" di panel aksi admin menampilkan count salah & duplikasi ketua TW
+
+- Goal: Perbaiki blok `Developers ({assignments.length})` pada `components/admin/request-admin-actions.tsx`.
+- Root cause:
+  - `assignments` juga berisi assignment Team Leader dan Technical Writer; in-map filter (`if (isLeader || isTw) return null`) menyembunyikan barisnya, tapi count di header tetap `assignments.length` (mis. tampil "Developers (3)" hanya 1 kartu developer).
+  - JSX return dalam `.map()` kurang rapi (closing paren pindah ke baris sendiri), rawan syntax error saat edit manual.
+- Changes made:
+  - `components/admin/request-admin-actions.tsx`:
+    - Tambah `developerAssignments` = `assignments.filter(...)` yang mengecualikan `teamLeader.id` & `technicalWriter.id` (null-safe).
+    - Header & map memakai `developerAssignments` sehingga count dan daftar konsisten (count = jumlah developer murni, tanpa ketua tim/TW).
+    - Map disederhanakan ke arrow-one-expression tanpa inline return-early.
+- Files changed: components/admin/request-admin-actions.tsx, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`, no error di file terkait)
+- Open questions:
+  - (None)
+
+## 2026-10-20 — Fix: Upload dokumen di halaman detail (admin & developer) tidak membuka file picker
+
+- Goal: Perbaiki tombol "Upload" pada tab Dokumen (Kelengkapan Dokumen) di detail request admin & developer yang ketika diklik tidak terjadi apa-apa.
+- Root cause:
+  - `components/requests/request-documents-section.tsx` memicu file picker via `<Label htmlFor="...">` yang membungkus `<Button>`, pada `<Input type="file" className="hidden">` yang tersembunyi.
+  - Sesuai spesifikasi HTML, klik pada elemen interaktif (`<button>`) di dalam `<label>` TIDAK mengaktifkan kontrol tujuan label — sehingga file dialog tidak pernah terbuka (tidak ada feedback/error sama sekali).
+- Changes made:
+  - `components/requests/request-documents-section.tsx`:
+    - Komponen baru `UploadButton` per baris dokumen: `<input type="file" className="hidden" accept={FILE_UPLOAD.ALLOWED_EXTENSIONS}>` dengan `useRef`, tombol memanggil `inputRef.current?.click()` langsung (menghapus pattern Label>Button yang bermasalah).
+    - Tambah attribute `accept` (.pdf, .doc, .docx, .xls, .xlsx, .png, .jpg, .jpeg) agar file picker memfilter tipe file sesuai validasi server.
+    - `handleUpload`/`handleDelete`: tambah `console.error` saat exception untuk debugging (toast error tetap generik).
+    - Bersihkan import `Input`, `Label` yang tidak terpakai.
+- Files changed: components/requests/request-documents-section.tsx, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Build: SUCCESS (`npm run build`)
+  - ✅ Lint: file bersih (`npx eslint components/requests/request-documents-section.tsx`)
+- Open questions:
+  - (None) — halaman user detail memakai `canUpload={false}` sehingga tidak terdampak; upload user (Dokumen Permintaan Aplikasi) tetap via form Request Baru.
+- Next recommended step: Manual test: login admin & developer, buka detail request → tab Dokumen → klik Upload salah satu tipe (Mis. Project Plan) → pastikan file picker terbuka, file terupload, badge "Terupload" + link download berfungsi.
+
+## 2026-10-20 — Fix: /requests page crash (searchParams Promise + unapplied migration 0003)
+
+- Goal: Fix error dev server at `app\(user)\requests\page.tsx` — (1) Next.js error `searchParams is a Promise and must be unwrapped with await/React.use()`, (2) DB error `Unknown column 'sla_paused_at' in 'field list'` from `getRequestsByUserId`.
+- Root cause:
+  1. `app/(user)/requests/page.tsx` accessed `searchParams.status/search` directly on the Promise (Next.js 15 API) — the only page not using `await searchParams` (all other list pages already correct).
+  2. Migration `db/migrations/0003_status_workflow_restructure.sql` was never applied to the local database: columns `sla_paused_at`, `sla_paused_duration_hours`, `on_hold_reason` missing, status enum still the old 7-value set (`completed`, `in_progress`, `assigned`, `verification`), and legacy data rows (1× in_progress, 25× completed) existed.
+- Additional migration file flaw found: 0003 updated status values BEFORE widening the enum — fails in MySQL strict mode (`Data truncated for column 'status'`). Fixed the file order: widen to superset enum → data updates → narrow to final canonical enum.
+- Changes made:
+  - `app/(user)/requests/page.tsx`: searchParams typed as `Promise<{ status?: string; search?: string }>`; unwrapped via `const params = await searchParams` before access.
+  - Applied missing migration to local DB: 3 columns added, status data migrated (1 row in_progress→ongoing, 25 rows completed→done), enum narrowed to `('submitted','in_review','approved','rejected','ongoing','done','on_hold')`.
+  - `db/migrations/0003_status_workflow_restructure.sql`: reordered Step 2 (widen → update data → narrow) so the file is correct as written on any environment.
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ SELECT with all 36 request columns (incl. sla_paused_at etc.) verified against local DB (20 rows returned, requester_id=2)
+  - ✅ Post-migration DB state verified: new columns present, enum correct, data migrated (1 ongoing, 25 done)
+- Open questions:
+  - (None)
+- Next recommended step: Refresh `/requests` in browser and confirm the page renders with the migrated statuses.
+
+## 2026-10-20 — Workflow Restructure Phase 5: Testing & Documentation
+
+- Goal: Phase 5 of WORKFLOW_RESTRUCTURE_PLAN — automated tests (transition validation + admin workflow integration), formalize workflow documentation, manual test plan for stakeholder execution.
+- Changes made:
+  - `__tests__/actions/request-status-transitions.test.ts` (new, 51 cases): full transition matrix per ADR-0017 (valid paths, blocked skips/reservations, final DONE, REJECTED resubmission-only), role permission matrix (admin full access; developer hold/resume/complete-only; user resubmit-only), `isTerminalStatus` (only DONE), `getNextStatuses`, Indonesian error messages.
+  - `__tests__/actions/request-admin-workflows.test.ts` (new, 37 cases): integration tests over `verifyRequest`, `approveRequest`, `rejectRequest`, `assignTeamToRequest`, `completeRequest`, `pauseRequest`, `resumeRequest` with mocked db/auth/audit/notifications/sla — happy paths, permission checks (developer cannot verify/approve/reject/assign), validation errors (reason rules, TW role, min 1 developer, unit exists, invalid transitions), SLA figures persisted at completion (actualDurationHours=164, slaMet ✓), pause accumulation (2+4=6 business hours), unassign-then-reassign handling, notification triggers per action, and full sequence tests: `submitted→in_review→approved→ongoing→on_hold→ongoing→done` and `submitted→in_review→rejected` (+ blocked assign).
+  - `__tests__/actions/__helpers__/mock-db.ts` (new): FIFO keyed-by-table mock of drizzle chainable query builder (select/update/insert/$returningId); `jest.config.js` gained `testPathIgnorePatterns: ['/node_modules/', '/__helpers__/']` so the helper is not treated as a test suite.
+  - `TESTING_CHECKLIST_RESTRUCTURE.md`: added `SECTION 14: Request Status Workflow` — 38 manual rows across 6 subsections (user visibility, admin verify/approve/reject, team assignment, hold/resume, completion, transition & edge-case guards) for stakeholder-led manual execution.
+  - `.ai/BUSINESS_RULES.md`: formalized Status Flow — workflow diagram, transition table with roles/actions/required inputs/side effects, final-status rules (DONE final; REJECTED resubmission-only), notification events table updated to implemented messages/recipients (added REQUEST_IN_REVIEW, REQUEST_ON_HOLD, REQUEST_RESUMED; team-member recipients per ADR-0018).
+  - `.ai/STATUS_WORKFLOW.md` (new): state machine diagram, transition table, role permission summary, per-status rules (labels/badges/actions), SLA interaction, automated coverage index.
+- Implemented-vs-plan discrepancies found during testing (not changed silently):
+  1. Approve + team assignment shipped as two steps (APPROVED is a real intermediate state) vs plan decision #3 "one step" — docs now describe implemented behavior; needs stakeholder confirmation if merging later is desired.
+  2. Developer completion path exists (`developer-requests.ts completeRequest`) vs plan decision #5 "Admin only" — flagged, kept (Phase 4 unified its SLA calc with admin path).
+  3. REJECTED is not fully final: resubmission `rejected→submitted` allowed per ADR-0017, contradicting plan §1 rules 4/11 — code and ADRs win; docs updated accordingly.
+- Files changed: __tests__/actions/request-status-transitions.test.ts (new), __tests__/actions/request-admin-workflows.test.ts (new), __tests__/actions/__helpers__/mock-db.ts (new), jest.config.js, TESTING_CHECKLIST_RESTRUCTURE.md, .ai/BUSINESS_RULES.md, .ai/STATUS_WORKFLOW.md (new), .ai/DECISIONS.md, .ai/WORKFLOW_RESTRUCTURE_PLAN.md, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ Unit tests (transitions): 75 passed (`npx jest __tests__/actions/request-status-transitions.test.ts` → counts include parameterized cases: 51 written cases expand; total transitions suite 75)
+  - ✅ Integration tests (workflows): 37 passed
+  - ✅ Full suite: 5 suites, 202 tests passed (`npx jest`)
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Build: SUCCESS (`npm run build`)
+  - ⚠️ Manual test plan: PREPARED (TESTING_CHECKLIST_RESTRUCTURE.md SECTION 14) — execution pending stakeholder (user-led, per role)
+- Open questions:
+  - Confirm the three discrepancies above (two-step approve+assign, developer completion, resubmission) as accepted behavior OR revert — see Status Workflow doc notes.
+- Next recommended step: Stakeholder executes MANUAL SECTION 14 in TESTING_CHECKLIST_RESTRUCTURE.md (user → admin → developer → edge cases), then code review, then post-implementation rollout steps (staging deploy, smoke tests, sign-off).
+
+## 2026-10-20 — Workflow Restructure Phase 4: SLA & Notifications
+
+- Goal: SLA calculation accounting for business days/holidays and on-hold pauses; request IN_REVIEW notification; team-member recipients for hold/resume/complete notifications.
+- Decisions (stakeholder-confirmed in-session):
+  - SLA actual duration measured in business-day hours (1 business day Mon-Fri = 24h, consistent with `targetSlaHours = targetBusinessDays * 24`), excluding weekends + holidays from `sla_holidays`.
+  - Multiple pause cycles: coarse-grained accumulate into `slaPausedDurationHours` (precision not required); each pause cycle logged in status history with reason.
+  - Hold/Resume/Complete notification recipients: requester + team members (assignment rows + team leader + technical writer) + admins.
+  - IN_REVIEW notification recipient: requester only.
+- Changes made:
+  - `lib/utils/sla.ts` (new): `getActiveHolidays()` (fail-open to empty), `calculateBusinessHoursBetween()` (calendar-day-normalized inclusive counting), `calculatePauseBusinessHours()`, `calculateActualDurationBusinessHours()` (gross business hours − accumulated pause, clamped ≥ 0), `evaluateSla()`.
+  - `app/actions/request-hold.ts` (`resumeRequest`): pause duration now computed in business-day hours with holidays (was raw elapsed hours) and accumulated.
+  - `app/actions/admin-requests.ts`:
+    - `completeRequest()`: now sets `actualDurationHours` (business hours − pauses) and `slaMet` on completion; audit log includes SLA figures.
+    - `verifyRequest()`: added `notifyRequestInReview()` to requester; fixed hardcoded `fromStatus: SUBMITTED` in history to use actual `request.status`.
+    - `getSLAAttentionRequests()`: subtracts `slaPausedDurationHours` from elapsed before SLA usage percentage.
+  - `app/actions/developer-requests.ts` (`completeRequest`): unified SLA calc with the same util (was raw hours − pause).
+  - `lib/constants.ts`: added `NOTIFICATION_EVENTS.REQUEST_IN_REVIEW`.
+  - `lib/notifications/templates.ts`: added `getTeamMemberIds()` helper (active `request_team_assignments` + team leader + technical writer); added `notifyRequestInReview()`; `notifyRequestOnHold`/`notifyRequestResumed`/`notifyRequestCompleted` now also notify team members; removed dead `recipientIds` in `notifyTeamAssigned` (pre-existing lint warning).
+- Files changed: lib/utils/sla.ts (new), app/actions/request-hold.ts, app/actions/admin-requests.ts, app/actions/developer-requests.ts, lib/constants.ts, lib/notifications/templates.ts, __tests__/lib/sla.test.ts (new), .ai/SESSION_LOG.md, .ai/DECISIONS.md, .ai/BUSINESS_RULES.md, .ai/WORKFLOW_RESTRUCTURE_PLAN.md
+- Tests/checks:
+  - ✅ Unit tests: 17 passed (`npx jest __tests__/lib/sla.test.ts`) — business hours, weekend/holiday exclusion, pause windows crossing weekends/holidays, pause accumulation, clamping, `evaluateSla`, holiday date normalization.
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Build: SUCCESS (`npm run build`)
+  - ✅ Lint: no new issues (3 pre-existing warnings in touched files remain; 1 dead-code warning removed)
+- Open questions:
+  - None blocking. Note: dashboard SLA "At Risk" widget now subtracts accumulated pause hours; no DB migration needed (fields already existed).
+- Next recommended step: Phase 5 (Testing & Documentation) — integration tests for hold/resume/complete workflows, manual role-based test plan execution, TESTING_CHECKLIST update.
+
 ## 2026-10-20 — Workflow Restructure Phase 3: UI & UX Implementation
 
 - Goal: Update all UI to reflect 7-status workflow — status colors per plan spec, Lucide icons on badges, Indonesian status labels everywhere, status history as separate tab on detail pages, context-aware admin action buttons.
@@ -1673,3 +1824,19 @@ See `.ai/PHASE_5_COMPLETE.md` for comprehensive documentation.
 - Open questions:
   - (None for Phase 1)
 - Next recommended step: Phase 2 — Admin workflow (merge approve+assign, hold/resume/complete actions, UI).
+
+## 2026-10-20 - Bugfix: Notification list card message overflow
+
+- Problem: Notification message in the notification list page could grow unbounded, making cards taller than intended and inconsistent.
+- Fix: Added line-clamp-2 to the message paragraph in components/notifications/notification-list-client.tsx (consistent with notification-bell popover).
+- Files changed: components/notifications/notification-list-client.tsx.
+
+## 2026-10-20 - Bugfix: Notification bell popover content overflow (follow-up)
+
+- Problem: With many notifications, the bell dropdown list did not get contained - content extended below the popover card boundary.
+- Root cause: ScrollArea in components/layout/notification-bell.tsx used only max-h-80. Base UI ScrollArea Viewport uses h-full (percentage) which resolves to uto when the parent height is auto + max-height, so the viewport grew with content and overflowed past the Root (which has overflow: visible).
+- Fix: Made the ScrollArea Root a flex column (lex max-h-80 flex-col) - the canonical max-height scroll pattern. The viewport now shrinks to the max-height boundary and scrolls internally.
+- Also applied approved hygiene fix in notification list page: title clamped to one line (line-clamp-1 break-words), title row aligned items-center.
+- Files changed: components/layout/notification-bell.tsx, components/notifications/notification-list-client.tsx.
+- Checks: TypeScript PASSED (npx tsc --noEmit). ESLint issues in touched files are pre-existing (react-hooks/set-state-in-effect, unused userId).
+- Open question: [NEEDS_DECISION] None. User to verify in browser (hard refresh recommended).

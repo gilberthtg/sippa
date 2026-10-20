@@ -9,6 +9,7 @@ import { eq, and, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { logAudit } from '@/lib/utils/audit';
 import { notifyRequestOnHold, notifyRequestResumed } from '@/lib/notifications/templates';
+import { getActiveHolidays, calculatePauseBusinessHours } from '@/lib/utils/sla';
 
 async function checkPauseAuth(requestId: number) {
   const session = await auth();
@@ -142,14 +143,21 @@ export async function resumeRequest(params: { requestId: number; note?: string }
       return { success: false, error: resumeValidation.error || 'Transisi status tidak valid' };
     }
 
-    // Calculate paused duration
+    // PHASE 4: Calculate paused duration in business-day hours
+    // (excludes weekends and holidays from sla_holidays table).
+    // Multiple pause cycles accumulate in slaPausedDurationHours; each cycle
+    // is logged individually in request_status_histories (reason stored at pause time).
+    const now = new Date();
     let pausedDurationHours = request.slaPausedDurationHours || 0;
     if (request.slaPausedAt) {
-      const pausedMs = Date.now() - new Date(request.slaPausedAt).getTime();
-      pausedDurationHours += Math.round(pausedMs / (1000 * 60 * 60));
+      const holidays = await getActiveHolidays();
+      const pauseHours = calculatePauseBusinessHours(
+        new Date(request.slaPausedAt),
+        now,
+        holidays
+      );
+      pausedDurationHours += Math.round(pauseHours);
     }
-
-    const now = new Date();
     await db.update(requests)
       .set({
         status: REQUEST_STATUSES.ONGOING,

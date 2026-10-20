@@ -71,11 +71,13 @@ status: mysqlEnum('status', [
 `
 
 **Supporting fields present:**
-- ejectionNote — for rejection reasons
+- 
+ejectionNote — for rejection reasons
 - onHoldReason — for on_hold reason
 - slaPausedAt — when SLA was paused
 - slaPausedDurationHours — accumulated pause duration
-- equestStatusHistories table — full audit trail
+- 
+equestStatusHistories table — full audit trail
 - Timestamps: submittedAt, approvedAt, rejectedAt, completedAt
 
 **Status:** ✅ All infrastructure exists and matches requirement
@@ -194,7 +196,8 @@ px tsc --noEmit
 - New: Approve button shows assignment form, updates status→APPROVED→ONGOING in one transaction
 
 **Update/Create:**
-1. equest-approval-dialog.tsx (UPDATE)
+1. 
+equest-approval-dialog.tsx (UPDATE)
    - Rejection path: Reject button → Enter reason → Status: IN_REVIEW → REJECTED
    - Approval path: Approve button → Assignment form (DevTI, Team Leader, TW, Developers) → Status: IN_REVIEW → APPROVED → ONGOING
 
@@ -202,18 +205,22 @@ px tsc --noEmit
    - Hold button → Enter reason → Status: ONGOING → ON_HOLD (SLA pauses)
 
 3. Server actions (app/actions/admin-requests.ts)
-   - eviewRequest() — IN_REVIEW → IN_REVIEW (admin opens, no status change yet)
+   - 
+eviewRequest() — IN_REVIEW → IN_REVIEW (admin opens, no status change yet)
    - pproveAndAssignRequest() (RENAMED/MERGED from approveRequest + assignTeam)
      - Input: approval data + assignment data
      - Validation: TW has TW role, minimum 1 developer
      - Output: Status: IN_REVIEW → APPROVED → ONGOING
      - Side effects: Notifications sent to team
-   - ejectRequest(reason) — IN_REVIEW → REJECTED
+   - 
+ejectRequest(reason) — IN_REVIEW → REJECTED
    - holdRequest(reason) (NEW) — ONGOING → ON_HOLD (SLA pauses, record slaPausedAt)
-   - esumeRequest() (NEW) — ON_HOLD → ONGOING (SLA resumes, calculate slaPausedDurationHours)
+   - 
+esumeRequest() (NEW) — ON_HOLD → ONGOING (SLA resumes, calculate slaPausedDurationHours)
    - completeRequest() (NEW) — ONGOING → DONE (SLA finalized)
 
-4. Update equest-admin-actions.tsx
+4. Update 
+equest-admin-actions.tsx
    - Show action buttons based on current status + role
    - IN_REVIEW: [Approve+Assign] [Reject]
    - APPROVED: [Approve+Assign] [Reject] (if not yet assigned)
@@ -453,7 +460,8 @@ pm run build
 - If critical data corruption: Restore from backup
 - If permission issues: Revert server actions code only
 - If SLA calculation wrong: Fix logic, recalculate for affected requests
-- Keep equest_status_histories for audit trail (never delete)
+- Keep 
+equest_status_histories for audit trail (never delete)
 
 ---
 
@@ -466,49 +474,55 @@ pm run build
 - [ ] Backup current database
 - [ ] Create branch: eature/workflow-restructure
 
-### Phase 1: Validation (1-2 days)
+### Phase 1: Validation
 - [ ] Create lib/validations/status-transitions.ts
 - [ ] Update all status-changing server actions (7-8 files)
 - [ ] Run: 
 px tsc --noEmit
 - [ ] Manual test: existing workflows still work
 
-### Phase 2: Admin Workflow (3-4 days)
+### Phase 2: Admin Workflow
 - [ ] Merge pproveRequest() + ssignTeamToRequest() → pproveAndAssignRequest()
 - [ ] Create holdRequest() server action
-- [ ] Create esumeRequest() server action
+- [ ] Create 
+esumeRequest() server action
 - [ ] Create completeRequest() server action
-- [ ] Update equest-approval-dialog.tsx (add assignment form)
+- [ ] Update 
+equest-approval-dialog.tsx (add assignment form)
 - [ ] Create on-hold-dialog.tsx
-- [ ] Implement SLA pause/resume in holdRequest() + esumeRequest()
-- [ ] Update equest-admin-actions.tsx
+- [ ] Implement SLA pause/resume in holdRequest() + 
+esumeRequest()
+- [ ] Update 
+equest-admin-actions.tsx
 - [ ] Run: 
 pm run build
 
-### Phase 3: UI & UX (2-3 days)
+### Phase 3: UI & UX
 - [ ] Update status-badge.tsx — 7 colors
-- [ ] Update equest-list-client.tsx — 7 status filters
-- [ ] Update equest-admin-actions.tsx — context-aware buttons
+- [ ] Update 
+equest-list-client.tsx — 7 status filters
+- [ ] Update 
+equest-admin-actions.tsx — context-aware buttons
 - [ ] Add status constants to lib/constants.ts
 - [ ] Update all detail pages
 - [ ] Visual testing (all 7 statuses)
 - [ ] Responsive design testing
 
-### Phase 4: SLA & Notifications (1-2 days)
-- [ ] Update lib/utils/sla.ts — pause/resume logic
-- [ ] Create notification templates for 3 new events
-- [ ] Trigger notifications in all status change actions
-- [ ] Test SLA calculation with pause
-- [ ] Verify notification recipients
+### Phase 4: SLA & Notifications
+- [x] Update lib/utils/sla.ts — pause/resume logic
+- [x] Create notification templates for 3 new events
+- [x] Trigger notifications in all status change actions
+- [x] Test SLA calculation with pause
+- [x] Verify notification recipients
 
-### Phase 5: Testing & Documentation (2-3 days)
-- [ ] Write unit tests (transition validation)
-- [ ] Write integration tests (full workflows)
-- [ ] Execute full manual test plan
-- [ ] Update BUSINESS_RULES.md
-- [ ] Create .ai/STATUS_WORKFLOW.md
-- [ ] Update TESTING_CHECKLIST.md
-- [ ] Update SESSION_LOG.md
+### Phase 5: Testing & Documentation
+- [x] Write unit tests (transition validation) — `__tests__/actions/request-status-transitions.test.ts`
+- [x] Write integration tests (full workflows) — `__tests__/actions/request-admin-workflows.test.ts` (202 tests total green)
+- [ ] Execute full manual test plan — WAITING STAKEHOLDER: checklist prepared in TESTING_CHECKLIST_RESTRUCTURE.md SECTION 14
+- [x] Update BUSINESS_RULES.md
+- [x] Create .ai/STATUS_WORKFLOW.md
+- [x] Update TESTING_CHECKLIST.md — TESTING_CHECKLIST_RESTRUCTURE.md
+- [x] Update SESSION_LOG.md
 - [ ] Code review
 
 ### Post-Implementation
@@ -523,15 +537,14 @@ pm run build
 
 ## 8. Timeline
 
-| Phase | Effort | Cumulative |
-|-------|--------|-----------|
-| Planning & Approval | 1 day | 1 day |
-| Phase 1: Validation | 1-2 days | 2-3 days |
-| Phase 2: Admin Workflow | 3-4 days | 5-7 days |
-| Phase 3: UI & UX | 2-3 days | 7-10 days |
-| Phase 4: SLA & Notifications | 1-2 days | 8-12 days |
-| Phase 5: Testing & Docs | 2-3 days | 10-15 days |
-| **Total** | **10-15 days** | **~2-3 weeks** |
+| Phase |
+|-------|
+| Planning & Approval
+| Phase 1: Validation
+| Phase 2: Admin Workflow
+| Phase 3: UI & UX
+| Phase 4: SLA & Notifications
+| Phase 5: Testing & Docs
 
 ---
 

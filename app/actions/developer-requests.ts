@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/utils/audit';
 import { AUDIT_MODULES, AUDIT_ACTIONS, REQUEST_STATUSES, ROLES } from '@/lib/constants';
 import { validateTransitionWithContext } from '@/lib/validations/status-transitions';
 import { notifyProgressUpdated, notifyRequestCompleted } from '@/lib/notifications/templates';
+import { getActiveHolidays, calculateActualDurationBusinessHours, evaluateSla } from '@/lib/utils/sla';
 
 async function checkDeveloperAuth() {
   const session = await auth();
@@ -537,13 +538,17 @@ export async function completeRequest(params: { requestId: number; finalNote: st
     }
 
     const completedAt = new Date();
-    // Compute actual duration accounting for on-hold pauses
+    // PHASE 4: Actual duration in business-day hours (excludes weekends/holidays),
+    // minus accumulated on-hold (pause) hours. Unified with admin completion logic.
     const submittedAt = request.submittedAt ? new Date(request.submittedAt) : completedAt;
-    const totalMs = completedAt.getTime() - submittedAt.getTime();
-    const totalHours = Math.round(totalMs / (1000 * 60 * 60));
-    const pausedHours = request.slaPausedDurationHours || 0;
-    const actualHours = Math.max(0, totalHours - pausedHours);
-    const slaMet = request.targetSlaHours ? actualHours <= request.targetSlaHours : null;
+    const holidays = await getActiveHolidays();
+    const actualHours = calculateActualDurationBusinessHours(
+      submittedAt,
+      completedAt,
+      request.slaPausedDurationHours || 0,
+      holidays
+    );
+    const slaMet = evaluateSla(actualHours, request.targetSlaHours);
 
     await db.update(requests)
       .set({ 

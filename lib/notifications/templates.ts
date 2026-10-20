@@ -1,7 +1,7 @@
 import { NOTIFICATION_EVENTS } from '@/lib/constants';
 import { db } from '@/lib/db';
-import { users } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { users, requests, requestTeamAssignments } from '@/lib/db/schema';
+import { eq, and, isNull } from 'drizzle-orm';
 import { sendNotification } from './notify';
 
 async function getAdminUserIds(): Promise<number[]> {
@@ -10,6 +10,42 @@ async function getAdminUserIds(): Promise<number[]> {
     .from(users)
     .where(and(eq(users.roleId, 2), eq(users.isActive, true)));
   return admins.map((a) => a.id);
+}
+
+/**
+ * Get user IDs of everyone involved in handling a request:
+ * active team assignment members (developers) + team leader + technical writer.
+ * Used for on-hold / resume / completed notifications.
+ */
+async function getTeamMemberIds(requestId: number): Promise<number[]> {
+  try {
+    const [request] = await db
+      .select({
+        teamLeaderId: requests.teamLeaderId,
+        technicalWriterId: requests.technicalWriterId,
+      })
+      .from(requests)
+      .where(eq(requests.id, requestId))
+      .limit(1);
+
+    const assignments = await db
+      .select({ assignedUserId: requestTeamAssignments.assignedUserId })
+      .from(requestTeamAssignments)
+      .where(
+        and(
+          eq(requestTeamAssignments.requestId, requestId),
+          isNull(requestTeamAssignments.unassignedAt)
+        )
+      );
+
+    const ids = new Set<number>(assignments.map((a) => a.assignedUserId));
+    if (request?.teamLeaderId) ids.add(request.teamLeaderId);
+    if (request?.technicalWriterId) ids.add(request.technicalWriterId);
+    return [...ids];
+  } catch (error) {
+    console.error('Get team member ids error:', error);
+    return [];
+  }
 }
 
 export async function notifyRequestSubmitted(params: {
@@ -24,6 +60,22 @@ export async function notifyRequestSubmitted(params: {
     recipientUserIds: adminIds,
     title: `Permintaan Baru: ${params.requestNo}`,
     message: `${params.requesterName} mengajukan permintaan "${params.title}"`,
+    entityType: 'request',
+    entityId: String(params.requestId),
+  });
+}
+
+export async function notifyRequestInReview(params: {
+  requestId: number;
+  requestNo: string;
+  title: string;
+  requesterId: number;
+}) {
+  await sendNotification({
+    type: NOTIFICATION_EVENTS.REQUEST_IN_REVIEW,
+    recipientUserIds: [params.requesterId],
+    title: `Permintaan Sedang Ditinjau: ${params.requestNo}`,
+    message: `Permintaan "${params.title}" sedang ditinjau oleh admin`,
     entityType: 'request',
     entityId: String(params.requestId),
   });
@@ -103,7 +155,8 @@ export async function notifyRequestCompleted(params: {
   requesterId: number;
 }) {
   const adminIds = await getAdminUserIds();
-  const recipientIds = [...new Set([params.requesterId, ...adminIds])];
+  const teamIds = await getTeamMemberIds(params.requestId);
+  const recipientIds = [...new Set([params.requesterId, ...teamIds, ...adminIds])];
   await sendNotification({
     type: NOTIFICATION_EVENTS.REQUEST_COMPLETED,
     recipientUserIds: recipientIds,
@@ -125,7 +178,8 @@ export async function notifyRequestOnHold(params: {
   reason: string;
 }) {
   const adminIds = await getAdminUserIds();
-  const recipientIds = [...new Set([params.requesterId, ...adminIds])];
+  const teamIds = await getTeamMemberIds(params.requestId);
+  const recipientIds = [...new Set([params.requesterId, ...teamIds, ...adminIds])];
   await sendNotification({
     type: NOTIFICATION_EVENTS.REQUEST_ON_HOLD,
     recipientUserIds: recipientIds,
@@ -143,7 +197,8 @@ export async function notifyRequestResumed(params: {
   requesterId: number;
 }) {
   const adminIds = await getAdminUserIds();
-  const recipientIds = [...new Set([params.requesterId, ...adminIds])];
+  const teamIds = await getTeamMemberIds(params.requestId);
+  const recipientIds = [...new Set([params.requesterId, ...teamIds, ...adminIds])];
   await sendNotification({
     type: NOTIFICATION_EVENTS.REQUEST_RESUMED,
     recipientUserIds: recipientIds,
@@ -162,12 +217,6 @@ export async function notifyTeamAssigned(params: {
   technicalWriterId: number;
   requesterId: number;
 }) {
-  const recipientIds = [
-    params.teamLeaderId,
-    params.technicalWriterId,
-    params.requesterId,
-  ];
-
   // Notify team leader
   await sendNotification({
     type: NOTIFICATION_EVENTS.DEVELOPER_ASSIGNED,

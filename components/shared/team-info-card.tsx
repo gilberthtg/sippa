@@ -90,47 +90,67 @@ export function TeamInfoCard({
           </div>
         )}
 
-        {/* Team Members / Developers */}
-        {teamMembers.length > 0 && (
-          <div>
-            <p className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-1">
-              <Users className="h-4 w-4" />
-              Team Members ({teamMembers.length})
-            </p>
-            <div className="space-y-3 pl-5">
-              {teamMembers.map((member) => {
-                const isYou = currentUserId ? member.id === currentUserId : member.isCurrentUser;
-                return (
-                  <div
-                    key={member.id}
-                    className={`space-y-2 pb-3 border-b last:border-b-0 ${
-                      isYou ? 'bg-primary/5 -ml-5 pl-5 pr-2 py-2 rounded' : ''
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {member.name}
-                          {isYou && (
-                            <span className="ml-2 text-xs text-primary font-semibold">
-                              (You)
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {member.email}
-                        </p>
+        {/* Team Members / Developers */}{/* Team Members / Developers */}
+        {(() => {
+          const filteredTeamMembers = teamMembers.filter((member) => {
+            const isLeader = teamLeader && member.id === teamLeader.id;
+            const isTw = technicalWriter && member.id === technicalWriter.id;
+
+            return !isLeader && !isTw;
+          });
+
+          return filteredTeamMembers.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                Team Members ({filteredTeamMembers.length})
+              </p>
+
+              <div className="space-y-3 pl-5">
+                {filteredTeamMembers.map((member) => {
+                  const isYou = currentUserId
+                    ? member.id === currentUserId
+                    : member.isCurrentUser;
+
+                  return (
+                    <div
+                      key={member.id}
+                      className={`space-y-2 pb-3 border-b last:border-b-0 ${
+                        isYou
+                          ? 'bg-primary/5 -ml-5 pl-5 pr-2 py-2 rounded'
+                          : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {member.name}
+                            {isYou && (
+                              <span className="ml-2 text-xs text-primary font-semibold">
+                                (You)
+                              </span>
+                            )}
+                          </p>
+
+                          <p className="text-xs text-muted-foreground truncate">
+                            {member.email}
+                          </p>
+                        </div>
+
+                        {member.developerRoleCode && (
+                          <RoleBadge
+                            roleCode={member.developerRoleCode}
+                            size="sm"
+                          />
+                        )}
                       </div>
-                      {member.developerRoleCode && (
-                        <RoleBadge roleCode={member.developerRoleCode} size="sm" />
-                      )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Empty State */}
         {!devtiUrusan && !teamLeader && !technicalWriter && teamMembers.length === 0 && (

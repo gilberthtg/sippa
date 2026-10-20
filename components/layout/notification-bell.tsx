@@ -135,7 +135,7 @@ export function NotificationBell({ userId, roleCode }: NotificationBellProps) {
           )}
         </div>
         <Separator />
-        <ScrollArea className="max-h-80">
+        <ScrollArea className="flex max-h-80 flex-col">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
               <Bell className="mb-2 h-8 w-8 opacity-40" />

@@ -1,14 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Upload, Download, Trash2, FileText, CheckCircle2, XCircle } from 'lucide-react';
 import { uploadRequestDocument, deleteRequestDocument } from '@/app/actions/request-documents';
 import { useRouter } from 'next/navigation';
+import { FILE_UPLOAD } from '@/lib/constants';
 
 type RequiredDoc = {
   id: number;
@@ -36,6 +35,45 @@ type Props = {
   canUpload: boolean;
 };
 
+function UploadButton({
+  documentTypeId,
+  uploading,
+  onUpload,
+}: {
+  documentTypeId: number;
+  uploading: boolean;
+  onUpload: (documentTypeId: number, file: File) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        className="hidden"
+        accept={FILE_UPLOAD.ALLOWED_EXTENSIONS.join(',')}
+        disabled={uploading}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onUpload(documentTypeId, f);
+          e.target.value = '';
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={uploading}
+        onClick={() => inputRef.current?.click()}
+      >
+        <Upload className="mr-1 h-4 w-4" />
+        {uploading ? 'Uploading...' : 'Upload'}
+      </Button>
+    </>
+  );
+}
+
 export function RequestDocumentsSection({ requestId, requiredDocs, uploadedDocs, canUpload }: Props) {
   const router = useRouter();
   const [uploadingTypeId, setUploadingTypeId] = useState<number | null>(null);
@@ -58,6 +96,7 @@ export function RequestDocumentsSection({ requestId, requiredDocs, uploadedDocs,
         toast.error(result.error || 'Gagal upload dokumen');
       }
     } catch (error) {
+      console.error('Upload dokumen gagal:', error);
       toast.error('Gagal upload dokumen');
     } finally {
       setUploadingTypeId(null);
@@ -75,6 +114,7 @@ export function RequestDocumentsSection({ requestId, requiredDocs, uploadedDocs,
         toast.error(result.error || 'Gagal menghapus dokumen');
       }
     } catch (error) {
+      console.error('Hapus dokumen gagal:', error);
       toast.error('Gagal menghapus dokumen');
     } finally {
       setDeletingId(null);
@@ -148,29 +188,11 @@ export function RequestDocumentsSection({ requestId, requiredDocs, uploadedDocs,
                     Belum
                   </Badge>
                   {canUpload && (
-                    <div>
-                      <Input
-                        type="file"
-                        className="hidden"
-                        id={`upload-${rd.documentTypeId}`}
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) handleUpload(rd.documentTypeId, f);
-                          e.target.value = '';
-                        }}
-                        disabled={isUploading}
-                      />
-                      <Label htmlFor={`upload-${rd.documentTypeId}`}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={isUploading}
-                        >
-                          <Upload className="mr-1 h-4 w-4" />
-                          {isUploading ? 'Uploading...' : 'Upload'}
-                        </Button>
-                      </Label>
-                    </div>
+                    <UploadButton
+                      documentTypeId={rd.documentTypeId}
+                      uploading={isUploading}
+                      onUpload={handleUpload}
+                    />
                   )}
                 </>
               )}

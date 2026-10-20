@@ -16,7 +16,11 @@ ALTER TABLE `requests`
   ADD COLUMN `on_hold_reason` text AFTER `completion_note`;
 
 -- Step 2: Migrate status enum values.
--- MySQL: modify enum column. First update data, then alter column type.
+-- MySQL: widen the enum first so new values are accepted, then update data,
+-- then narrow the enum to the final canonical set.
+ALTER TABLE `requests`
+  MODIFY COLUMN `status` ENUM('submitted','verification','rejected','approved','assigned','in_progress','completed','in_review','ongoing','done','on_hold') NOT NULL DEFAULT 'submitted';
+
 UPDATE `requests` SET `status` = 'ongoing' WHERE `status` IN ('assigned', 'in_progress');
 UPDATE `requests` SET `status` = 'in_review' WHERE `status` = 'verification';
 UPDATE `requests` SET `status` = 'done' WHERE `status` = 'completed';

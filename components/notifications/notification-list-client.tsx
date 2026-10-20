@@ -167,8 +167,8 @@ export function NotificationListClient({
                     <Icon className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={`text-sm ${!item.isRead ? 'font-semibold' : ''}`}>{item.title}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={`line-clamp-1 break-words text-sm ${!item.isRead ? 'font-semibold' : ''}`}>{item.title}</p>
                       <div className="flex shrink-0 items-center gap-2">
                         {!item.isRead && <div className="h-2 w-2 rounded-full bg-primary" />}
                         <Badge variant="outline" className="text-xs">
@@ -176,7 +176,7 @@ export function NotificationListClient({
                         </Badge>
                       </div>
                     </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{item.message}</p>
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{item.message}</p>
                     <div className="mt-2 flex items-center gap-3">
                       <span className="text-xs text-muted-foreground/70">
                         {item.createdAt && formatDistanceToNow(new Date(item.createdAt), { addSuffix: true, locale: id })}

@@ -116,6 +116,7 @@ export type Role = typeof ROLES[keyof typeof ROLES];
 
 export const NOTIFICATION_EVENTS = {
   REQUEST_SUBMITTED: 'request_submitted',
+  REQUEST_IN_REVIEW: 'request_in_review',
   REQUEST_APPROVED: 'request_approved',
   REQUEST_REJECTED: 'request_rejected',
   DEVELOPER_ASSIGNED: 'developer_assigned',
