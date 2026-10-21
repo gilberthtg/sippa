@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 
 type Props = {
-  type: 'units' | 'teams' | 'priorities' | 'developer-roles' | 'applications' | 'sla-holidays' | 'document-types' | 'service-document-types';
+  type: 'units' | 'teams' | 'priorities' | 'developer-roles' | 'applications' | 'sla-holidays' | 'document-types' | 'service-document-types' | 'devteam-units';
 };
 
 export function MasterDataSearch({ type }: Props) {
@@ -37,7 +37,7 @@ export function MasterDataSearch({ type }: Props) {
     <div className="relative flex-1 max-w-sm">
       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
-        placeholder="Search by code or name..."
+        placeholder={type === 'devteam-units' ? 'Search by name...' : 'Search by code or name...'}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         className="pl-9"

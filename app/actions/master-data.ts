@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { units, priorities, developerRoles, users, requestApplications, requests, slaHolidays, documentTypes, serviceDocumentTypes } from '@/lib/db/schema';
+import { units, priorities, developerRoles, users, requestApplications, requests, slaHolidays, documentTypes, serviceDocumentTypes, devteamUnits } from '@/lib/db/schema';
 import { eq, and, or, like, desc, asc, count, sql, gte, lte, between } from 'drizzle-orm';
 import { auth } from '@/lib/auth/config';
 import { revalidatePath } from 'next/cache';
@@ -1433,6 +1433,187 @@ export async function toggleServiceDocumentTypeRequired(id: number, isRequired: 
   });
 
   revalidatePath('/admin/settings/service-document-types');
+
+  return { success: true };
+}
+
+// ==================== DEVTEAM UNITS ====================
+
+export async function getDevteamUnits(params?: {
+  isActive?: boolean | null;
+  search?: string;
+  page?: number;
+  limit?: number;
+}) {
+  await checkAdminAuth();
+
+  const {
+    isActive = null,
+    search = '',
+    page = 1,
+    limit = 20,
+  } = params || {};
+
+  const offset = (page - 1) * limit;
+  const conditions = [];
+
+  if (isActive !== null) {
+    conditions.push(eq(devteamUnits.isActive, isActive));
+  }
+
+  if (search) {
+    conditions.push(like(devteamUnits.name, `%${search}%`));
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [list, totalCountResult] = await Promise.all([
+    db
+      .select()
+      .from(devteamUnits)
+      .where(whereClause)
+      .orderBy(asc(devteamUnits.name))
+      .limit(limit)
+      .offset(offset),
+    db.select({ count: count() }).from(devteamUnits).where(whereClause),
+  ]);
+
+  return {
+    devteamUnits: list,
+    total: totalCountResult[0]?.count || 0,
+    page,
+    limit,
+    totalPages: Math.ceil((totalCountResult[0]?.count || 0) / limit),
+  };
+}
+
+export async function createDevteamUnit(data: { name: string }) {
+  const adminUser = await checkAdminAuth();
+
+  const existing = await db
+    .select({ id: devteamUnits.id })
+    .from(devteamUnits)
+    .where(eq(devteamUnits.name, data.name))
+    .limit(1);
+
+  if (existing.length > 0) {
+    throw new Error('DevTeam unit name already exists');
+  }
+
+  const result = await db.insert(devteamUnits).values({
+    name: data.name,
+    isActive: true,
+  });
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'devteam_unit',
+    entityId: String(result[0].insertId),
+    action: AUDIT_ACTIONS.CREATE,
+    afterData: { name: data.name },
+  });
+
+  revalidatePath('/admin/settings/devteam-units');
+
+  return { success: true, id: result[0].insertId };
+}
+
+export async function updateDevteamUnit(
+  id: number,
+  data: {
+    name?: string;
+    isActive?: boolean;
+  }
+) {
+  const adminUser = await checkAdminAuth();
+
+  if (data.name) {
+    const existing = await db
+      .select({ id: devteamUnits.id })
+      .from(devteamUnits)
+      .where(and(eq(devteamUnits.name, data.name), sql`${devteamUnits.id} != ${id}`))
+      .limit(1);
+
+    if (existing.length > 0) {
+      throw new Error('DevTeam unit name already exists');
+    }
+  }
+
+  await db
+    .update(devteamUnits)
+    .set({
+      ...(data.name && { name: data.name }),
+      ...(data.isActive !== undefined && { isActive: data.isActive }),
+      updatedAt: new Date(),
+    })
+    .where(eq(devteamUnits.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'devteam_unit',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.UPDATE,
+    afterData: data,
+  });
+
+  revalidatePath('/admin/settings/devteam-units');
+
+  return { success: true };
+}
+
+export async function toggleDevteamUnitActive(id: number, isActive: boolean) {
+  const adminUser = await checkAdminAuth();
+
+  await db
+    .update(devteamUnits)
+    .set({ isActive, updatedAt: new Date() })
+    .where(eq(devteamUnits.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'devteam_unit',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.TOGGLE_ACTIVE,
+    afterData: { isActive },
+  });
+
+  revalidatePath('/admin/settings/devteam-units');
+
+  return { success: true };
+}
+
+export async function deleteDevteamUnit(id: number) {
+  const adminUser = await checkAdminAuth();
+
+  const usage = await db
+    .select({ count: count() })
+    .from(requests)
+    .where(eq(requests.devtiUrusanId, id));
+
+  if (usage[0]?.count > 0) {
+    throw new Error(
+      `Cannot delete: devteam unit is used in ${usage[0].count} request(s)`
+    );
+  }
+
+  await db.delete(devteamUnits).where(eq(devteamUnits.id, id));
+
+  logAudit({
+    actorUserId: adminUser.id,
+    actorName: adminUser.name,
+    module: AUDIT_MODULES.SETTINGS,
+    entityType: 'devteam_unit',
+    entityId: String(id),
+    action: AUDIT_ACTIONS.DELETE,
+  });
+
+  revalidatePath('/admin/settings/devteam-units');
 
   return { success: true };
 }

@@ -9,48 +9,48 @@ export const REQUEST_STATUSES = {
 } as const;
 
 export const STATUS_LABELS: Record<string, string> = {
-  [REQUEST_STATUSES.SUBMITTED]: 'Diajukan',
-  [REQUEST_STATUSES.IN_REVIEW]: 'Sedang Ditinjau',
-  [REQUEST_STATUSES.APPROVED]: 'Disetujui',
-  [REQUEST_STATUSES.REJECTED]: 'Ditolak',
-  [REQUEST_STATUSES.ONGOING]: 'Sedang Berlangsung',
-  [REQUEST_STATUSES.ON_HOLD]: 'Ditangguhkan',
-  [REQUEST_STATUSES.DONE]: 'Selesai',
+  [REQUEST_STATUSES.SUBMITTED]: 'Submitted',
+  [REQUEST_STATUSES.IN_REVIEW]: 'In Review',
+  [REQUEST_STATUSES.APPROVED]: 'Approved',
+  [REQUEST_STATUSES.REJECTED]: 'Rejected',
+  [REQUEST_STATUSES.ONGOING]: 'Ongoing',
+  [REQUEST_STATUSES.ON_HOLD]: 'On Hold',
+  [REQUEST_STATUSES.DONE]: 'Done'
 };
 
 export const STATUS_CONFIG: Record<string, { label: string; className: string; icon: string }> = {
   [REQUEST_STATUSES.SUBMITTED]: {
-    label: 'Diajukan',
+    label: 'Submitted',
     className: 'bg-gray-100 text-gray-800 hover:bg-gray-100',
     icon: 'clock',
   },
   [REQUEST_STATUSES.IN_REVIEW]: {
-    label: 'Sedang Ditinjau',
+    label: 'In Review',
     className: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
     icon: 'eye',
   },
   [REQUEST_STATUSES.APPROVED]: {
-    label: 'Disetujui',
+    label: 'Approved',
     className: 'bg-green-100 text-green-800 hover:bg-green-100',
     icon: 'check-circle',
   },
   [REQUEST_STATUSES.REJECTED]: {
-    label: 'Ditolak',
+    label: 'Rejected',
     className: 'bg-red-100 text-red-800 hover:bg-red-100',
     icon: 'x-circle',
   },
   [REQUEST_STATUSES.ONGOING]: {
-    label: 'Sedang Berlangsung',
+    label: 'Ongoing',
     className: 'bg-amber-100 text-amber-800 hover:bg-amber-100',
     icon: 'play',
   },
   [REQUEST_STATUSES.ON_HOLD]: {
-    label: 'Ditangguhkan',
+    label: 'On Hold',
     className: 'bg-orange-100 text-orange-800 hover:bg-orange-100',
     icon: 'pause-circle',
   },
   [REQUEST_STATUSES.DONE]: {
-    label: 'Selesai',
+    label: 'Done',
     className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100',
     icon: 'check-circle-2',
   },

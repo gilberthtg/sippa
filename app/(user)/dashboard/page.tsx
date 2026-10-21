@@ -4,7 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
+import { UserRecentActivity } from '@/components/requests/user-recent-activity';
+import { getUserDashboardStats, getUserRecentActivity } from '@/app/actions/requests';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 
 export default async function UserDashboardPage() {
   const session = await auth();
@@ -12,6 +16,14 @@ export default async function UserDashboardPage() {
   if (!session) {
     redirect('/login');
   }
+
+  const statsResult = await getUserDashboardStats();
+  const activityResult = await getUserRecentActivity(8);
+
+  const stats = statsResult.success && statsResult.data
+    ? statsResult.data
+    : { pending: 0, ongoing: 0, onHold: 0, completedThisMonth: 0, total: 0 };
+  const activities = activityResult.success && activityResult.data ? activityResult.data : [];
 
   return (
     <PageContainer>
@@ -23,34 +35,36 @@ export default async function UserDashboardPage() {
       <div className="grid gap-6 md:grid-cols-3 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+            <CardTitle className="text-sm font-medium">Menunggu Verifikasi</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.pending}</div>
             <p className="text-xs text-muted-foreground">
-              Menunggu verifikasi
+              Diajukan / ditinjau / disetujui
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+            <CardTitle className="text-sm font-medium">Sedang Berlangsung</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.ongoing}</div>
             <p className="text-xs text-muted-foreground">
-              Sedang dikerjakan
+              {stats.onHold > 0
+                ? `Dikerjakan oleh tim DevTI • ${stats.onHold} ditangguhkan`
+                : 'Dikerjakan oleh tim DevTI'}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium">Selesai Bulan Ini</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.completedThisMonth}</div>
             <p className="text-xs text-muted-foreground">
               Selesai bulan ini
             </p>
@@ -79,17 +93,7 @@ export default async function UserDashboardPage() {
         </CardContent>
       </Card>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>
-            Aktivitas terbaru Anda
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Belum ada aktivitas</p>
-        </CardContent>
-      </Card>
+      <UserRecentActivity activities={activities} />
     </PageContainer>
   );
 }

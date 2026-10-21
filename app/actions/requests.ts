@@ -408,6 +408,82 @@ export async function getRequestById(id: number) {
 }
 
 /**
+ * Get dashboard stats for the current user's own requests
+ * - pending: submitted + in_review + approved (belum mulai dikerjakan)
+ * - ongoing: pengerjaan berjalan
+ * - onHold: pengerjaan ditangguhkan
+ * - completedThisMonth: selesai bulan berjalan
+ */
+export async function getUserDashboardStats() {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const [stats] = await db
+      .select({
+        pending: sql<number>`SUM(CASE WHEN ${requests.status} IN ('submitted', 'in_review', 'approved') THEN 1 ELSE 0 END)`,
+        ongoing: sql<number>`SUM(CASE WHEN ${requests.status} = 'ongoing' THEN 1 ELSE 0 END)`,
+        onHold: sql<number>`SUM(CASE WHEN ${requests.status} = 'on_hold' THEN 1 ELSE 0 END)`,
+        completedThisMonth: sql<number>`SUM(CASE WHEN ${requests.status} = 'done' AND ${requests.completedAt} IS NOT NULL AND MONTH(${requests.completedAt}) = MONTH(CURRENT_DATE()) AND YEAR(${requests.completedAt}) = YEAR(CURRENT_DATE()) THEN 1 ELSE 0 END)`,
+        total: sql<number>`COUNT(*)`,
+      })
+      .from(requests)
+      .where(eq(requests.requesterId, session.user.id));
+
+    return {
+      success: true,
+      data: {
+        pending: Number(stats?.pending || 0),
+        ongoing: Number(stats?.ongoing || 0),
+        onHold: Number(stats?.onHold || 0),
+        completedThisMonth: Number(stats?.completedThisMonth || 0),
+        total: Number(stats?.total || 0),
+      },
+    };
+  } catch (error) {
+    console.error('Get user dashboard stats error:', error);
+    return { success: false, error: 'Gagal mengambil statistik dashboard' };
+  }
+}
+
+/**
+ * Get recent status-history activity across the current user's own requests
+ */
+export async function getUserRecentActivity(limit = 8) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const activities = await db
+      .select({
+        id: requestStatusHistories.id,
+        requestId: requestStatusHistories.requestId,
+        requestNo: requests.requestNo,
+        requestTitle: requests.title,
+        fromStatus: requestStatusHistories.fromStatus,
+        toStatus: requestStatusHistories.toStatus,
+        changedByName: requestStatusHistories.changedByName,
+        note: requestStatusHistories.note,
+        createdAt: requestStatusHistories.createdAt,
+      })
+      .from(requestStatusHistories)
+      .innerJoin(requests, eq(requestStatusHistories.requestId, requests.id))
+      .where(eq(requests.requesterId, session.user.id))
+      .orderBy(desc(requestStatusHistories.createdAt))
+      .limit(limit);
+
+    return { success: true, data: activities };
+  } catch (error) {
+    console.error('Get user recent activity error:', error);
+    return { success: false, error: 'Gagal mengambil aktivitas terbaru' };
+  }
+}
+
+/**
  * Get list of applications for RFC dropdown
  * Returns all applications created from approved NEW_APPLICATION requests
  */

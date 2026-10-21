@@ -1,0 +1,297 @@
+﻿SIPPA UI COMPREHENSIVE CATALOG
+Generated: 2026-10-21
+
+================================================================================
+PAGES BY ROLE (28 Total)
+================================================================================
+
+USER ROLE (6 pages)
+- /login - Authentication
+- /dashboard - User dashboard with stats
+- /requests/new - Create request (single-page conditional form)
+- /requests - User request list (DevTI Request)
+- /requests/[id] - Request detail with tabs
+- /notifications - User notifications
+
+ADMIN ROLE (17 pages)
+- /admin/dashboard - Admin dashboard with widgets
+- /admin/requests - Request list with advanced filters
+- /admin/requests/[id] - Request detail + admin actions
+- /admin/reports/laptri - Quarterly report
+- /admin/reports/sla - SLA achievement report
+- /admin/settings - Settings hub (10 master data sections)
+- /admin/settings/users - User management CRUD
+- /admin/settings/units - Units CRUD
+- /admin/settings/priorities - Priority levels CRUD
+- /admin/settings/developer-roles - Developer roles (SA/TW/BE/FE/QA/DM)
+- /admin/settings/sla-policies - SLA policies CRUD
+- /admin/settings/applications - Application master (read-only)
+- /admin/settings/sla-holidays - Holiday calendar CRUD + bulk import
+- /admin/settings/document-types - Document types CRUD
+- /admin/settings/service-document-types - Service doc type mappings
+- /admin/settings/audit-logs - Audit logs viewer with filters
+- /admin/notifications - Admin notifications
+
+DEVELOPER ROLE (5 pages)
+- /developer/dashboard - Developer dashboard with stats
+- /developer/assignments - My assignments (request list)
+- /developer/requests - DevTI Request (alt view)
+- /developer/requests/[id] - Request detail with team info
+- /developer/notifications - Developer notifications
+
+================================================================================
+FORMS & FORM FIELDS
+================================================================================
+
+REQUEST SUBMISSION FORM (Single-page, request-form-single.tsx)
+- Radio: NEW_APPLICATION vs RFC
+- NEW_APPLICATION fields:
+  * Title (required, min 3-max 255 chars)
+  * Description (required, min 20 chars, textarea)
+  * Urgency (required, dropdown: LOW/MEDIUM/HIGH)
+  * Requester Phone (optional, tel)
+  * Business Need (optional, textarea)
+  * Objective (optional, textarea)
+  * Expected Output (optional, textarea)
+  * Version (auto 1.0.0, read-only)
+  * Dokumen Permintaan Aplikasi (optional, file, 10MB)
+
+- RFC fields:
+  * Application (required, dropdown)
+  * Requested Version (required, semantic x.y.z, must be > current)
+  * Description (required, min 20 chars)
+  * Urgency (required, dropdown)
+  * [same as NEW_APPLICATION for other fields]
+
+LOGIN FORM (app/(auth)/login/page.tsx)
+- Email (required, email input)
+- Password (required, password input with show/hide)
+- Error alert for invalid credentials
+
+TEAM ASSIGNMENT FORM (team-assignment-dialog.tsx)
+- DevTI Urusan (required, dropdown: units)
+- Ketua Tim (optional, dropdown: all users)
+- Technical Writer (required, dropdown: TW role only)
+- Assign Developers (required, multi-select with role badges)
+  * Min 1 developer required
+  * Deduplication: if dev selected as TL/TW, removed from dev list
+  * Grouped by role (SA, TW, BE, FE, QA, DM)
+- Catatan (optional, textarea)
+
+================================================================================
+DIALOGS & MODALS (24 Total)
+================================================================================
+
+ADMIN DIALOGS (6)
+1. VerifyDialog - Verify request (SUBMITTED to IN_REVIEW)
+2. ApproveDialog - Approve request (IN_REVIEW to APPROVED)
+3. RejectDialog - Reject with reason (IN_REVIEW to REJECTED)
+4. TeamAssignmentDialog - Assign team (APPROVED to ONGOING)
+5. OnHoldDialog - Hold with reason (ONGOING to ON_HOLD)
+6. CompleteDialog - Complete request (ONGOING to DONE)
+
+DEVELOPER DIALOGS (3)
+7. StartRequestDialog - Start work (APPROVED to ONGOING)
+8. UpdateProgressDialog - Update progress and notes
+9. CompleteRequestDialog - Complete request (ONGOING to DONE)
+
+SETTINGS DIALOGS (8)
+10. CreateUserDialog
+11. EditUserDialog
+12. ChangePasswordDialog
+13. DeactivateUserDialog
+14. DeveloperRoleDialog
+15. CreateSLAPolicyDialog
+16. EditSLAPolicyDialog
+17. SLAHolidayDialog
+18. SLAHolidayBulkDialog
+
+SHARED DIALOGS (7)
+19. ApplicationHistoryDialog
+20. AuditLogDetailDialog
+21. ConfirmDialog
+22. MasterDataDialog
+23. DocumentTypeDialog
+24. RequestDocumentUploadDialog
+
+================================================================================
+TABLES (11 Total)
+================================================================================
+
+1. RequestTable (User List) - Columns: No. Request, Tipe, Judul, Status, Prioritas, Tanggal, Aksi
+2. AdminRequestTable (Admin List) - Columns: No. Request, Tipe, Judul, Status, Prioritas, DevTI Urusan, Ketua Tim, Tanggal, Aksi
+3. DeveloperRequestTable - Columns: No. Request, Tipe, Judul, Status, My Role, Prioritas, Urgency, Tanggal, Aksi
+4. LaptriTable (Quarterly Report) - Columns: No. Request, Type, Title, Status, Submitted, Completed, Duration, Developer Roles
+5. SLATable (SLA Report) - Columns: No. Request, Type, Priority, Submitted, Completed, Target (BD), Actual (BD), SLA Met
+6. UserTable - Columns: Name, Email, Role, Unit, Dev Role, Status, Actions
+7. MasterDataTable - Columns: Code, Name, Status, Actions
+8. SLAPolicyTable - Columns: Request Type, Priority, Target Business Days, Status, Actions
+9. DeveloperRoleTable - Columns: Code, Name, Description, Status, Sort Order, Actions
+10. SLAHolidayTable - Columns: Holiday Date, Description, Status, Actions
+11. AuditLogTable - Columns: Date/Time, Actor, Module, Entity Type, Action, Status, Actions
+
+================================================================================
+STATUS VALUES (7 Statuses with Badges)
+================================================================================
+
+SUBMITTED (Diajukan) - Gray badge, clock icon
+IN_REVIEW (Sedang Ditinjau) - Blue badge, eye icon
+APPROVED (Disetujui) - Green badge, check-circle icon
+REJECTED (Ditolak) - Red badge, x-circle icon
+ONGOING (Sedang Berlangsung) - Amber badge, play icon
+ON_HOLD (Ditangguhkan) - Orange badge, pause-circle icon
+DONE (Selesai) - Emerald badge, check-circle-2 icon (FINAL STATUS)
+
+================================================================================
+STATUS TRANSITIONS (Server-Validated)
+================================================================================
+
+SUBMITTED -> IN_REVIEW (Verify action)
+IN_REVIEW -> APPROVED (Approve action, app master auto-created for NEW_APPLICATION)
+IN_REVIEW -> REJECTED (Reject with reason)
+APPROVED -> ONGOING (Assign Team action)
+ONGOING -> ON_HOLD (Hold with reason, SLA paused)
+ON_HOLD -> ONGOING (Resume action, pause accumulated)
+ONGOING -> DONE (Complete action, SLA calculated, FINAL)
+REJECTED -> SUBMITTED (User resubmit only)
+
+================================================================================
+REQUEST TYPES (2)
+================================================================================
+
+NEW_APPLICATION
+- Version: Auto 1.0.0 (read-only)
+- On Approval: request_applications entry auto-created
+- Fields: Title, Description, Urgency, Phone, Business Need, Objective, Expected Output, File
+
+RFC (Request for Change)
+- Version: User specifies, must be > current_version
+- On Completion: Application master current_version updated
+- Fields: Application, Requested Version, Description, Urgency, Phone, Business Need, Objective, Expected Output, File
+
+================================================================================
+DEVELOPER ROLES (6 - Color-Coded)
+================================================================================
+
+SA (System Analyst) - Purple
+TW (Technical Writer) - Blue
+BE (Back End Developer) - Green
+FE (Front End Developer) - Yellow
+QA (Quality Assurance) - Red
+DM (Data Management) - Indigo
+
+================================================================================
+URGENCY LEVELS (3)
+================================================================================
+
+LOW
+MEDIUM
+HIGH
+
+================================================================================
+NOTIFICATION EVENTS (9 Types)
+================================================================================
+
+REQUEST_SUBMITTED -> All admins
+REQUEST_IN_REVIEW -> Requester
+REQUEST_APPROVED -> Requester
+REQUEST_REJECTED -> Requester
+DEVELOPER_ASSIGNED -> Developers + TL + TW + Requester
+PROGRESS_UPDATED -> Requester
+REQUEST_ON_HOLD -> Requester + Team + Admins
+REQUEST_RESUMED -> Requester + Team + Admins
+REQUEST_COMPLETED -> Requester + Team + All Admins
+
+================================================================================
+FILE UPLOAD SPECIFICATIONS
+================================================================================
+
+Allowed Types: .pdf, .doc, .docx, .xls, .xlsx, .png, .jpg, .jpeg
+Max Size: 10 MB per file
+Max Count: 1 file per document type
+Upload Location: Request form (Dokumen Permintaan Aplikasi) and detail page (Dokumen tab)
+Validation: MIME type check (server-side)
+
+================================================================================
+FILTERS & SEARCH (9 Systems)
+================================================================================
+
+1. RequestFilters (User) - Button group: Semua, Diajukan, Sedang Ditinjau, Disetujui, Sedang Berlangsung, Ditangguhkan, Selesai, Ditolak
+2. AdminRequestFilters - Status (multi), Priority (multi), Request Type
+3. DeveloperRequestFilters - Status (multi), My Role (multi), Priority (multi)
+4. LaptriFilters - Year, Quarter (Q1-Q4), Request Type
+5. SLAFilters - Year, Request Type, Priority (multi), SLA Status
+6. UserFilters - Role, Unit, Status
+7. MasterDataFilters - Status, Search
+8. SLAHolidayFilters - Year, Status
+9. AuditLogFilters - Date Range, Module, Action, User
+
+================================================================================
+NAVIGATION MENU BY ROLE
+================================================================================
+
+USER MENU:
+- Dashboard
+- Requests (Request Baru, DevTI Request)
+- Notifications (bell icon)
+- User Menu (logout)
+
+ADMIN MENU:
+- Dashboard
+- Requests (DevTI Request)
+- Reports (Laptri, Pencapaian SLA)
+- Administration (Settings)
+- Notifications
+- User Menu
+
+DEVELOPER MENU:
+- Dashboard
+- Requests (My Assignment, DevTI Request)
+- Notifications
+- User Menu
+
+================================================================================
+RESPONSIVE DESIGN
+================================================================================
+
+Desktop (1024px+): Sidebar visible, 3-column grids, full tables
+Tablet (768-1023px): Collapsible sidebar, 2-column grids
+Mobile (<768px): Drawer nav, single column, stacked inputs
+
+================================================================================
+PAGINATION & SORTING
+================================================================================
+
+Default Limit: 20 items per page
+Sort Options: By date (desc default), status, priority, type, name
+URL Params: ?page=1&limit=20&sortBy=submittedAt&sortOrder=desc
+
+================================================================================
+ACCESSIBILITY
+================================================================================
+
+Keyboard navigation: Tab, Enter, Escape
+Focus states: ring-2 ring-ring/50
+Semantic HTML: nav, main, header, section
+Labels: For all form fields
+ARIA: aria-current page, aria-describedby for errors
+Color contrast: WCAG AA (4.5:1)
+Focus trap: In modals/dialogs
+
+================================================================================
+SUMMARY
+================================================================================
+
+Total Pages: 28 (6 User, 17 Admin, 5 Developer)
+Total Dialogs: 24
+Total Tables: 11
+Total Filters: 9
+Status Values: 7
+Request Types: 2
+Developer Roles: 6
+Notification Types: 9
+Urgency Levels: 3
+
+Document Version: 1.0
+Generated: 2026-10-21
+Codebase Status: Production (Phase 1-8 complete)

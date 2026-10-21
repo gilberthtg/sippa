@@ -2,8 +2,8 @@
 
 import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
-import { requests, requestTeamAssignments, requestProgress, requestStatusHistories, users, priorities, units, developerRoles } from '@/lib/db/schema';
-import { eq, and, or, desc, sql, inArray, aliasedTable } from 'drizzle-orm';
+import { requests, requestTeamAssignments, requestProgress, requestStatusHistories, users, priorities, units, devteamUnits, developerRoles } from '@/lib/db/schema';
+import { eq, and, or, desc, sql, inArray } from 'drizzle-orm';
 import { logAudit } from '@/lib/utils/audit';
 import { AUDIT_MODULES, AUDIT_ACTIONS, REQUEST_STATUSES, ROLES } from '@/lib/constants';
 import { validateTransitionWithContext } from '@/lib/validations/status-transitions';
@@ -260,8 +260,6 @@ export async function getRequestByIdDeveloper(requestId: number) {
       return { success: false, error: 'Request tidak di-assign ke Anda' };
     }
 
-    const devtiUnit = aliasedTable(units, 'devti_unit');
-
     const [request] = await db
       .select({
         id: requests.id,
@@ -287,7 +285,7 @@ export async function getRequestByIdDeveloper(requestId: number) {
         unitId: requests.requesterUnitId,
         unitName: units.name,
         rejectionNote: requests.rejectionNote,
-        devtiUrusan: devtiUnit.name,
+        devtiUrusan: devteamUnits.name,
         teamLeaderId: requests.teamLeaderId,
         technicalWriterId: requests.technicalWriterId,
       })
@@ -295,7 +293,7 @@ export async function getRequestByIdDeveloper(requestId: number) {
       .leftJoin(priorities, eq(requests.priorityId, priorities.id))
       .leftJoin(users, eq(requests.requesterId, users.id))
       .leftJoin(units, eq(requests.requesterUnitId, units.id))
-      .leftJoin(devtiUnit, eq(requests.devtiUrusanId, devtiUnit.id))
+      .leftJoin(devteamUnits, eq(requests.devtiUrusanId, devteamUnits.id))
       .where(eq(requests.id, requestId))
       .limit(1);
 

@@ -81,6 +81,7 @@ Format:
 ## ADR-0010 — Seed Data Strategy
 - Status: Confirmed
 - Date: 2026-09-23
+- Update: 2026-10-21 — seed contents replaced with 5 real user requests (renumbered ids 181-185 → 1-5; devtiUrusanId old units id 10 → 2 per ADR-0020) including their full documents/progress/status-histories/assignments and an extra application master (id 7). See SESSION_LOG 2026-10-21.
 - Decision: Development-only seed with 20-30 diverse requests
 - Reason: Comprehensive testing coverage without production data mixing
 - Impact: Seed script includes 8 SLA policies and 25 completed requests spanning all quarters of 2026
@@ -193,3 +194,10 @@ Format:
 - Decision: Implement workflow tests with jest + mocked drizzle DB (`__/tests__/actions/__helpers__/mock-db.ts`) instead of a live DB/testcontainers. DB interactions rely on a FIFO select-queue keyed by table; updates/inserts are recorded for assertions. Server actions remain the integration boundary (auth, audit, notifications, SLA utils are module mocks).
 - Reason: Fast, dependency-free CI tests covering transition validation wiring, permission gating, notification triggers and history writes of `admin-requests.ts` / `request-hold.ts` without a running MySQL instance.
 - Impact: `jest.config.js` gains `testPathIgnorePatterns: ['/node_modules/', '/__helpers__/']`. New suites: `__tests__/actions/request-status-transitions.test.ts` (transition matrix) and `__tests__/actions/request-admin-workflows.test.ts` (action flows, 202 total tests with previous suites). Select-queue tests are order-sensitive: any action query-order change requires updating queues.
+
+## ADR-0020 — DevTI Urusan references devteam_units (not units)
+- Status: Confirmed
+- Date: 2026-10-21
+- Decision: `requests.devti_urusan_id` FK moved from `units` to `devteam_units`. Admin team-assignment dialog, `assignTeamToRequest` validation, request detail fetch (admin + developer) and seed data now use `devteam_units` (via new `getDevteamUnits()` action); `units` remains the requester organizational unit master. Values not present in `devteam_units` are set to NULL by migration 0005 (column is NULLABLE; no invented units→urusan mapping).
+- Reason: DevTI Urusan is a DevTI-specific urusan master (`URUSAN PENGEMBANGAN ...`), not an organizational unit of the requester; reusing `units` conflated the two masters (completes the plan from the devteam_units master-data session).
+- Impact: Migration `db/migrations/0005_devti_urusan_to_devteam_units.sql` (forward-only; FK constraint name differs per environment — drizzle-kit name used locally). `lib/db/schema/requests.ts` now imports `devteam_units`. Seed requests carry `devtiUrusanId` cycling 1-3.

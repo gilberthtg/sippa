@@ -56,13 +56,13 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  submitted: 'Diajukan',
-  in_review: 'Sedang Ditinjau',
-  approved: 'Disetujui',
-  rejected: 'Ditolak',
-  ongoing: 'Sedang Berlangsung',
-  on_hold: 'Ditangguhkan',
-  done: 'Selesai',
+  submitted: 'Submitted',
+  in_review: 'In Review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  ongoing: 'Ongoing',
+  on_hold: 'On Hold',
+  done: 'Done'
 };
 
 export function ApplicationHistoryDialog({ applicationId, open, onOpenChange }: Props) {

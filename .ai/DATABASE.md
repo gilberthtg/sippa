@@ -89,7 +89,7 @@ This document describes the production database schema for SIPPA after the Phase
 - requester_unit_id (FK → units)
 - urgency (ENUM: LOW, MEDIUM, HIGH)
 - priority_id (FK → priorities, set by admin)
-- **devti_urusan_id** (FK → units, NULLABLE)
+- **devti_urusan_id** (FK → devteam_units, NULLABLE)
 - **technical_writer_id** (FK → users with developer_role=TW)
 - **team_leader_id** (FK → users, any role)
 - status (ENUM: SUBMITTED, IN_REVIEW, APPROVED, REJECTED, ONGOING, DONE, ON_HOLD)
@@ -255,6 +255,7 @@ developer_roles (1) ──< users (N)
 units (1) ──< users (N)
 users (1) ──< request_applications (N) [created_by]
 users (1) ──< requests (N) [requester_id, technical_writer_id, team_leader_id]
+devteam_units (1) ──< requests (N) [devti_urusan_id]
 request_applications (1) ──< requests (N) [application_id]
 requests (1) ──< request_team_assignments (N)
 requests (1) ──< request_status_histories (N)
@@ -289,6 +290,9 @@ priorities (1) ──< sla_policies (N)
 - **Phase 1 (2026-10-06):** Updated sla_policies (target_hours → target_business_days)
 - **Phase 7 (2026-10-08):** Data migration from old structure to new
 - **Phase 7 (2026-10-08):** Removed teams, team_members, old request_assignments
+- **2026-10-19:** `requests.devti_urusan` (varchar) → `requests.devti_urusan_id` (int FK → units)
+- **2026-10-21:** `devteam_units` table created (DevTI Urusan master, FK on requests not yet moved)
+- **2026-10-21:** `requests.devti_urusan_id` FK moved: units → devteam_units (migration 0005; old units-based values not present in devteam_units set to NULL)
 
 ## Database Statistics (Estimated)
 
@@ -309,7 +313,18 @@ priorities (1) ──< sla_policies (N)
 
 ## New Tables (Document Management)
 
-### document_types
+### devteam_units (NEW)
+- id (PK, int, auto)
+- name (varchar 200, NOT NULL)
+- is_active (boolean, default true)
+- created_at
+- updated_at
+
+**Purpose:** Master data for DevTI Urusan (urusan pengembangan) — separate from organizational units.
+**Seed Data:**
+1. URUSAN PENGEMBANGAN PRODUK TI AKADEMIK
+2. URUSAN PENGEMBANGAN PRODUK TI NON-AKADEMIK
+3. URUSAN PENGEMBANGAN TI STRATEGIS
 - id (PK, smallint, auto)
 - name (varchar 200, UNIQUE)
 - sort_order (smallint, default 0)

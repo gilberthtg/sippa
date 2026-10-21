@@ -94,6 +94,11 @@ export function NotificationListClient({
     });
   };
 
+  const formatLabel = (value: string) =>
+    value
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+
   const handleFilterChange = (filter: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (filter === 'all') {
@@ -172,7 +177,7 @@ export function NotificationListClient({
                       <div className="flex shrink-0 items-center gap-2">
                         {!item.isRead && <div className="h-2 w-2 rounded-full bg-primary" />}
                         <Badge variant="outline" className="text-xs">
-                          {typeLabels[item.type] || item.type}
+                          {typeLabels[item.type] || formatLabel(item.type)}
                         </Badge>
                       </div>
                     </div>

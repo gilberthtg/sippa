@@ -3,10 +3,10 @@ import { redirect } from 'next/navigation';
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Building2, Flag, Target, Shield, Code2, Package, CalendarOff, FileText, Files } from 'lucide-react';
+import { Users, Building2, Flag, Target, Shield, Code2, Package, CalendarOff, FileText, Files, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/db';
-import { users, units, priorities, slaPolicies, auditLogs, developerRoles, requestApplications, slaHolidays, documentTypes, serviceDocumentTypes } from '@/lib/db/schema';
+import { users, units, priorities, slaPolicies, auditLogs, developerRoles, requestApplications, slaHolidays, documentTypes, serviceDocumentTypes, devteamUnits } from '@/lib/db/schema';
 import { count, eq, gte } from 'drizzle-orm';
 
 async function getSettingsStats() {
@@ -32,6 +32,7 @@ async function getSettingsStats() {
     currentYearHolidays,
     totalDocumentTypes,
     totalServiceDocumentTypes,
+    totalDevteamUnits,
   ] = await Promise.all([
     db.select({ count: count() }).from(users),
     db.select({ count: count() }).from(users).where(eq(users.isActive, true)),
@@ -49,6 +50,7 @@ async function getSettingsStats() {
     ),
     db.select({ count: count() }).from(documentTypes),
     db.select({ count: count() }).from(serviceDocumentTypes),
+    db.select({ count: count() }).from(devteamUnits),
   ]);
 
   return {
@@ -66,6 +68,7 @@ async function getSettingsStats() {
     currentYearHolidays: currentYearHolidays[0].count,
     totalDocumentTypes: totalDocumentTypes[0].count,
     totalServiceDocumentTypes: totalServiceDocumentTypes[0].count,
+    totalDevteamUnits: totalDevteamUnits[0].count,
   };
 }
 
@@ -94,6 +97,13 @@ export default async function SettingsPage() {
       icon: Building2,
       href: '/admin/settings/units',
       stats: [{ label: 'Total Units', value: stats.totalUnits }],
+    },
+    {
+      title: 'DevTeam Units',
+      description: 'Manage DevTI urusan for team assignment',
+      icon: Briefcase,
+      href: '/admin/settings/devteam-units',
+      stats: [{ label: 'Total Urusan', value: stats.totalDevteamUnits }],
     },
     {
       title: 'Priorities',

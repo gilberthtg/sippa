@@ -1,5 +1,93 @@
 # SiPPA AI Session Log
 
+## 2026-10-22 — Fix: User dashboard (/dashboard) menampilkan angka hardcoded & aktivitas statis
+
+- Goal: Halaman dashboard User menampilkan kartu penghitung yang di-hardcode "0" dan blok "Recent Activity" selalu "Belum ada aktivitas". Buat fungsional: jumlah pending / berlangsung / selesai + aktivitas terbaru milik user.
+- Root cause: `app/(user)/dashboard/page.tsx` murni komponen statis — tidak memanggil server action apa pun (tidak ada `getUserDashboardStats`/`getUserRecentActivity`; `getUserStats` milik user-management bersifat admin-only).
+- Changes made:
+  - `app/actions/requests.ts`: tambah 2 server action (pattern sama dengan getRequestsByUserId — auth via session, try/catch, pesan error Indonesia):
+    - `getUserDashboardStats()`: 1 aggregate query atas requests milik `requesterId` = session user → `{ pending (submitted+in_review+approved), ongoing, onHold, completedThisMonth (done + MONTH/YEAR(completed_at) = bulan berjalan), total }`.
+    - `getUserRecentActivity(limit = 8)`: status histories dari request milik user (INNER JOIN requests, filter requesterId, ORDER BY createdAt DESC) → `{ id, requestId, requestNo, requestTitle, fromStatus, toStatus, changedByName, note, createdAt }`.
+  - `components/requests/user-recent-activity.tsx` (BARU): server component card "Aktivitas Terbaru" — baris tiap event berisi requestNo, transisi status pakai `StatusBadge` (dengan ikon, konsisten 7-status workflow) via `ArrowRight`, judul permintaan, note opsional,nama pengubah + waktu relatif (date-fns id-ID); link ke `/requests/[id]`; empty state "Belum ada aktivitas".
+  - `app/(user)/dashboard/page.tsx`: fetch kedua action (fallback zeros/list kosong saat gagal), 3 kartu kini real data dengan label Indonesia (Menunggu Verifikasi / Sedang Berlangsung / Selesai Bulan Ini); kartu Sedang Berlangsung menambahkan "• N ditangguhkan" bila onHold > 0 (on_hold tetap terlihat tanpa mengubah 3 kartu); blok Aktivitas Terbaru diganti `UserRecentActivity`; tambah `export const dynamic = 'force-dynamic'` (sesuai pattern halaman auth-enabled lain).
+- Files changed: app/actions/requests.ts, app/(user)/dashboard/page.tsx, components/requests/user-recent-activity.tsx (new), .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Build: SUCCESS (`npm run build`)
+  - ✅ Lint: file baru & page bersih; 2 error `no-explicit-any` pada requests.ts lines 29/88 pre-existing (terverifikasi via `git stash` — sama pada HEAD)
+  - ✅ SQL stats & activity diverifikasi langsung ke DB lokal: requester_id 2 → pending=1, ongoing=2, on_hold=0, completed_this_month=2, total=6; aktivitas terbaru HEAD interaction membalik urutan (on_hold/ongoing loop request 5)
+- Open questions:
+  - (None) — definisi kategori kartu mengikuti rencana yang dikonfirmasi user: pending = SUBMITTED+IN_REVIEW+APPROVED; in-progress = ONGOING; completed = DONE bulan berjalan.
+- Next recommended step: Manual test login sebagai user pemilik seeded requests → `/dashboard` → cek 3 kartu (1/2/2 utk requester id 2) dan daftar aktivitas terbaru berfungsi link ke detail.
+
+## 2026-10-21 — Seed data diganti: 5 request asli menggantikan 25 requestDummy
+
+- Goal: Ganti isi `db:seed` dari 25 requestdummy (laporan/SLA test) menjadi 5 request riil beserta seluruh jejak workflow-nya (dokumen, progress, history, assignment, application master tambahan).
+- Sumber data: dump INSERT dari DB lokal (request id 181-185 + tabel turunannya) yang diberikan user.
+- Transformasi (sesuai konfirmasi user):
+  - Request renumbered 181-185 → 1-5; semua FK anak (documents/progress/histories/assignments) ikut dipetakan.
+  - `devti_urusan_id` 10 (DIREKTORAT ASET DAN SUSTAINABILITY, units) → 2 (URUSAN PENGEMBANGAN PRODUK TI NON-AKADEMIK, devteam_units). Nilai 2 tetap 2. Semua request non-null kini urusan 2.
+  - Note history "- DevTI Urusan: ..." dinormalisasi ke nama urusan terpetakan agar konsisten dengan FK (teks asli masih menyebut DIREKTORAT ...).
+  - `requester_unit_id` dipertahankan (unit organisasi pemohon); semua timestamp dipertahankan apa adanya; `request_no` asli dipertahankan (REQ-20261020-001 … REQ-20261021-004).
+  - `request_applications` id 7 ('Lorem ipsum dolor sit amet.') ikut disemai (id 6 tidak ada di dump, dilewati).
+- Changes made: `lib/db/seed.ts` — blok "Seed Completed Requests for Testing Reports" (loop 25 request) diganti tulisan data riil: 1 application, 5 requests, 9 request_documents, 5 request_progress, 28 request_status_histories, 23 request_team_assignments; pesan summary akhir diperbarui.
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Lint seed: hanya warning pre-existing ('e' unused)
+  - ✅ Build: SUCCESS (`npm run build`)
+  - ✅ `npm run db:seed` reproducible: 5/9/5/28/23 rows, 6 applications; 0 orphan pada semua tabel child; devti_urusan_id {2, NULL} valid terhadap FK devteam_units.
+  - Catatan: jumlah dokumen riil = 9 (bukan 10 — hitung ulang dump).
+- Open questions:
+  - (None) — jika dump berubah, edit literal data di `lib/db/seed.ts` blok "Seed Real User Requests".
+
+## 2026-10-21 — FK devti_urusan_id dipindah units → devteam_units (multi-page)
+
+- Goal: Menuntaskan open question sesi sebelumnya — `requests.devti_urusan_id` tidak lagi menunjuk `units`, tapi `devteam_units`; semua halaman/aksi yang memakai DevTI Urusan kini membaca dari master urusan.
+- Changes made:
+  - Migration `db/migrations/0005_devti_urusan_to_devteam_units.sql` (NEW, forward-only):
+    1. UPDATE NULL untuk nilai `devti_urusan_id` yang tidak ada di `devteam_units` (kolom nullable; tidak ada mapping bisnis units→urusan yang terdokumentasi),
+    2. DROP FK lama ke `units` (nama constraint drizzle-kit: `requests_devti_urusan_id_units_id_fk`; varian manual 0002: `fk_requests_devti_urusan` — catatan ada di file),
+    3. ADD CONSTRAINT `fk_requests_devti_urusan_devteam` → `devteam_units(id)` (memakai index `devti_urusan_id_idx` yang sudah ada).
+  - `lib/db/schema/requests.ts`: `devtiUrusanId` kini `.references(() => devteamUnits.id)` (+import).
+  - `app/actions/admin-requests.ts`: fetch nama DevTI urusan di detail request & validasi di `assignTeamToRequest` memakai `devteamUnits`; error message "Unit tidak ditemukan" → "DevTI Urusan tidak ditemukan"; JSDoc & audit log field (`unitName` → `devteamUnitName`); NEW `getDevteamUnits()` (aktif saja, order name, bentuk `{success, data}` — paralel dengan `getUnits()` yang tetap dipakai untuk unit organisasi).
+  - `app/actions/developer-requests.ts`: leftJoin `devteamUnits` untuk `devtiUrusan` (alias `aliasedTable(units)` dihapus bersama import-nya karena kini tabel beda).
+  - `components/admin/team-assignment-dialog.tsx`: dropdown DevTI Urusan beralih `getUnits()` → `getDevteamUnits()`; state direname `units`→`devteamUnits`, `selectedUnit`→`selectedDevteamUnit`; render tanpa kolom `code` (devteam_units hanya id/name).
+  - `lib/db/seed.ts`: request seed kini membawa `devtiUrusanId: (req.no % 3) + 1` (siklus 1-3); BUG pre-existing diperbaiki — cleanup seed tidak menghapus `request_documents` sehingga `db:seed` gagal FK 1451 → ditambah `db.delete(requestDocuments)`.
+  - DB lokal: migration 0005 applied via mysql CLI, lalu `npm run db:seed` ulang.
+- Files changed: db/migrations/0005_devti_urusan_to_devteam_units.sql, lib/db/schema/requests.ts, app/actions/admin-requests.ts, app/actions/developer-requests.ts, components/admin/team-assignment-dialog.tsx, lib/db/seed.ts, .ai/DATABASE.md, .ai/BUSINESS_RULES.md, .ai/DECISIONS.md, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Lint: 2 error `react-hooks/set-state-in-effect` di team-assignment-dialog adalah pre-existing (terverifikasi via git stash, ada di HEAD); warning lain juga pre-existing.
+  - ✅ Build: SUCCESS (`npm run build`)
+  - ✅ DB: FK `fk_requests_devti_urusan_devteam` → devteam_units terverifikasi via information_schema; data seed 25 request terdistribusi 8/9/8 di urusan 1-3, 0 orphan.
+  - Halaman yang membaca `devtiUrusan` (admin/requests/[id], developer/requests/[id], request-admin-actions, team-info-card) tidak perlu diubah — konsumen string nama, otomatis ikut.
+  - `app/actions/master-data.ts` punya `getDevteamUnits` versi list paginasi untuk CRUD settings (bentuk beda dari versi actions admin) — keduanya memang kebutuhan berbeda.
+- Open questions:
+  - (None)
+
+## 2026-10-21 — Feature: Master data DevTeam Units (tabel + CRUD di admin settings)
+
+- Goal: Pisahkan konsep "DevTI Urusan" dari master units (unit organisasi pemohon). Buat tabel `devteam_units` + seed 3 urusan, lalu CRUD-nya di admin settings.
+- Changes made:
+  - Database (tahap 1, additive only — tidak mengubah data/FK existing):
+    - `lib/db/schema/devteam-units.ts` (NEW): tabel `devteam_units` (id, name, is_active, created_at, updated_at) — tanpa kolom `code`.
+    - `lib/db/schema/index.ts`: export tabel baru.
+    - `db/migrations/0004_devteam_units.sql` (NEW): CREATE TABLE + INSERT 3 seed (Urusan Pengembangan Produk TI Akademik / Non-Akademik / TI Strategis).
+    - `lib/db/seed.ts`: seed `devteamUnits` (onDuplicateKeyUpdate by name).
+  - CRUD admin settings:
+    - `app/actions/master-data.ts`: tambah `getDevteamUnits` (search by name, filter isActive, pagination limit 20, order by name asc), `createDevteamUnit`, `updateDevteamUnit` (duplikat-name check), `toggleDevteamUnitActive`, `deleteDevteamUnit` (usage check terhadap `requests.devti_urusan_id` — efektif setelah FK dipindah ke devteam_units).
+    - `app/(admin)/admin/settings/devteam-units/page.tsx` (NEW): admin-only, searchParams page/search/isActive, force-dynamic.
+    - `components/settings/devteam-units/devteam-unit-list-client.tsx` (NEW): tabel (Name/Status/Created/Actions), edit, toggle active, delete dengan ConfirmDialog, pagination.
+    - `components/settings/devteam-units/devteam-unit-dialog.tsx` (NEW): form name (Zod + RHF), switch isActive saat edit.
+    - `components/settings/master-data/master-data-search.tsx`: type union ditambah `'devteam-units'`, placeholder "Search by name...".
+    - `app/(admin)/admin/settings/page.tsx`: card "DevTeam Units" (icon Briefcase) setelah card Units, stat Total Urusan.
+- Files changed: lib/db/schema/devteam-units.ts, lib/db/schema/index.ts, db/migrations/0004_devteam_units.sql, lib/db/seed.ts, app/actions/master-data.ts, app/(admin)/admin/settings/devteam-units/page.tsx, components/settings/devteam-units/*, components/settings/master-data/master-data-search.tsx, app/(admin)/admin/settings/page.tsx, .ai/DATABASE.md, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Lint: PASSED (0 error; warning pre-existing tidak terkait)
+- Open questions:
+  - FK `requests.devti_urusan_id` masih menunjuk `units` — rencana tahap berikutnya: pindahkan FK ke `devteam_units` + update `getUnits()`/`assignTeamToRequest()`/`team-assignment-dialog` agar dropdown DevTI Urusan memakai `devteam_units`. [NEEDS_DECISION timing]
+
 ## 2026-10-20 — Fix: Filter jenis/prioritas/status tidak memengaruhi summary report SLA
 
 - Goal: Perbaiki halaman `/admin/reports/sla` — filter Jenis, Prioritas, dan Status SLA mengubah URL tapi summary (kartu metrics, chart, monthly trend, role metrics) tidak berubah; hanya tabel detail yang terfilter.

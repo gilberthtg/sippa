@@ -1,6 +1,7 @@
 import { mysqlTable, varchar, text, timestamp, int, smallint, bigint, boolean, mysqlEnum, index, tinyint } from 'drizzle-orm/mysql-core';
 import { users } from './users';
 import { units, priorities } from './master';
+import { devteamUnits } from './devteam-units';
 import { requestApplications } from './request-applications';
 import { developerRoles } from './developer-roles';
 
@@ -34,7 +35,7 @@ export const requests = mysqlTable('requests', {
   requesterPhone: varchar('requester_phone', { length: 50 }),
   
   // Admin assignment fields
-  devtiUrusanId: int('devti_urusan_id').references(() => units.id),
+  devtiUrusanId: int('devti_urusan_id').references(() => devteamUnits.id),
   technicalWriterId: int('technical_writer_id').references(() => users.id),
   teamLeaderId: int('team_leader_id').references(() => users.id),
   

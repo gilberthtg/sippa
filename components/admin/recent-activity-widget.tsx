@@ -26,13 +26,13 @@ interface RecentActivityWidgetProps {
 }
 
 const statusLabels: Record<string, string> = {
-  submitted: 'Diajukan',
-  in_review: 'Sedang Ditinjau',
-  approved: 'Disetujui',
-  rejected: 'Ditolak',
-  ongoing: 'Sedang Berlangsung',
-  on_hold: 'Ditangguhkan',
-  done: 'Selesai',
+  submitted: 'Submitted',
+  in_review: 'In Review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  ongoing: 'Ongoing',
+  on_hold: 'On Hold',
+  done: 'Done'
 };
 
 const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -65,7 +65,7 @@ export function RecentActivityWidget({ activities }: RecentActivityWidgetProps) 
         <CardTitle className="text-lg">Aktivitas Terbaru</CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[400px] pr-4">
+        <ScrollArea className="h-[500px] pr-4">
           <div className="space-y-4">
             {activities.map((activity) => (
               <Link

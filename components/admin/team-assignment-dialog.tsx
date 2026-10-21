@@ -27,7 +27,7 @@ import {
   getTeamLeaderOptions, 
   getTechnicalWriters, 
   getDeveloperRoles,
-  getUnits
+  getDevteamUnits
 } from '@/app/actions/admin-requests';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -84,17 +84,17 @@ export function TeamAssignmentDialog({
   const [technicalWriters, setTechnicalWriters] = useState<Developer[]>([]);
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [developerRoles, setDeveloperRoles] = useState<DeveloperRole[]>([]);
-  const [units, setUnits] = useState<Array<{ id: number; code: string; name: string }>>([]);
+  const [devteamUnits, setDevteamUnits] = useState<Array<{ id: number; name: string }>>([]);
 
   async function loadData() {
     setIsLoading(true);
     try {
-      const [leadersResult, writersResult, devsResult, rolesResult, unitsResult] = await Promise.all([
+      const [leadersResult, writersResult, devsResult, rolesResult, devteamUnitsResult] = await Promise.all([
         getTeamLeaderOptions(),
         getTechnicalWriters(),
         getDevelopersByRole(),
         getDeveloperRoles(),
-        getUnits(),
+        getDevteamUnits(),
       ]);
 
       if (leadersResult.success && leadersResult.data) {
@@ -113,8 +113,8 @@ export function TeamAssignmentDialog({
         setDeveloperRoles(rolesResult.data as DeveloperRole[]);
       }
 
-      if (unitsResult.success && unitsResult.data) {
-        setUnits(unitsResult.data as Array<{ id: number; code: string; name: string }>);
+      if (devteamUnitsResult.success && devteamUnitsResult.data) {
+        setDevteamUnits(devteamUnitsResult.data as Array<{ id: number; name: string }>);
       }
     } catch (error) {
       console.error('Load data error:', error);
@@ -232,7 +232,7 @@ export function TeamAssignmentDialog({
   };
 
   // Get selected data for preview
-  const selectedUnit = units.find(u => u.id.toString() === devtiUrusanId);
+  const selectedDevteamUnit = devteamUnits.find(u => u.id.toString() === devtiUrusanId);
   const selectedTeamLeader = teamLeaders.find(tl => tl.id.toString() === teamLeaderId);
   const selectedTechnicalWriter = technicalWriters.find(tw => tw.id.toString() === technicalWriterId);
   const selectedDevelopersList = developers.filter(d => selectedDevelopers.has(d.id));
@@ -281,17 +281,14 @@ export function TeamAssignmentDialog({
                 disabled={isPending}
               >
                 <SelectTrigger id="devti-urusan" className="w-full">
-                  <SelectValue placeholder="Pilih unit...">
-                    {selectedUnit ? `${selectedUnit.name} (${selectedUnit.code})` : 'Pilih unit...'}
+                  <SelectValue placeholder="Pilih DevTI Urusan...">
+                    {selectedDevteamUnit ? selectedDevteamUnit.name : 'Pilih DevTI Urusan...'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {units.map((u) => (
+                  {devteamUnits.map((u) => (
                     <SelectItem key={u.id} value={u.id.toString()}>
-                      <div className="flex flex-col py-1">
-                        <span className="font-medium">{u.name}</span>
-                        <span className="text-xs text-muted-foreground">{u.code}</span>
-                      </div>
+                      <span className="font-medium">{u.name}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -447,7 +444,7 @@ export function TeamAssignmentDialog({
                 
                 {devtiUrusanId && (
                   <p className="text-sm">
-                    <span className="text-muted-foreground">DevTI Urusan:</span> {selectedUnit?.name || ''}
+                    <span className="text-muted-foreground">DevTI Urusan:</span> {selectedDevteamUnit?.name || ''}
                   </p>
                 )}
                 

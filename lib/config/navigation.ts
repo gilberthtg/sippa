@@ -97,17 +97,17 @@ export const navigationConfig: NavSection[] = [
       },
     ],
   },
-  {
-    title: 'Administration',
-    items: [
-      {
-        label: 'Settings',
-        href: '/admin/settings',
-        icon: Settings,
-        roles: ['admin'],
-      },
-    ],
-  },
+  // {
+  //   title: 'Administration',
+  //   items: [
+  //     {
+  //       label: 'Settings',
+  //       href: '/admin/settings',
+  //       icon: Settings,
+  //       roles: ['admin'],
+  //     },
+  //   ],
+  // },
 ];
 
 export function getNavigationForRole(role: Role): NavSection[] {

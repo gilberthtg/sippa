@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
 import { db } from './index';
-import { roles, priorities, units, users, slaPolicies, requests, requestStatusHistories, requestTeamAssignments, requestProgress, requestAttachments, requestApplications, documentTypes, serviceDocumentTypes } from './schema';
+import { roles, priorities, units, users, slaPolicies, requests, requestStatusHistories, requestTeamAssignments, requestProgress, requestAttachments, requestApplications, requestDocuments, documentTypes, serviceDocumentTypes, devteamUnits } from './schema';
 import bcrypt from 'bcryptjs';
 import { sql } from 'drizzle-orm';
 
@@ -19,6 +19,7 @@ async function seed() {
   await db.delete(requestTeamAssignments).execute();
   await db.delete(requestStatusHistories).execute();
   await db.delete(requestAttachments).execute();
+  await db.delete(requestDocuments).execute();
 
   // Drop deprecated request_assignments table if exists
   try {
@@ -68,6 +69,14 @@ async function seed() {
       name: sql`VALUES(name)`,
     },
   });
+
+  // Seed DevTeam Units (DevTI Urusan)
+  console.log('  → Seeding devteam units...');
+  await db.insert(devteamUnits).values([
+    { id: 1, name: 'URUSAN PENGEMBANGAN PRODUK TI AKADEMIK' },
+    { id: 2, name: 'URUSAN PENGEMBANGAN PRODUK TI NON-AKADEMIK' },
+    { id: 3, name: 'URUSAN PENGEMBANGAN TI STRATEGIS' },
+  ]).onDuplicateKeyUpdate({ set: { name: sql`VALUES(name)` } });
 
   // Seed Document Types
   console.log('  → Seeding document types...');
@@ -316,189 +325,302 @@ async function seed() {
     // { requestType: 'rfc', priorityId: 4, targetBusinessDays: 1 },  // Critical: 1 day
   ]).onDuplicateKeyUpdate({ set: { targetBusinessDays: sql`VALUES(target_business_days)` } });
 
-  // Seed Completed Requests for Testing Reports
-  console.log('  → Seeding completed requests...');
+  // Seed Real User Requests (replaces generated test data)
+  console.log('  → Seeding real user requests...');
 
-  // Helper to create dates in 2026
-  const makeDate = (month: number, day: number, hour = 9) => new Date(2026, month - 1, day, hour, 0, 0);
+  // Long Lorem boilerplate used across request 1
+  const LOREM = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since 1966, when designers at Letraset and James Mosley, the librarian at St Bride Printing Library in London, took a 1914 Cicero translation and scrambled it to make dummy text for Letraset's Body Type sheets. It has survived not only many decades, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised thanks to these sheets and more recently with desktop publishing software like Aldus PageMaker and Microsoft Word including versions of Lorem Ipsum.";
 
-  const completedRequests = [
-    // Q1 2026 - 6 requests
-    { no: 1, type: 'new_application', priority: 2, unit: 2, month: 1, day: 15, duration: 110 }, // Met
-    { no: 2, type: 'rfc', priority: 1, unit: 3, month: 1, day: 28, duration: 90 }, // Met
-    { no: 3, type: 'new_application', priority: 3, unit: 4, month: 2, day: 10, duration: 80 }, // Exceeded
-    { no: 4, type: 'rfc', priority: 2, unit: 2, month: 2, day: 20, duration: 65 }, // Met
-    { no: 5, type: 'new_application', priority: 4, unit: 3, month: 3, day: 5, duration: 45 }, // Met
-    { no: 6, type: 'rfc', priority: 3, unit: 4, month: 3, day: 25, duration: 50 }, // Exceeded
+  // Application master created from an approved NEW_APPLICATION (original id 7 kept)
+  await db.insert(requestApplications).values({
+    id: 7,
+    applicationName: 'Lorem ipsum dolor sit amet.',
+    description: 'Lorem ipsum dolor sit amet consectetur, adipisicing elit. Eum tempora ullam impedit distinctio nisi natus recusandae laboriosam ipsum quam tempore!',
+    currentVersion: '1.0.0',
+    createdBy: 2, // John Doe
+    createdAt: new Date('2026-10-19T12:01:22'),
+    updatedAt: new Date('2026-10-19T12:01:22'),
+  }).onDuplicateKeyUpdate({ set: { applicationName: sql`VALUES(application_name)` } });
 
-    // Q2 2026 - 7 requests
-    { no: 7, type: 'new_application', priority: 1, unit: 2, month: 4, day: 8, duration: 160 }, // Met
-    { no: 8, type: 'rfc', priority: 2, unit: 3, month: 4, day: 18, duration: 70 }, // Met
-    { no: 9, type: 'new_application', priority: 3, unit: 4, month: 5, day: 5, duration: 68 }, // Met
-    { no: 10, type: 'rfc', priority: 4, unit: 2, month: 5, day: 15, duration: 22 }, // Met
-    { no: 11, type: 'new_application', priority: 2, unit: 3, month: 5, day: 28, duration: 130 }, // Exceeded
-    { no: 12, type: 'rfc', priority: 1, unit: 4, month: 6, day: 10, duration: 95 }, // Met
-    { no: 13, type: 'new_application', priority: 4, unit: 2, month: 6, day: 25, duration: 40 }, // Met
-
-    // Q3 2026 - 6 requests
-    { no: 14, type: 'rfc', priority: 3, unit: 3, month: 7, day: 8, duration: 55 }, // Exceeded
-    { no: 15, type: 'new_application', priority: 2, unit: 4, month: 7, day: 20, duration: 115 }, // Met
-    { no: 16, type: 'rfc', priority: 2, unit: 2, month: 8, day: 5, duration: 68 }, // Met
-    { no: 17, type: 'new_application', priority: 1, unit: 3, month: 8, day: 18, duration: 165 }, // Met
-    { no: 18, type: 'rfc', priority: 4, unit: 4, month: 9, day: 3, duration: 20 }, // Met
-    { no: 19, type: 'new_application', priority: 3, unit: 2, month: 9, day: 20, duration: 75 }, // Exceeded
-
-    // Q4 2026 - 6 requests (future dates but marked as completed for testing)
-    { no: 20, type: 'rfc', priority: 1, unit: 3, month: 10, day: 10, duration: 92 }, // Met
-    { no: 21, type: 'new_application', priority: 4, unit: 4, month: 10, day: 25, duration: 52 }, // Exceeded
-    { no: 22, type: 'rfc', priority: 2, unit: 2, month: 11, day: 8, duration: 70 }, // Met
-    { no: 23, type: 'new_application', priority: 3, unit: 3, month: 11, day: 20, duration: 70 }, // Met
-    { no: 24, type: 'rfc', priority: 3, unit: 4, month: 12, day: 5, duration: 46 }, // Met
-    { no: 25, type: 'new_application', priority: 1, unit: 2, month: 12, day: 20, duration: 170 }, // Exceeded
-  ];
-
-  for (const req of completedRequests) {
-    const submittedAt = makeDate(req.month, req.day - Math.floor(req.duration / 24) - 1);
-    const approvedAt = new Date(submittedAt.getTime() + (8 * 60 * 60 * 1000)); // 8 hours later
-    const assignedAt = new Date(approvedAt.getTime() + (2 * 60 * 60 * 1000)); // 2 hours later
-    const startedAt = new Date(assignedAt.getTime() + (4 * 60 * 60 * 1000)); // 4 hours later
-    const completedAt = makeDate(req.month, req.day);
-
-    const targetSlaHours = req.type === 'new_application'
-      ? [168, 120, 72, 48][req.priority - 1]
-      : [96, 72, 48, 24][req.priority - 1];
-
-    const slaMet = req.duration <= targetSlaHours;
-
-    const [result] = await db.insert(requests).values({
-      requestNo: `REQ-2026${String(req.month).padStart(2, '0')}${String(req.day).padStart(2, '0')}-${String(req.no).padStart(3, '0')}`,
-      requestType: req.type as 'new_application' | 'rfc',
-      title: `${req.type === 'new_application' ? 'New Application' : 'RFC'} Request ${req.no}`,
-      description: `Test request for reporting - ${req.type} with ${['low', 'medium', 'high', 'critical'][req.priority - 1]} priority`,
-      businessNeed: 'Business need description for testing',
-      objective: 'Objective description for testing',
-      expectedOutput: 'Expected output description for testing',
-      urgency: req.priority <= 2 ? 'low' : req.priority === 3 ? 'medium' : 'high',
-      requesterId: 2, // John Doe (user)
+  // 5 real requests (renumbered from ids 181-185; devtiUrusanId old units id 10 mapped → 2)
+  await db.insert(requests).values([
+    {
+      id: 1,
+      requestNo: 'REQ-20261020-001',
+      requestType: 'rfc',
+      applicationId: 4, // Asset Tracking
+      requestedVersion: '3.1.3',
+      title: 'Asset Tracking',
+      description: LOREM,
+      businessNeed: LOREM,
+      objective: LOREM,
+      expectedOutput: LOREM,
+      urgency: 'medium',
+      requesterId: 2,
       requesterName: 'John Doe',
       requesterEmail: 'user@sippa.local',
-      requesterUnitId: req.unit,
-      requesterPhone: '081234567891',
-      priorityId: req.priority,
+      requesterUnitId: 2,
+      requesterPhone: null,
+      devtiUrusanId: 2,
+      technicalWriterId: 12,
+      teamLeaderId: 10,
+      priorityId: 2,
       status: 'done',
-      submittedAt,
-      approvedAt,
-      assignedAt,
-      startedAt,
-      completedAt,
-      targetSlaHours,
-      actualDurationHours: req.duration,
-      slaMet,
-      completionNote: `Completed successfully - SLA ${slaMet ? 'met' : 'exceeded'}`,
-    });
+      submittedAt: new Date('2026-10-19T12:08:10'),
+      approvedAt: new Date('2026-10-19T12:09:31'),
+      rejectedAt: null,
+      assignedAt: new Date('2026-10-19T12:09:59'),
+      startedAt: null,
+      completedAt: new Date('2026-10-19T12:57:02'),
+      targetSlaHours: 1056,
+      actualDurationHours: 24,
+      slaMet: true,
+      slaPausedAt: null,
+      slaPausedDurationHours: 0,
+      rejectionNote: null,
+      completionNote: null,
+      onHoldReason: null,
+      createdAt: new Date('2026-10-19T19:08:09'),
+      updatedAt: new Date('2026-10-19T19:57:02'),
+    },
+    {
+      id: 2,
+      requestNo: 'REQ-20261021-001',
+      requestType: 'rfc',
+      applicationId: 5, // Document Management
+      requestedVersion: '1.4.1',
+      title: 'Document Management',
+      description: 'Testing Testing Testing Testing Testing Testing Testing Testing Testing Testing Testing Testing Testing Testing',
+      businessNeed: 'Tetsing',
+      objective: 'Testing',
+      expectedOutput: 'Testing',
+      urgency: 'low',
+      requesterId: 2,
+      requesterName: 'John Doe',
+      requesterEmail: 'user@sippa.local',
+      requesterUnitId: 2,
+      requesterPhone: '081234567890',
+      devtiUrusanId: 2,
+      technicalWriterId: 12,
+      teamLeaderId: 10,
+      priorityId: 2,
+      status: 'done',
+      submittedAt: new Date('2026-10-21T00:08:06'),
+      approvedAt: new Date('2026-10-21T03:40:36'),
+      rejectedAt: null,
+      assignedAt: new Date('2026-10-21T03:44:29'),
+      startedAt: null,
+      completedAt: new Date('2026-10-21T04:04:45'),
+      targetSlaHours: 1056,
+      actualDurationHours: 24,
+      slaMet: true,
+      slaPausedAt: null,
+      slaPausedDurationHours: 0,
+      rejectionNote: null,
+      completionNote: null,
+      onHoldReason: null,
+      createdAt: new Date('2026-10-21T07:08:06'),
+      updatedAt: new Date('2026-10-21T11:04:44'),
+    },
+    {
+      id: 3,
+      requestNo: 'REQ-20261021-002',
+      requestType: 'rfc',
+      applicationId: 1, // SIPPA Core
+      requestedVersion: '1.2.1',
+      title: 'SIPPA Core',
+      description: 'Penambahan fitur baru. Penambahan fitur baru. Penambahan fitur baru',
+      businessNeed: null,
+      objective: 'Penambahan fitur baru',
+      expectedOutput: 'Fitur sesuai',
+      urgency: 'high',
+      requesterId: 2,
+      requesterName: 'John Doe',
+      requesterEmail: 'user@sippa.local',
+      requesterUnitId: 2,
+      requesterPhone: null,
+      devtiUrusanId: 2,
+      technicalWriterId: 12,
+      teamLeaderId: 3,
+      priorityId: 3,
+      status: 'ongoing',
+      submittedAt: new Date('2026-10-21T04:09:44'),
+      approvedAt: new Date('2026-10-21T04:13:05'),
+      rejectedAt: null,
+      assignedAt: new Date('2026-10-21T04:16:12'),
+      startedAt: null,
+      completedAt: null,
+      targetSlaHours: 1056,
+      actualDurationHours: null,
+      slaMet: null,
+      slaPausedAt: null,
+      slaPausedDurationHours: 0,
+      rejectionNote: null,
+      completionNote: null,
+      onHoldReason: null,
+      createdAt: new Date('2026-10-21T11:09:44'),
+      updatedAt: new Date('2026-10-21T04:16:12'),
+    },
+    {
+      id: 4,
+      requestNo: 'REQ-20261021-003',
+      requestType: 'rfc',
+      applicationId: 3, // Finance Portal
+      requestedVersion: '1.0.9',
+      title: 'Finance Portal',
+      description: 'testing RFC, testing RFC,testing RFC, testing RFC, testing RFC',
+      businessNeed: null,
+      objective: null,
+      expectedOutput: null,
+      urgency: 'low',
+      requesterId: 2,
+      requesterName: 'John Doe',
+      requesterEmail: 'user@sippa.local',
+      requesterUnitId: 2,
+      requesterPhone: null,
+      devtiUrusanId: null,
+      technicalWriterId: null,
+      teamLeaderId: null,
+      priorityId: null,
+      status: 'rejected',
+      submittedAt: new Date('2026-10-21T04:24:48'),
+      approvedAt: null,
+      rejectedAt: new Date('2026-10-21T04:25:25'),
+      assignedAt: null,
+      startedAt: null,
+      completedAt: null,
+      targetSlaHours: null,
+      actualDurationHours: null,
+      slaMet: null,
+      slaPausedAt: null,
+      slaPausedDurationHours: 0,
+      rejectionNote: 'tidak penting',
+      completionNote: null,
+      onHoldReason: null,
+      createdAt: new Date('2026-10-21T11:24:47'),
+      updatedAt: new Date('2026-10-21T04:25:25'),
+    },
+    {
+      id: 5,
+      requestNo: 'REQ-20261021-004',
+      requestType: 'rfc',
+      applicationId: 4, // Asset Tracking
+      requestedVersion: '3.1.3',
+      title: 'Asset Tracking',
+      description: 'penambahan fitur, penambahan fitur, penambahan fitur, penambahan fitur',
+      businessNeed: null,
+      objective: null,
+      expectedOutput: null,
+      urgency: 'high',
+      requesterId: 2,
+      requesterName: 'John Doe',
+      requesterEmail: 'user@sippa.local',
+      requesterUnitId: 2,
+      requesterPhone: null,
+      devtiUrusanId: 2,
+      technicalWriterId: 12,
+      teamLeaderId: 3,
+      priorityId: null,
+      status: 'ongoing',
+      submittedAt: new Date('2026-10-21T05:41:47'),
+      approvedAt: new Date('2026-10-21T05:43:34'),
+      rejectedAt: null,
+      assignedAt: new Date('2026-10-21T05:44:20'),
+      startedAt: null,
+      completedAt: null,
+      targetSlaHours: null,
+      actualDurationHours: null,
+      slaMet: null,
+      slaPausedAt: null,
+      slaPausedDurationHours: 48,
+      rejectionNote: null,
+      completionNote: null,
+      onHoldReason: null,
+      createdAt: new Date('2026-10-21T12:41:47'),
+      updatedAt: new Date('2026-10-21T05:51:13'),
+    },
+  ]);
 
-    const requestId = Number(result.insertId);
+  // Request documents (10 files across requests 1, 2, 5)
+  await db.insert(requestDocuments).values([
+    { id: 2, requestId: 1, documentTypeId: 1, originalName: 'Tugas 2.pdf', storageKey: '2026/10/1792436889581-qe2otq29fm9-Tugas_2.pdf', mimeType: 'application/pdf', sizeBytes: 83457, uploadedBy: 2, uploadedAt: new Date('2026-10-19T19:08:09') },
+    { id: 3, requestId: 1, documentTypeId: 4, originalName: 'Tugas 2.pdf', storageKey: '2026/10/1792438241595-65613f647iy-Tugas_2.pdf', mimeType: 'application/pdf', sizeBytes: 83457, uploadedBy: 1, uploadedAt: new Date('2026-10-19T19:30:41') },
+    { id: 4, requestId: 1, documentTypeId: 5, originalName: 'Tugas 2 (1).pdf', storageKey: '2026/10/1792439460341-w1lmb3s8op-Tugas_2_1_.pdf', mimeType: 'application/pdf', sizeBytes: 135387, uploadedBy: 1, uploadedAt: new Date('2026-10-19T19:51:00') },
+    { id: 5, requestId: 1, documentTypeId: 6, originalName: 'dataset_tugas 2026.1.xlsx', storageKey: '2026/10/1792439466208-m723shzmtz-dataset_tugas_2026.1.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', sizeBytes: 13527, uploadedBy: 1, uploadedAt: new Date('2026-10-19T19:51:06') },
+    { id: 6, requestId: 1, documentTypeId: 7, originalName: 'dataset_tugas 2026.1.xlsx', storageKey: '2026/10/1792439471373-ett1hyefemd-dataset_tugas_2026.1.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', sizeBytes: 13527, uploadedBy: 1, uploadedAt: new Date('2026-10-19T19:51:11') },
+    { id: 7, requestId: 1, documentTypeId: 8, originalName: 'dataset_tugas 2026.1.xlsx', storageKey: '2026/10/1792439475898-0rje8r3sae79-dataset_tugas_2026.1.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', sizeBytes: 13527, uploadedBy: 1, uploadedAt: new Date('2026-10-19T19:51:15') },
+    { id: 8, requestId: 1, documentTypeId: 9, originalName: 'dataset_tugas 2026.1.xlsx', storageKey: '2026/10/1792439481107-558imehttdn-dataset_tugas_2026.1.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', sizeBytes: 13527, uploadedBy: 1, uploadedAt: new Date('2026-10-19T19:51:21') },
+    { id: 9, requestId: 2, documentTypeId: 1, originalName: 'Use Case.png', storageKey: '2026/10/1792580605018-d4emtax5wrv-Use_Case.png', mimeType: 'image/png', sizeBytes: 298210, uploadedBy: 10, uploadedAt: new Date('2026-10-21T11:03:25') },
+    { id: 10, requestId: 5, documentTypeId: 1, originalName: 'Use Case Diagram SiPPA.png', storageKey: '2026/10/1792587039319-ao223fodye-Use_Case_Diagram_SiPPA.png', mimeType: 'image/png', sizeBytes: 227147, uploadedBy: 1, uploadedAt: new Date('2026-10-21T12:50:39') },
+  ]);
 
-    // Add status histories
-    await db.insert(requestStatusHistories).values([
-      {
-        requestId,
-        fromStatus: null,
-        toStatus: 'submitted',
-        changedBy: 2,
-        changedByName: 'John Doe',
-        createdAt: submittedAt,
-      },
-      {
-        requestId,
-        fromStatus: 'submitted',
-        toStatus: 'in_review',
-        changedBy: 1,
-        changedByName: 'Admin User',
-        createdAt: new Date(submittedAt.getTime() + (2 * 60 * 60 * 1000)),
-      },
-      {
-        requestId,
-        fromStatus: 'in_review',
-        toStatus: 'approved',
-        changedBy: 1,
-        changedByName: 'Admin User',
-        createdAt: approvedAt,
-      },
-      {
-        requestId,
-        fromStatus: 'approved',
-        toStatus: 'ongoing',
-        changedBy: 1,
-        changedByName: 'Admin User',
-        createdAt: assignedAt,
-      },
-      {
-        requestId,
-        fromStatus: 'ongoing',
-        toStatus: 'ongoing',
-        changedBy: 3,
-        changedByName: 'Developer One',
-        createdAt: startedAt,
-      },
-      {
-        requestId,
-        fromStatus: 'ongoing',
-        toStatus: 'done',
-        changedBy: 3,
-        changedByName: 'Developer One',
-        createdAt: completedAt,
-      },
-    ]);
+  // Progress updates (5 entries)
+  await db.insert(requestProgress).values([
+    { id: 703, requestId: 1, progressPercent: 100, updateNote: 'test lorem do', updatedBy: 12, updatedByName: 'Dewi Lestari', createdAt: new Date('2026-10-19T19:56:33') },
+    { id: 704, requestId: 1, progressPercent: 100, updateNote: LOREM, updatedBy: 12, updatedByName: 'Dewi Lestari', createdAt: new Date('2026-10-19T19:57:02') },
+    { id: 705, requestId: 2, progressPercent: 80, updateNote: 'Tahap Testing', updatedBy: 10, updatedByName: 'Ahmad Fauzi', createdAt: new Date('2026-10-21T11:01:01') },
+    { id: 706, requestId: 2, progressPercent: 100, updateNote: 'Pengerjaan Selesai', updatedBy: 10, updatedByName: 'Ahmad Fauzi', createdAt: new Date('2026-10-21T11:02:19') },
+    { id: 707, requestId: 2, progressPercent: 100, updateNote: 'Aplikasi selesai dikerjakan', updatedBy: 10, updatedByName: 'Ahmad Fauzi', createdAt: new Date('2026-10-21T11:04:44') },
+  ]);
 
-    // Add assignment - TODO: Update to requestTeamAssignments in Phase 2
-    /*
-    await db.insert(requestTeamAssignments).values({
-      requestId,
-      assignedUserId: 3,
-      developerRoleId: 3, // Backend developer
-      assignedBy: 1,
-      assignedAt,
-    });
-    */
+  // Status histories (28 entries - full workflow traces)
+  await db.insert(requestStatusHistories).values([
+    { id: 1063, requestId: 1, fromStatus: null, toStatus: 'submitted', changedBy: 2, changedByName: 'John Doe', actorRole: null, note: 'Request dibuat', metadata: null, createdAt: new Date('2026-10-19T19:08:09') },
+    { id: 1064, requestId: 1, fromStatus: 'submitted', toStatus: 'in_review', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: LOREM, metadata: null, createdAt: new Date('2026-10-19T19:09:13') },
+    { id: 1065, requestId: 1, fromStatus: 'in_review', toStatus: 'approved', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: LOREM, metadata: null, createdAt: new Date('2026-10-19T19:09:31') },
+    { id: 1066, requestId: 1, fromStatus: 'approved', toStatus: 'ongoing', changedBy: 1, changedByName: 'Admin User', actorRole: 'admin', note: 'Request di-assign ke tim:\n- Ketua Tim: Ahmad Fauzi\n- Technical Writer: Dewi Lestari\n- Developers: Andi Wijaya, Dian Pratama, Maya Sari\n- DevTI Urusan: URUSAN PENGEMBANGAN PRODUK TI NON-AKADEMIK\n- Catatan: ' + LOREM, metadata: null, createdAt: new Date('2026-10-19T19:09:59') },
+    { id: 1067, requestId: 1, fromStatus: 'ongoing', toStatus: 'ongoing', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: 'Priority diubah menjadi Medium', metadata: null, createdAt: new Date('2026-10-19T19:41:52') },
+    { id: 1068, requestId: 1, fromStatus: 'ongoing', toStatus: 'done', changedBy: 12, changedByName: 'Dewi Lestari', actorRole: null, note: LOREM, metadata: null, createdAt: new Date('2026-10-19T19:57:02') },
+    { id: 1069, requestId: 2, fromStatus: null, toStatus: 'submitted', changedBy: 2, changedByName: 'John Doe', actorRole: null, note: 'Request dibuat', metadata: null, createdAt: new Date('2026-10-21T07:08:06') },
+    { id: 1070, requestId: 2, fromStatus: 'submitted', toStatus: 'in_review', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: 'Request diverifikasi oleh admin', metadata: null, createdAt: new Date('2026-10-21T07:17:31') },
+    { id: 1071, requestId: 2, fromStatus: 'in_review', toStatus: 'approved', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: 'Request disetujui', metadata: null, createdAt: new Date('2026-10-21T10:40:35') },
+    { id: 1072, requestId: 2, fromStatus: 'approved', toStatus: 'approved', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: 'Priority diubah menjadi Medium', metadata: null, createdAt: new Date('2026-10-21T10:40:53') },
+    { id: 1073, requestId: 2, fromStatus: 'approved', toStatus: 'ongoing', changedBy: 1, changedByName: 'Admin User', actorRole: 'admin', note: 'Request di-assign ke tim:\n- Ketua Tim: Ahmad Fauzi\n- Technical Writer: Dewi Lestari\n- Developers: Andi Wijaya, Dian Pratama, Maya Sari, Lisa Anggraini\n- DevTI Urusan: URUSAN PENGEMBANGAN PRODUK TI NON-AKADEMIK', metadata: null, createdAt: new Date('2026-10-21T10:44:28') },
+    { id: 1074, requestId: 2, fromStatus: 'ongoing', toStatus: 'done', changedBy: 10, changedByName: 'Ahmad Fauzi', actorRole: null, note: 'Aplikasi selesai dikerjakan', metadata: null, createdAt: new Date('2026-10-21T11:04:44') },
+    { id: 1075, requestId: 3, fromStatus: null, toStatus: 'submitted', changedBy: 2, changedByName: 'John Doe', actorRole: null, note: 'Request dibuat', metadata: null, createdAt: new Date('2026-10-21T11:09:44') },
+    { id: 1076, requestId: 3, fromStatus: 'submitted', toStatus: 'in_review', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: 'Approve', metadata: null, createdAt: new Date('2026-10-21T11:12:37') },
+    { id: 1077, requestId: 3, fromStatus: 'in_review', toStatus: 'approved', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: 'oke', metadata: null, createdAt: new Date('2026-10-21T11:13:04') },
+    { id: 1078, requestId: 3, fromStatus: 'approved', toStatus: 'approved', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: 'Priority diubah menjadi High', metadata: null, createdAt: new Date('2026-10-21T11:13:48') },
+    { id: 1079, requestId: 3, fromStatus: 'approved', toStatus: 'ongoing', changedBy: 1, changedByName: 'Admin User', actorRole: 'admin', note: 'Request di-assign ke tim:\n- Ketua Tim: Jane Smith\n- Technical Writer: Dewi Lestari\n- Developers: Andi Wijaya, Dian Pratama, Maya Sari, Lisa Anggraini\n- DevTI Urusan: URUSAN PENGEMBANGAN PRODUK TI NON-AKADEMIK', metadata: null, createdAt: new Date('2026-10-21T11:16:11') },
+    { id: 1080, requestId: 4, fromStatus: null, toStatus: 'submitted', changedBy: 2, changedByName: 'John Doe', actorRole: null, note: 'Request dibuat', metadata: null, createdAt: new Date('2026-10-21T11:24:47') },
+    { id: 1081, requestId: 4, fromStatus: 'submitted', toStatus: 'in_review', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: 'Request diverifikasi oleh admin', metadata: null, createdAt: new Date('2026-10-21T11:25:16') },
+    { id: 1082, requestId: 4, fromStatus: 'in_review', toStatus: 'rejected', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: 'Request ditolak: tidak penting', metadata: null, createdAt: new Date('2026-10-21T11:25:25') },
+    { id: 1083, requestId: 5, fromStatus: null, toStatus: 'submitted', changedBy: 2, changedByName: 'John Doe', actorRole: null, note: 'Request dibuat', metadata: null, createdAt: new Date('2026-10-21T12:41:47') },
+    { id: 1084, requestId: 5, fromStatus: 'submitted', toStatus: 'in_review', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: 'Request diverifikasi oleh admin', metadata: null, createdAt: new Date('2026-10-21T12:42:54') },
+    { id: 1085, requestId: 5, fromStatus: 'in_review', toStatus: 'approved', changedBy: 1, changedByName: 'Admin User', actorRole: null, note: 'Request disetujui', metadata: null, createdAt: new Date('2026-10-21T12:43:33') },
+    { id: 1086, requestId: 5, fromStatus: 'approved', toStatus: 'ongoing', changedBy: 1, changedByName: 'Admin User', actorRole: 'admin', note: 'Request di-assign ke tim:\n- Ketua Tim: Jane Smith\n- Technical Writer: Dewi Lestari\n- Developers: Ahmad Fauzi, Siti Nurhaliza, Andi Wijaya, Dian Pratama, Maya Sari, Lisa Anggraini\n- DevTI Urusan: URUSAN PENGEMBANGAN PRODUK TI NON-AKADEMIK', metadata: null, createdAt: new Date('2026-10-21T12:44:20') },
+    { id: 1087, requestId: 5, fromStatus: 'ongoing', toStatus: 'on_hold', changedBy: 1, changedByName: 'Admin User', actorRole: 'admin', note: 'sedang ditinjau ulang', metadata: '{"reason":"sedang ditinjau ulang","pausedAt":"2026-10-21T12:46:40.841Z"}', createdAt: new Date('2026-10-21T12:46:40') },
+    { id: 1088, requestId: 5, fromStatus: 'on_hold', toStatus: 'ongoing', changedBy: 1, changedByName: 'Admin User', actorRole: 'admin', note: 'Request dilanjutkan kembali', metadata: '{"resumedAt":"2026-10-21T12:49:00.438Z","pausedDurationHours":24}', createdAt: new Date('2026-10-21T12:49:00') },
+    { id: 1089, requestId: 5, fromStatus: 'ongoing', toStatus: 'on_hold', changedBy: 1, changedByName: 'Admin User', actorRole: 'admin', note: 'sedang ditinjau ulang', metadata: '{"reason":"sedang ditinjau ulang","pausedAt":"2026-10-21T12:50:01.691Z"}', createdAt: new Date('2026-10-21T12:50:01') },
+    { id: 1090, requestId: 5, fromStatus: 'on_hold', toStatus: 'ongoing', changedBy: 1, changedByName: 'Admin User', actorRole: 'admin', note: 'Request dilanjutkan kembali', metadata: '{"resumedAt":"2026-10-21T12:51:13.192Z","pausedDurationHours":48}', createdAt: new Date('2026-10-21T12:51:13') },
+  ]);
 
-    // Add progress updates
-    const progressDuration = completedAt.getTime() - startedAt.getTime();
-    await db.insert(requestProgress).values([
-      {
-        requestId,
-        progressPercent: 25,
-        updateNote: 'Started working on the request',
-        updatedBy: 3,
-        updatedByName: 'Developer One',
-        createdAt: new Date(startedAt.getTime() + progressDuration * 0.2),
-      },
-      {
-        requestId,
-        progressPercent: 50,
-        updateNote: 'Development in progress',
-        updatedBy: 3,
-        updatedByName: 'Developer One',
-        createdAt: new Date(startedAt.getTime() + progressDuration * 0.5),
-      },
-      {
-        requestId,
-        progressPercent: 75,
-        updateNote: 'Testing phase',
-        updatedBy: 3,
-        updatedByName: 'Developer One',
-        createdAt: new Date(startedAt.getTime() + progressDuration * 0.75),
-      },
-      {
-        requestId,
-        progressPercent: 100,
-        updateNote: 'Completed and delivered',
-        updatedBy: 3,
-        updatedByName: 'Developer One',
-        createdAt: completedAt,
-      },
-    ]);
-  }
+  // Team assignments (23 entries across requests 1, 2, 3, 5)
+  await db.insert(requestTeamAssignments).values([
+    { id: 5, requestId: 1, assignedUserId: 14, developerRoleId: 3, assignedBy: 1, assignedAt: new Date('2026-10-19T12:09:59'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-19T19:09:59'), updatedAt: new Date('2026-10-19T19:09:59') },
+    { id: 6, requestId: 1, assignedUserId: 16, developerRoleId: 4, assignedBy: 1, assignedAt: new Date('2026-10-19T12:09:59'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-19T19:09:59'), updatedAt: new Date('2026-10-19T19:09:59') },
+    { id: 7, requestId: 1, assignedUserId: 18, developerRoleId: 5, assignedBy: 1, assignedAt: new Date('2026-10-19T12:09:59'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-19T19:09:59'), updatedAt: new Date('2026-10-19T19:09:59') },
+    { id: 8, requestId: 1, assignedUserId: 10, developerRoleId: 1, assignedBy: 1, assignedAt: new Date('2026-10-19T12:09:59'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-19T19:09:59'), updatedAt: new Date('2026-10-19T19:09:59') },
+    { id: 9, requestId: 1, assignedUserId: 12, developerRoleId: 2, assignedBy: 1, assignedAt: new Date('2026-10-19T12:09:59'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-19T19:09:59'), updatedAt: new Date('2026-10-19T19:09:59') },
+    { id: 10, requestId: 2, assignedUserId: 14, developerRoleId: 3, assignedBy: 1, assignedAt: new Date('2026-10-21T03:44:29'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T10:44:28'), updatedAt: new Date('2026-10-21T10:44:28') },
+    { id: 11, requestId: 2, assignedUserId: 16, developerRoleId: 4, assignedBy: 1, assignedAt: new Date('2026-10-21T03:44:29'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T10:44:28'), updatedAt: new Date('2026-10-21T10:44:28') },
+    { id: 12, requestId: 2, assignedUserId: 18, developerRoleId: 5, assignedBy: 1, assignedAt: new Date('2026-10-21T03:44:29'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T10:44:28'), updatedAt: new Date('2026-10-21T10:44:28') },
+    { id: 13, requestId: 2, assignedUserId: 20, developerRoleId: 6, assignedBy: 1, assignedAt: new Date('2026-10-21T03:44:29'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T10:44:28'), updatedAt: new Date('2026-10-21T10:44:28') },
+    { id: 14, requestId: 2, assignedUserId: 10, developerRoleId: 1, assignedBy: 1, assignedAt: new Date('2026-10-21T03:44:29'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T10:44:28'), updatedAt: new Date('2026-10-21T10:44:28') },
+    { id: 15, requestId: 2, assignedUserId: 12, developerRoleId: 2, assignedBy: 1, assignedAt: new Date('2026-10-21T03:44:29'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T10:44:28'), updatedAt: new Date('2026-10-21T10:44:28') },
+    { id: 16, requestId: 3, assignedUserId: 14, developerRoleId: 3, assignedBy: 1, assignedAt: new Date('2026-10-21T04:16:12'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T11:16:11'), updatedAt: new Date('2026-10-21T11:16:11') },
+    { id: 17, requestId: 3, assignedUserId: 16, developerRoleId: 4, assignedBy: 1, assignedAt: new Date('2026-10-21T04:16:12'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T11:16:11'), updatedAt: new Date('2026-10-21T11:16:11') },
+    { id: 18, requestId: 3, assignedUserId: 18, developerRoleId: 5, assignedBy: 1, assignedAt: new Date('2026-10-21T04:16:12'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T11:16:11'), updatedAt: new Date('2026-10-21T11:16:11') },
+    { id: 19, requestId: 3, assignedUserId: 20, developerRoleId: 6, assignedBy: 1, assignedAt: new Date('2026-10-21T04:16:12'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T11:16:11'), updatedAt: new Date('2026-10-21T11:16:11') },
+    { id: 20, requestId: 3, assignedUserId: 12, developerRoleId: 2, assignedBy: 1, assignedAt: new Date('2026-10-21T04:16:12'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T11:16:11'), updatedAt: new Date('2026-10-21T11:16:11') },
+    { id: 21, requestId: 5, assignedUserId: 10, developerRoleId: 1, assignedBy: 1, assignedAt: new Date('2026-10-21T05:44:20'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T12:44:20'), updatedAt: new Date('2026-10-21T12:44:20') },
+    { id: 22, requestId: 5, assignedUserId: 11, developerRoleId: 2, assignedBy: 1, assignedAt: new Date('2026-10-21T05:44:20'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T12:44:20'), updatedAt: new Date('2026-10-21T12:44:20') },
+    { id: 23, requestId: 5, assignedUserId: 14, developerRoleId: 3, assignedBy: 1, assignedAt: new Date('2026-10-21T05:44:20'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T12:44:20'), updatedAt: new Date('2026-10-21T12:44:20') },
+    { id: 24, requestId: 5, assignedUserId: 16, developerRoleId: 4, assignedBy: 1, assignedAt: new Date('2026-10-21T05:44:20'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T12:44:20'), updatedAt: new Date('2026-10-21T12:44:20') },
+    { id: 25, requestId: 5, assignedUserId: 18, developerRoleId: 5, assignedBy: 1, assignedAt: new Date('2026-10-21T05:44:20'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T12:44:20'), updatedAt: new Date('2026-10-21T12:44:20') },
+    { id: 26, requestId: 5, assignedUserId: 20, developerRoleId: 6, assignedBy: 1, assignedAt: new Date('2026-10-21T05:44:20'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T12:44:20'), updatedAt: new Date('2026-10-21T12:44:20') },
+    { id: 27, requestId: 5, assignedUserId: 12, developerRoleId: 2, assignedBy: 1, assignedAt: new Date('2026-10-21T05:44:20'), unassignedAt: null, notes: null, createdAt: new Date('2026-10-21T12:44:20'), updatedAt: new Date('2026-10-21T12:44:20') },
+  ]);
 
   console.log('✅ Seeding completed!');
   console.log('');
@@ -507,13 +629,13 @@ async function seed() {
   console.log('  User: user@sippa.local / password123');
   console.log('  Developer: dev@sippa.local / password123');
   console.log('');
-  console.log('📊 Report Data:');
+  console.log('📊 Seed Data:');
   console.log('  - 8 SLA policies created');
-  console.log('  - 5 request applications created');
-  console.log('  - 25 completed requests created');
-  console.log('  - Distribution: Q1(6), Q2(7), Q3(6), Q4(6)');
-  console.log('  - Types: 13 New Application, 12 RFC');
-  console.log('  - SLA: 18 met (72%), 7 exceeded (28%)');
+  console.log('  - 6 request applications created (5 base + 1 Lorem)');
+  console.log('  - 5 real user requests (REQ-20261020-001 … REQ-20261021-004)');
+  console.log('  - Statuses: 2 done, 2 ongoing, 1 rejected');
+  console.log('  - 9 documents, 5 progress updates, 28 status histories, 23 team assignments');
+  console.log('  - DevTI Urusan: mapped to devteam_units (old units id 10 → 2)');
   console.log('');
 
   process.exit(0);

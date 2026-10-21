@@ -251,8 +251,8 @@ Defined in `sla_policies` table:
 - Active assignments have `unassigned_at = NULL`
 
 ### DevTI Urusan
-- Text field specifying which division handles request
-- Example: "Pengembangan Aplikasi Internal"
+- Selection from `devteam_units` master (FK: requests.devti_urusan_id), separate from organizational units
+- Example: "URUSAN PENGEMBANGAN PRODUK TI AKADEMIK"
 - Set by admin during assignment
 - Required field
 
@@ -260,7 +260,7 @@ Defined in `sla_policies` table:
 1. Admin approves request
 2. Admin clicks "Assign Team"
 3. Admin fills assignment form:
-   - DevTI Urusan (text input)
+   - DevTI Urusan (dropdown: from devteam_units master)
    - Team Leader (dropdown: all users)
    - Technical Writer (dropdown: only TW role)
    - Developers (multi-select with role badges)
