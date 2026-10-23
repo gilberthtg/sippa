@@ -1,23 +1,30 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, XCircle, FileText } from 'lucide-react';
+import { CheckCircle, XCircle, FileText, Clock } from 'lucide-react';
+
+interface SlaTargetRow {
+  priorityId: number;
+  priorityName: string;
+  targetBusinessDays: number | null;
+}
 
 interface SLASummaryProps {
   totalRequests: number;
   slaMetCount: number;
   slaExceededCount: number;
   achievementRate: number;
-  avgCompletionByType: { new_application: number; rfc: number };
-  avgCompletionByPriority: { low: number; medium: number; high: number; critical: number };
+  slaTargets: {
+    new_application: SlaTargetRow[];
+    rfc: SlaTargetRow[];
+  };
 }
 
 export function SLASummary({
   totalRequests,
   slaMetCount,
   slaExceededCount,
-  avgCompletionByType,
-  avgCompletionByPriority,
+  slaTargets,
 }: SLASummaryProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
@@ -59,44 +66,37 @@ export function SLASummary({
       </Card>
 
       {/* <Card className="md:col-span-2">
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Rata-rata Waktu Penyelesaian (jam)</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Target SLA (Hari Kerja)</CardTitle>
+          <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground">Pengembangan</p>
-              <p className="text-xl font-bold">{avgCompletionByType.new_application.toFixed(1)}</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Pengembangan</p>
+              <div className="space-y-1.5">
+                {slaTargets.new_application.map((target) => (
+                  <div key={target.priorityId} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{target.priorityName}:</span>
+                    <span className="font-medium">
+                      {target.targetBusinessDays !== null ? `${target.targetBusinessDays} hari` : 'N/A'}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">RFC</p>
-              <p className="text-xl font-bold">{avgCompletionByType.rfc.toFixed(1)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card> */}
-
-      {/* <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Per Prioritas (jam)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Low:</span>
-              <span className="font-medium">{avgCompletionByPriority.low.toFixed(1)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Medium:</span>
-              <span className="font-medium">{avgCompletionByPriority.medium.toFixed(1)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">High:</span>
-              <span className="font-medium">{avgCompletionByPriority.high.toFixed(1)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Critical:</span>
-              <span className="font-medium">{avgCompletionByPriority.critical.toFixed(1)}</span>
+              <p className="text-xs font-medium text-muted-foreground mb-2">RFC</p>
+              <div className="space-y-1.5">
+                {slaTargets.rfc.map((target) => (
+                  <div key={target.priorityId} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{target.priorityName}:</span>
+                    <span className="font-medium">
+                      {target.targetBusinessDays !== null ? `${target.targetBusinessDays} hari` : 'N/A'}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </CardContent>

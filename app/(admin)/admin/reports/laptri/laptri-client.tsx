@@ -29,11 +29,19 @@ interface DeveloperRoleMetric {
   latestCompletedAt: Date | null;
 }
 
+interface SlaTargetRow {
+  priorityId: number;
+  priorityName: string;
+  targetBusinessDays: number | null;
+}
+
 interface LaptriSummary {
   quarterCounts: { Q1: number; Q2: number; Q3: number; Q4: number };
   typeBreakdown: { new_application: number; rfc: number };
-  avgCompletionByType: { new_application: number; rfc: number };
-  avgCompletionByPriority: { low: number; medium: number; high: number; critical: number };
+  slaTargets: {
+    new_application: SlaTargetRow[];
+    rfc: SlaTargetRow[];
+  };
   monthlyTrend: Array<{ month: string; count: number }>;
   developerRoleMetrics: DeveloperRoleMetric[];
 }
@@ -111,7 +119,7 @@ export function LaptriClient({
       <LaptriSummary
         quarterCounts={summary.quarterCounts}
         typeBreakdown={summary.typeBreakdown}
-        avgCompletionByType={summary.avgCompletionByType}
+        slaTargets={summary.slaTargets}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">

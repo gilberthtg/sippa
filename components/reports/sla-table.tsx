@@ -50,18 +50,20 @@ export function SLATable({ requests }: SLATableProps) {
                 <TableHead>No. Permintaan</TableHead>
                 <TableHead>Jenis</TableHead>
                 <TableHead>Prioritas</TableHead>
-                <TableHead className="text-right">Target (jam)</TableHead>
-                <TableHead className="text-right">Aktual (jam)</TableHead>
-                <TableHead className="text-right">Selisih (jam)</TableHead>
+                <TableHead className="text-right">Target (hari kerja)</TableHead>
+                <TableHead className="text-right">Aktual (hari kerja)</TableHead>
+                <TableHead className="text-right">Selisih (hari)</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-right">Pencapaian</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {requests.map((request) => {
+                const targetDays = request.targetSlaHours !== null ? request.targetSlaHours / 24 : null;
+                const actualDays = request.actualDurationHours !== null ? request.actualDurationHours / 24 : null;
                 const difference =
-                  request.actualDurationHours && request.targetSlaHours
-                    ? request.actualDurationHours - request.targetSlaHours
+                  actualDays !== null && targetDays !== null
+                    ? actualDays - targetDays
                     : null;
 
                 return (
@@ -83,15 +85,15 @@ export function SLATable({ requests }: SLATableProps) {
                       <Badge variant="outline">{request.priorityName || 'N/A'}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {request.targetSlaHours || 'N/A'}
+                      {targetDays !== null ? Math.ceil(targetDays) : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right">
-                      {request.actualDurationHours || 'N/A'}
+                      {actualDays !== null ? Math.ceil(actualDays) : 'N/A'}
                     </TableCell>
                     <TableCell className="text-right">
                       {difference !== null ? (
                         <span className={difference > 0 ? 'text-red-600' : 'text-green-600'}>
-                          {difference > 0 ? '+' : ''}{difference.toFixed(1)}
+                          {difference > 0 ? '+' : ''}{Math.ceil(difference)}
                         </span>
                       ) : (
                         'N/A'

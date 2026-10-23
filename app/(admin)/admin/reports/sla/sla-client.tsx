@@ -31,17 +31,20 @@ interface DeveloperRoleSLAMetric {
   avgCompletionTime: number;
 }
 
+interface SlaTargetRow {
+  priorityId: number;
+  priorityName: string;
+  targetBusinessDays: number | null;
+}
+
 interface SLASummary {
   totalRequests: number;
   slaMetCount: number;
   slaExceededCount: number;
   achievementRate: number;
-  avgCompletionByType: { new_application: number; rfc: number };
-  avgCompletionByPriority: {
-    low: number;
-    medium: number;
-    high: number;
-    critical: number;
+  slaTargets: {
+    new_application: SlaTargetRow[];
+    rfc: SlaTargetRow[];
   };
   monthlyTrend: Array<{
     month: string;
@@ -155,8 +158,7 @@ export function SLAClient({
           slaMetCount={summary.slaMetCount}
           slaExceededCount={summary.slaExceededCount}
           achievementRate={summary.achievementRate}
-          avgCompletionByType={summary.avgCompletionByType}
-          avgCompletionByPriority={summary.avgCompletionByPriority}
+          slaTargets={summary.slaTargets}
         />
 
         {/* <SLAMonthlyTrend monthlyTrend={summary.monthlyTrend} /> */}

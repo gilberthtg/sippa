@@ -2,7 +2,7 @@
 
 import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
-import { requests, priorities, units, requestTeamAssignments, developerRoles } from '@/lib/db/schema';
+import { requests, priorities, units, requestTeamAssignments, developerRoles, slaPolicies } from '@/lib/db/schema';
 import { eq, and, gte, lte, sql, isNull } from 'drizzle-orm';
 import { getQuarterFromDate, calculateAchievementRate, generateMonthlyTrend } from '@/lib/utils/report-calculations';
 
@@ -12,6 +12,49 @@ async function checkAdminAuth() {
     throw new Error('Unauthorized: Admin access required');
   }
   return session;
+}
+
+async function getSLAPolicyTargets() {
+  const [priorityRows, policyRows] = await Promise.all([
+    db
+      .select({
+        id: priorities.id,
+        name: priorities.name,
+        sortOrder: priorities.sortOrder,
+      })
+      .from(priorities)
+      .where(eq(priorities.isActive, true))
+      .orderBy(priorities.sortOrder),
+    db
+      .select({
+        requestType: slaPolicies.requestType,
+        priorityId: slaPolicies.priorityId,
+        targetBusinessDays: slaPolicies.targetBusinessDays,
+      })
+      .from(slaPolicies)
+      .where(eq(slaPolicies.isActive, true)),
+  ]);
+
+  const targetMap = new Map<string, number>();
+  policyRows.forEach((policy) => {
+    if (!policy.requestType || policy.priorityId === null) return;
+    const key = `${policy.requestType}:${policy.priorityId}`;
+    if (!targetMap.has(key)) {
+      targetMap.set(key, policy.targetBusinessDays);
+    }
+  });
+
+  const buildRows = (requestType: 'new_application' | 'rfc') =>
+    priorityRows.map((priority) => ({
+      priorityId: priority.id,
+      priorityName: priority.name,
+      targetBusinessDays: targetMap.get(`${requestType}:${priority.id}`) ?? null,
+    }));
+
+  return {
+    new_application: buildRows('new_application'),
+    rfc: buildRows('rfc'),
+  };
 }
 
 export async function getLaptriData(filters: {
@@ -88,17 +131,13 @@ export async function getLaptriSummary(filters: {
   const allCompleted = await db
     .select({
       requestType: requests.requestType,
-      priorityId: requests.priorityId,
       completedAt: requests.completedAt,
-      actualDurationHours: requests.actualDurationHours,
     })
     .from(requests)
     .where(and(...summaryConditions));
 
   const quarterCounts = { Q1: 0, Q2: 0, Q3: 0, Q4: 0 };
   const typeBreakdown = { new_application: 0, rfc: 0 };
-  const typeDurations = { new_application: [] as number[], rfc: [] as number[] };
-  const priorityDurations = { low: [] as number[], medium: [] as number[], high: [] as number[], critical: [] as number[] };
 
   allCompleted.forEach((req) => {
     if (!req.completedAt) return;
@@ -108,33 +147,14 @@ export async function getLaptriSummary(filters: {
 
     if (req.requestType === 'new_application') {
       typeBreakdown.new_application++;
-      if (req.actualDurationHours) typeDurations.new_application.push(req.actualDurationHours);
     } else if (req.requestType === 'rfc') {
       typeBreakdown.rfc++;
-      if (req.actualDurationHours) typeDurations.rfc.push(req.actualDurationHours);
-    }
-
-    if (req.actualDurationHours) {
-      if (req.priorityId === 1) priorityDurations.low.push(req.actualDurationHours);
-      else if (req.priorityId === 2) priorityDurations.medium.push(req.actualDurationHours);
-      else if (req.priorityId === 3) priorityDurations.high.push(req.actualDurationHours);
-      else if (req.priorityId === 4) priorityDurations.critical.push(req.actualDurationHours);
     }
   });
 
   const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 
-  const avgCompletionByType = {
-    new_application: avg(typeDurations.new_application),
-    rfc: avg(typeDurations.rfc),
-  };
-
-  const avgCompletionByPriority = {
-    low: avg(priorityDurations.low),
-    medium: avg(priorityDurations.medium),
-    high: avg(priorityDurations.high),
-    critical: avg(priorityDurations.critical),
-  };
+  const slaTargets = await getSLAPolicyTargets();
 
   const monthlyTrend = generateMonthlyTrend(allCompleted, year);
 
@@ -217,8 +237,7 @@ export async function getLaptriSummary(filters: {
   return {
     quarterCounts,
     typeBreakdown,
-    avgCompletionByType,
-    avgCompletionByPriority,
+    slaTargets,
     monthlyTrend,
     developerRoleMetrics,
   };
@@ -346,10 +365,7 @@ export async function getSLASummary(filters: {
 
   const allCompleted = await db
     .select({
-      requestType: requests.requestType,
-      priorityId: requests.priorityId,
       completedAt: requests.completedAt,
-      actualDurationHours: requests.actualDurationHours,
       slaMet: requests.slaMet,
     })
     .from(requests)
@@ -360,37 +376,9 @@ export async function getSLASummary(filters: {
   const slaExceededCount = allCompleted.filter((r) => r.slaMet === false).length;
   const achievementRate = totalRequests > 0 ? (slaMetCount / totalRequests) * 100 : 0;
 
-  const typeDurations = { new_application: [] as number[], rfc: [] as number[] };
-  const priorityDurations = { low: [] as number[], medium: [] as number[], high: [] as number[], critical: [] as number[] };
-
-  allCompleted.forEach((req) => {
-    if (req.actualDurationHours) {
-      if (req.requestType === 'new_application') {
-        typeDurations.new_application.push(req.actualDurationHours);
-      } else if (req.requestType === 'rfc') {
-        typeDurations.rfc.push(req.actualDurationHours);
-      }
-
-      if (req.priorityId === 1) priorityDurations.low.push(req.actualDurationHours);
-      else if (req.priorityId === 2) priorityDurations.medium.push(req.actualDurationHours);
-      else if (req.priorityId === 3) priorityDurations.high.push(req.actualDurationHours);
-      else if (req.priorityId === 4) priorityDurations.critical.push(req.actualDurationHours);
-    }
-  });
-
   const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 
-  const avgCompletionByType = {
-    new_application: avg(typeDurations.new_application),
-    rfc: avg(typeDurations.rfc),
-  };
-
-  const avgCompletionByPriority = {
-    low: avg(priorityDurations.low),
-    medium: avg(priorityDurations.medium),
-    high: avg(priorityDurations.high),
-    critical: avg(priorityDurations.critical),
-  };
+  const slaTargets = await getSLAPolicyTargets();
 
   // Monthly trend with SLA metrics
   const monthlyData = generateMonthlyTrend(allCompleted, filters.year);
@@ -500,8 +488,7 @@ export async function getSLASummary(filters: {
     slaMetCount,
     slaExceededCount,
     achievementRate,
-    avgCompletionByType,
-    avgCompletionByPriority,
+    slaTargets,
     monthlyTrend,
     developerRoleSLAMetrics,
   };

@@ -1,5 +1,62 @@
 # SiPPA AI Session Log
 
+## 2026-10-23 — UI: Nilai hari di tabel Detail SLA & sheet Excel "Detail SLA" dibulatkan ke atas (int)
+
+- Goal: Tindak lanjut sesi konversi jam → hari kerja. Konfirmasi user: nilai hari TIDAK boleh format float; gunakan bilangan bulat dibulatkan ke atas.
+- Changes made:
+  - `components/reports/sla-table.tsx`: `targetDays`/`actualDays`/`selisih` dari `.toFixed(1)` → `Math.ceil(...)` (contoh 6.85 hari → 7; selisih ikut ceil, warna merah/hijau + tanda "+" tidak berubah). `achievementRate` tetap toFixed(1) (persentase, bukan hari).
+  - `lib/utils/report-export.ts` (sheet "Detail SLA"): mapping Excel sama — ketiga kolom hari `Math.ceil`, fallback `N/A` tetap.
+- Files changed: components/reports/sla-table.tsx, lib/utils/report-export.ts, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ ESLint: PASSED (0 error/warning, kedua file)
+  - ✅ Jest: 201 passed / 9 failed — baseline pre-existing request-admin-workflows (tidak tersentuh)
+  - ✅ Build: SUCCESS (`npm run build`)
+- Open questions:
+  - (None) — pembulatan `Math.ceil` ke arah +∞ (mis. -3.15 → -3); dikonfirmasi user dalam pilihan "int, rounded up".
+- Next recommended step: Manual test `/admin/reports/sla` → kolom Target/Aktual/Selisih tampil bilangan bulat; export Excel → sheet "Detail SLA" sama.
+
+## 2026-10-23 — UI: Tabel Detail SLA (sla-table.tsx) & sheet Excel "Detail SLA" dikonversi jam → hari kerja
+
+- Goal: Menindaklanjuti resolusi [NEEDS_DECISION] sesi "Target SLA (hari kerja) dari master sla_policies": tabel "Detail SLA" di `/admin/reports/sla` (`components/reports/sla-table.tsx`) dan sheet Excel "Detail SLA" (`lib/utils/report-export.ts`) masih menampilkan kolom jam raw (Target/Aktual/Selisih jam). Konversi ke hari kerja sesuai konfirmasi user: (1) SEMUA kolom diubah ke hari (Target/Aktual/Selisih); (2) target via pembagian sederhana `targetSlaHours ÷ 24` tanpa DB join (1 hari kerja = 24 jam per ADR-0018); (3) sheet Excel "Detail SLA" diubah cara sama.
+- Changes made:
+  - `components/reports/sla-table.tsx`: header kolom `Target (jam)`/`Aktual (jam)`/`Selisih (jam)` → `Target (hari kerja)`/`Aktual (hari kerja)`/`Selisih (hari)`; per baris dihitung `targetDays`/`actualDays` (÷24, 1 desimal via toFixed(1)) dan `difference = actualDays − targetDays`; fallback `N/A` tetap; warna selisih (merah > 0, hijau ≤ 0), ikon status, dan Pencapaian % tidak berubah. Tidak ada perubahan interface (konversi terjadi di layer tampilan).
+  - `lib/utils/report-export.ts` (exportSLAToExcel, sheet "Detail SLA"): header dan mapping baris sama dengan tabel — `targetDays`/`actualDays` ÷24, selisih dalam hari, `N/A` bila null.
+- Files changed: components/reports/sla-table.tsx, lib/utils/report-export.ts, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ ESLint: PASSED (0 error, 0 warning pada 2 file diubah)
+  - ✅ Jest: 201 passed / 9 failed — baseline pre-existing request-admin-workflows (identik, tidak tersentuh)
+  - ✅ Build: SUCCESS (`npm run build`)
+- Open questions:
+  - (Resolved) Kolom perlu tampil raw jam → tabel & sheet Excel "Detail SLA" kini konsisten menampilkan hari kerja.
+  - (Superseded 2026-10-23) Catatan nilai desimal tampil — diganti pembulatan int ke atas (`Math.ceil`) per konfirmasi user pada sesi berikutnya.
+- Next recommended step: Manual test `/admin/reports/sla` — verifikasi kolom hari dan highlight selisih; export Excel → sheet "Detail SLA" menampilkan hari.
+
+## 2026-10-23 — UI: Laporan Laptri & Pencapaian SLA menampilkan Target SLA (hari kerja) dari master sla_policies, bukan raw jam
+
+- Goal: Pada halaman laporan (`/admin/reports/laptri` dan `/admin/reports/sla`), card ringkasan tidak lagi menampilkan raw data (`actualDurationHours` — rata-rata penyelesaian dalam jam); gantinya menampilkan jumlah hari kerja sesuai master `sla_policies` (statik, tidak terpengaruh filter), dengan nama prioritas diambil dinamis dari DB.
+- Konfirmasi user: target statik dari master (tidak terpengaruh filter); card yang dikomentari di sla-summary.tsx di-uncomment & dimodifikasi; nama prioritas dinamis dari DB; scope juga mencakup card Laptri (section "Avg: X jam").
+- Changes made:
+  - `app/actions/reports.ts`:
+    - Helper privat baru `getSLAPolicyTargets()`: fetch `priorities` aktif (order `sort_order`) + `sla_policies` aktif (didedup per `requestType:priorityId`, keep first), membentuk per baris `{ priorityId, priorityName, targetBusinessDays | null }` — `null` bila tidak ada policy aktif untuk kombinasi tsb.
+    - `getLaptriSummary`: select `allCompleted` ditrim ke `{ requestType, completedAt }`; hapus agregasi `typeDurations`/`priorityDurations`/`avgCompletionByType`/`avgCompletionByPriority`; return kini memuat `slaTargets` (statik dari master).
+    - `getSLASummary`: select `allCompleted` ditrim ke `{ completedAt, slaMet }` (dipakai monthly trend/status count); hapus agregasi raw-hours yang sama; return kini memuat `slaTargets`. Developer role metrics tetap memakai `avg` existing (tidak tersentuh).
+  - `components/reports/sla-summary.tsx`: card yang sebelumnya dikomentari ("Rata-rata Waktu Penyelesaian (jam)" & "Per Prioritas (jam)") diganti SATU card baru "Target SLA (Hari Kerja)" (`md:col-span-2`, grid 2 kolom Pengembangan | RFC, tiap kolom baris `Prioritas: N hari` / `N/A`). Prop `avgCompletionByType`/`avgCompletionByPriority` diganti `slaTargets`.
+  - `components/reports/laptri-summary.tsx`: card Pengembangan & RFC — sub-line "Avg: X jam" diganti blok baris per prioritas "Target SLA (hari kerja)" (border-top, `Prioritas: N hari`), count total tetap.
+  - `app/(admin)/admin/reports/sla/sla-client.tsx` & `laptri-client.tsx`: interface `SlaTargetRow` baru + field `slaTargets` pada interface summary; props ke komponen summary diganti.
+  - `lib/utils/report-export.ts`: kedua interface summary diganti `slaTargets`; sheet "Ringkasan" Excel Laptri & SLA — section "Rata-rata Waktu Penyelesaian (jam)" & "Rata-rata per Prioritas (jam)" diganti "Target SLA (Hari Kerja) - Pengembangan"/"- RFC" dengan baris per prioritas (N/A bila tidak ada policy).
+- Files changed: app/actions/reports.ts, components/reports/sla-summary.tsx, components/reports/laptri-summary.tsx, app/(admin)/admin/reports/sla/sla-client.tsx, app/(admin)/admin/reports/laptri/laptri-client.tsx, lib/utils/report-export.ts, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ ESLint: 0 error pada 6 file diubah; 3 warning pre-existing (komponen unused karena masih dikomentari pada client)
+  - ✅ Jest: 201 passed / 9 failed — 9 failure request-admin-workflows terverifikasi pre-existing (baseline identik terdokumentasi sesi 2026-10-23; per grep tidak ada test yang menyentuh summary/export/summary components)
+  - ✅ Build: SUCCESS (`npm run build`; /admin/reports/laptri & /admin/reports/sla ter-generate)
+  - ✅ DB smoke: `sla_policies` aktif = 6 (new_application Low/Medium/High = 135 hari; rfc Low/Medium/High = 44 hari); `priorities` aktif = Low/Medium/High (Critical is_active=0) — tampilan dinamis mengikuti master (Critical tidak tampil).
+- Open questions:
+  - (Resolved 2026-10-23, sesi berikut berjudul "Tabel Detail SLA ... dikonversi jam → hari kerja") Tabel "Detail SLA" (`components/reports/sla-table.tsx`) & sheet Excel "Detail SLA" masih menampilkan kolom jam raw per request — kini sudah dikonversi ke hari kerja.
+- Next recommended step: Manual test kedua halaman laporan (kartu Target SLA tampil dengan nilai 135/44 dari master, tidak berubah saat filter tahun/jenis/prioritas/status diubah) + cek file Excel export sheet Ringkasan.
+
 ## 2026-10-23 — UI: Ganti LaptriMonthlyTrend menjadi pie chart komposisi tipe permintaan
 
 - Goal: Pada halaman laporan Laptri (`/admin/reports/laptri`), hapus chart "Tren Bulanan" (`LaptriMonthlyTrend`) dan ganti dengan pie chart komposisi total New Application vs RFC (data `summary.typeBreakdown` yang sudah tersedia).

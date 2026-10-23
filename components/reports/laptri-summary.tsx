@@ -3,13 +3,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart3, FileText } from 'lucide-react';
 
+interface SlaTargetRow {
+  priorityId: number;
+  priorityName: string;
+  targetBusinessDays: number | null;
+}
+
 interface LaptriSummaryProps {
   quarterCounts: { Q1: number; Q2: number; Q3: number; Q4: number };
   typeBreakdown: { new_application: number; rfc: number };
-  avgCompletionByType: { new_application: number; rfc: number };
+  slaTargets: {
+    new_application: SlaTargetRow[];
+    rfc: SlaTargetRow[];
+  };
 }
 
-export function LaptriSummary({ quarterCounts, typeBreakdown, avgCompletionByType }: LaptriSummaryProps) {
+export function LaptriSummary({ quarterCounts, typeBreakdown, slaTargets }: LaptriSummaryProps) {
   const total = quarterCounts.Q1 + quarterCounts.Q2 + quarterCounts.Q3 + quarterCounts.Q4;
 
   return (
@@ -76,7 +85,18 @@ export function LaptriSummary({ quarterCounts, typeBreakdown, avgCompletionByTyp
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{typeBreakdown.new_application}</div>
-          <p className="text-xs text-muted-foreground">Avg: {avgCompletionByType.new_application.toFixed(1)} jam</p>
+          <p className="text-xs text-muted-foreground">Permintaan selesai</p>
+          {/* <div className="mt-2 space-y-1 border-t pt-2">
+            <p className="text-xs font-medium text-muted-foreground">Target SLA (hari kerja)</p>
+            {slaTargets.new_application.map((target) => (
+              <div key={target.priorityId} className="flex justify-between text-xs">
+                <span className="text-muted-foreground">{target.priorityName}:</span>
+                <span className="font-medium">
+                  {target.targetBusinessDays !== null ? `${target.targetBusinessDays} hari` : 'N/A'}
+                </span>
+              </div>
+            ))}
+          </div> */}
         </CardContent>
       </Card>
 
@@ -87,7 +107,18 @@ export function LaptriSummary({ quarterCounts, typeBreakdown, avgCompletionByTyp
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{typeBreakdown.rfc}</div>
-          <p className="text-xs text-muted-foreground">Avg: {avgCompletionByType.rfc.toFixed(1)} jam</p>
+          <p className="text-xs text-muted-foreground">Permintaan selesai</p>
+          {/* <div className="mt-2 space-y-1 border-t pt-2">
+            <p className="text-xs font-medium text-muted-foreground">Target SLA (hari kerja)</p>
+            {slaTargets.rfc.map((target) => (
+              <div key={target.priorityId} className="flex justify-between text-xs">
+                <span className="text-muted-foreground">{target.priorityName}:</span>
+                <span className="font-medium">
+                  {target.targetBusinessDays !== null ? `${target.targetBusinessDays} hari` : 'N/A'}
+                </span>
+              </div>
+            ))}
+          </div> */}
         </CardContent>
       </Card>
     </div>

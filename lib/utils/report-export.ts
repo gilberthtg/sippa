@@ -1,10 +1,18 @@
 import * as XLSX from 'xlsx';
 
+interface SlaTargetRow {
+  priorityId: number;
+  priorityName: string;
+  targetBusinessDays: number | null;
+}
+
 interface LaptriSummary {
   quarterCounts: { Q1: number; Q2: number; Q3: number; Q4: number };
   typeBreakdown: { new_application: number; rfc: number };
-  avgCompletionByType: { new_application: number; rfc: number };
-  avgCompletionByPriority: { low: number; medium: number; high: number; critical: number };
+  slaTargets: {
+    new_application: SlaTargetRow[];
+    rfc: SlaTargetRow[];
+  };
   monthlyTrend: Array<{ month: string; count: number }>;
   developerRoleMetrics: Array<{
     roleCode: string;
@@ -56,15 +64,16 @@ export function exportLaptriToExcel(
     ['Pengembangan', summary.typeBreakdown.new_application],
     ['RFC', summary.typeBreakdown.rfc],
     [''],
-    ['Rata-rata Waktu Penyelesaian (jam):'],
-    ['Pengembangan', summary.avgCompletionByType.new_application.toFixed(1)],
-    ['RFC', summary.avgCompletionByType.rfc.toFixed(1)],
-    [''],
-    ['Rata-rata per Prioritas (jam):'],
-    ['Low', summary.avgCompletionByPriority.low.toFixed(1)],
-    ['Medium', summary.avgCompletionByPriority.medium.toFixed(1)],
-    ['High', summary.avgCompletionByPriority.high.toFixed(1)],
-    ['Critical', summary.avgCompletionByPriority.critical.toFixed(1)],
+    ['Target SLA (Hari Kerja) - Pengembangan:'],
+    ...summary.slaTargets.new_application.map((target) => [
+      target.priorityName,
+      target.targetBusinessDays !== null ? target.targetBusinessDays : 'N/A',
+    ]),
+    ['Target SLA (Hari Kerja) - RFC:'],
+    ...summary.slaTargets.rfc.map((target) => [
+      target.priorityName,
+      target.targetBusinessDays !== null ? target.targetBusinessDays : 'N/A',
+    ]),
   ];
 
   const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
@@ -130,8 +139,10 @@ interface SLASummary {
   slaMetCount: number;
   slaExceededCount: number;
   achievementRate: number;
-  avgCompletionByType: { new_application: number; rfc: number };
-  avgCompletionByPriority: { low: number; medium: number; high: number; critical: number };
+  slaTargets: {
+    new_application: SlaTargetRow[];
+    rfc: SlaTargetRow[];
+  };
   monthlyTrend: Array<{ month: string; total: number; met: number; exceeded: number; rate: number }>;
   developerRoleSLAMetrics: Array<{
     roleCode: string;
@@ -186,15 +197,16 @@ export function exportSLAToExcel(
     ['Tidak Tercapai', `${summary.slaExceededCount} (${((summary.slaExceededCount / summary.totalRequests) * 100).toFixed(1)}%)`],
     ['Tingkat Pencapaian', `${summary.achievementRate.toFixed(1)}%`],
     [''],
-    ['Rata-rata Waktu Penyelesaian (jam):'],
-    ['Pengembangan', summary.avgCompletionByType.new_application.toFixed(1)],
-    ['RFC', summary.avgCompletionByType.rfc.toFixed(1)],
-    [''],
-    ['Rata-rata per Prioritas (jam):'],
-    ['Low', summary.avgCompletionByPriority.low.toFixed(1)],
-    ['Medium', summary.avgCompletionByPriority.medium.toFixed(1)],
-    ['High', summary.avgCompletionByPriority.high.toFixed(1)],
-    ['Critical', summary.avgCompletionByPriority.critical.toFixed(1)],
+    ['Target SLA (Hari Kerja) - Pengembangan:'],
+    ...summary.slaTargets.new_application.map((target) => [
+      target.priorityName,
+      target.targetBusinessDays !== null ? target.targetBusinessDays : 'N/A',
+    ]),
+    ['Target SLA (Hari Kerja) - RFC:'],
+    ...summary.slaTargets.rfc.map((target) => [
+      target.priorityName,
+      target.targetBusinessDays !== null ? target.targetBusinessDays : 'N/A',
+    ]),
   ];
 
   const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
@@ -243,19 +255,22 @@ export function exportSLAToExcel(
   XLSX.utils.book_append_sheet(wb, ws2b, 'Developer Role SLA');
 
   const detailsData = [
-    ['No. Permintaan', 'Jenis', 'Prioritas', 'Target (jam)', 'Aktual (jam)', 'Selisih (jam)', 'Status', 'Pencapaian (%)'],
-    ...requests.map((req) => [
-      req.requestNo,
-      req.requestType === 'new_application' ? 'Pengembangan' : 'RFC',
-      req.priorityName || 'N/A',
-      req.targetSlaHours || 'N/A',
-      req.actualDurationHours || 'N/A',
-      req.targetSlaHours && req.actualDurationHours
-        ? (req.actualDurationHours - req.targetSlaHours).toFixed(1)
-        : 'N/A',
-      req.slaMet ? 'Tercapai' : 'Tidak Tercapai',
-      req.achievementRate.toFixed(1),
-    ]),
+    ['No. Permintaan', 'Jenis', 'Prioritas', 'Target (hari kerja)', 'Aktual (hari kerja)', 'Selisih (hari)', 'Status', 'Pencapaian (%)'],
+    ...requests.map((req) => {
+      const targetDays = req.targetSlaHours !== null ? req.targetSlaHours / 24 : null;
+      const actualDays = req.actualDurationHours !== null ? req.actualDurationHours / 24 : null;
+      const difference = actualDays !== null && targetDays !== null ? actualDays - targetDays : null;
+      return [
+        req.requestNo,
+        req.requestType === 'new_application' ? 'Pengembangan' : 'RFC',
+        req.priorityName || 'N/A',
+        targetDays !== null ? Math.ceil(targetDays) : 'N/A',
+        actualDays !== null ? Math.ceil(actualDays) : 'N/A',
+        difference !== null ? Math.ceil(difference) : 'N/A',
+        req.slaMet ? 'Tercapai' : 'Tidak Tercapai',
+        req.achievementRate.toFixed(1),
+      ];
+    }),
   ];
   const ws3 = XLSX.utils.aoa_to_sheet(detailsData);
   XLSX.utils.book_append_sheet(wb, ws3, 'Detail SLA');
