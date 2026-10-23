@@ -131,7 +131,7 @@ export function CreateUserDialog({ open, onOpenChange, roles, units, developerRo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="min-w-[50vw] max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New User</DialogTitle>
           <DialogDescription>Add a new user to the system</DialogDescription>
