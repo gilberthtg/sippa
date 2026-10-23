@@ -119,7 +119,7 @@ export function LaptriClient({
         <LaptriMonthlyTrend monthlyTrend={summary.monthlyTrend} />
       </div>
 
-      <DeveloperRoleMetrics metrics={summary.developerRoleMetrics} />
+      {/* <DeveloperRoleMetrics metrics={summary.developerRoleMetrics} /> */}
 
       <LaptriTable requests={requests} />
     </div>

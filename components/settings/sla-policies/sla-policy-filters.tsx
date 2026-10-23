@@ -103,7 +103,7 @@ export function SLAPolicyFilters({ priorities }: Props) {
                 setRequestType(checked ? 'new_application' : null);
               }}
             >
-              New Application
+              Pengembangan
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               checked={requestType === 'rfc'}

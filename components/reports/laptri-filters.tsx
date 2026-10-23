@@ -74,7 +74,7 @@ export function LaptriFilters({
         <Select value={requestType || 'all'} onValueChange={(val) => onRequestTypeChange(val === 'all' ? undefined : (val || undefined))}>
           <SelectTrigger className="w-52">
             <SelectValue>
-              {!requestType || requestType === 'all' ? 'Semua Jenis Request' : requestType === 'new_application' ? 'New Application' : 'RFC - Request for Change'}
+              {!requestType || requestType === 'all' ? 'Semua Jenis Request' : requestType === 'new_application' ? 'Pengembangan' : 'RFC - Request for Change'}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -83,7 +83,7 @@ export function LaptriFilters({
             </SelectItem>
             <SelectItem value="new_application">
               <div className="flex flex-col py-1">
-                <span className="font-medium">New Application</span>
+                <span className="font-medium">Pengembangan</span>
                 <span className="text-xs text-muted-foreground">Aplikasi baru</span>
               </div>
             </SelectItem>

@@ -49,7 +49,7 @@ type Props = {
 };
 
 const REQUEST_TYPE_LABELS: Record<string, string> = {
-  new_application: 'New Application',
+  new_application: 'Pengembangan',
   rfc: 'RFC',
 };
 

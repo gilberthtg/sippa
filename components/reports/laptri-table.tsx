@@ -70,7 +70,7 @@ export function LaptriTable({ requests }: LaptriTableProps) {
                   </TableCell>
                   <TableCell>
                     <Badge variant={request.requestType === 'new_application' ? 'default' : 'secondary'}>
-                      {request.requestType === 'new_application' ? 'New Application' : 'RFC'}
+                      {request.requestType === 'new_application' ? 'Pengembangan' : 'RFC'}
                     </Badge>
                   </TableCell>
                   <TableCell className="max-w-xs truncate">{request.title}</TableCell>

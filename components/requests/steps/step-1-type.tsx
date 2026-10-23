@@ -28,7 +28,7 @@ export function Step1Type({ value, onChange }: Step1TypeProps) {
                 htmlFor="new_application"
                 className="text-base font-medium cursor-pointer"
               >
-                New Application
+                Pengembangan
               </Label>
               <p className="text-sm text-muted-foreground mt-1">
                 Permintaan pembuatan aplikasi baru yang belum pernah ada sebelumnya

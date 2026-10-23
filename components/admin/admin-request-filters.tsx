@@ -40,7 +40,7 @@ const statusOptions: FilterOption[] = [
 ].map((value) => ({ value, label: STATUS_LABELS[value] || value }));
 
 const typeOptions: FilterOption[] = [
-  { value: 'new_application', label: 'New Application' },
+  { value: 'new_application', label: 'Pengembangan' },
   { value: 'rfc', label: 'RFC' },
 ];
 

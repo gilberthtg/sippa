@@ -35,7 +35,7 @@ export function Step5Review({
   files,
 }: Step5ReviewProps) {
   const getRequestTypeLabel = (type: string) => {
-    return type === REQUEST_TYPES.NEW_APPLICATION ? 'New Application' : 'RFC';
+    return type === REQUEST_TYPES.NEW_APPLICATION ? 'Pengembangan' : 'RFC';
   };
 
   const getUrgencyLabel = (level: string) => {

@@ -49,7 +49,7 @@ export function RequestDetailHeader({
   };
 
   const getRequestTypeLabel = (type: string) => {
-    return type === REQUEST_TYPES.NEW_APPLICATION ? 'New Application' : 'RFC';
+    return type === REQUEST_TYPES.NEW_APPLICATION ? 'Pengembangan' : 'RFC';
   };
 
   return (

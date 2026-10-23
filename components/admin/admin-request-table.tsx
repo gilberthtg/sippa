@@ -37,7 +37,7 @@ interface AdminRequestTableProps {
 }
 
 const typeLabels = {
-  new_application: 'New Application',
+  new_application: 'Pengembangan',
   rfc: 'RFC',
 };
 

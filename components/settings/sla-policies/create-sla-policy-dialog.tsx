@@ -120,7 +120,7 @@ export function CreateSLAPolicyDialog({ open, onOpenChange, priorities }: Props)
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select request type">
-                          {field.value === 'new_application' && 'New Application'}
+                          {field.value === 'new_application' && 'Pengembangan'}
                           {field.value === 'rfc' && 'RFC - Request for Change'}
                           {!field.value && 'Select request type'}
                         </SelectValue>
@@ -129,7 +129,7 @@ export function CreateSLAPolicyDialog({ open, onOpenChange, priorities }: Props)
                     <SelectContent>
                       <SelectItem value="new_application">
                         <div className="flex flex-col py-1">
-                          <span className="font-medium">New Application</span>
+                          <span className="font-medium">Pengembangan</span>
                           <span className="text-xs text-muted-foreground">Aplikasi baru yang belum pernah ada</span>
                         </div>
                       </SelectItem>

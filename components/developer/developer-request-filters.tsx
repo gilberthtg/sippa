@@ -27,7 +27,7 @@ const PRIORITY_OPTIONS = [
 ];
 
 const TYPE_OPTIONS = [
-  { value: 'new_application', label: 'New Application' },
+  { value: 'new_application', label: 'Pengembangan' },
   { value: 'rfc', label: 'RFC' },
 ];
 

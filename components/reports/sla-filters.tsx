@@ -55,7 +55,7 @@ export function SLAFilters({
         <Select value={requestType || 'all'} onValueChange={(val) => onRequestTypeChange(val === 'all' ? undefined : (val || undefined))}>
           <SelectTrigger className="w-52">
             <SelectValue>
-              {!requestType || requestType === 'all' ? 'Semua Jenis' : requestType === 'new_application' ? 'New Application' : 'RFC'}
+              {!requestType || requestType === 'all' ? 'Semua Jenis' : requestType === 'new_application' ? 'Pengembangan' : 'RFC'}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -64,7 +64,7 @@ export function SLAFilters({
             </SelectItem>
             <SelectItem value="new_application">
               <div className="flex flex-col py-1">
-                <span className="font-medium">New Application</span>
+                <span className="font-medium">Pengembangan</span>
                 <span className="text-xs text-muted-foreground">Aplikasi baru</span>
               </div>
             </SelectItem>

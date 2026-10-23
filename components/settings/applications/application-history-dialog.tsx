@@ -187,7 +187,7 @@ export function ApplicationHistoryDialog({ applicationId, open, onOpenChange }: 
                                 </div>
                                 <div className="mt-1 text-sm text-muted-foreground">
                                   {request.requestType === 'NEW_APPLICATION'
-                                    ? request.title || 'New Application'
+                                    ? request.title || 'Pengembangan'
                                     : `RFC: Update to v${request.requestedVersion}`}
                                 </div>
                               </div>
