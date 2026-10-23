@@ -1,6 +1,6 @@
 # SIPPA Business Rules (v1.0)
 
-**Last Updated:** 2026-10-12  
+**Last Updated:** 2026-10-23  
 **Status:** Production Rules (after Phase 1-8 restructure)
 
 ## Workflow Baseline
@@ -402,6 +402,11 @@ plus team leader and technical writer (even if those are not regular developers)
 - **Max Size:** 10 MB per file
 - **Max Count:** 1 file per request
 - **Validation:** MIME type check (server-side)
+
+### Document Checklist Upload Permission (request detail page)
+- Only Admin, Team Leader of the request, and Technical Writer of the request can upload/delete documents on the request detail page document checklist
+- Everyone else (requester, peer developers) can only view and download documents
+- Enforced in UI (`canUpload` prop on `RequestDocumentsSection`) and server-side (`uploadRequestDocument` rejects developers that are not Team Leader or TW of the request)
 
 ## Deferred Requirements (v1.1+)
 

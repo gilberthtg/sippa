@@ -44,7 +44,7 @@ export function DeveloperRequestActions({
       </Card>
     );
   }
-
+  
   return (
     <>
       <Card>
@@ -87,7 +87,7 @@ export function DeveloperRequestActions({
           {!canStart && !canUpdate && !canComplete && (
             <div className="text-sm text-muted-foreground text-center py-4">
               {status === 'ongoing' && !canManage
-                ? 'Hanya Admin dan Ketua Tim (Team Lead) yang dapat memperbarui progres dan menyelesaikan request'
+                ? 'Tidak ada tindakan yang tersedia untuk status ini'
                 : 'No actions available for this status'}
             </div>
           )}

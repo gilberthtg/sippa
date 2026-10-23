@@ -1,8 +1,8 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { requestDocuments, requests, documentTypes, serviceDocumentTypes, requestTeamAssignments, users } from '@/lib/db/schema';
-import { eq, and, isNull, asc } from 'drizzle-orm';
+import { requestDocuments, requests, documentTypes, serviceDocumentTypes } from '@/lib/db/schema';
+import { eq, and, asc } from 'drizzle-orm';
 import { auth } from '@/lib/auth/config';
 import { revalidatePath } from 'next/cache';
 import { logAudit } from '@/lib/utils/audit';
@@ -74,22 +74,28 @@ export async function uploadRequestDocument(formData: FormData) {
     return { success: false, error: 'Data tidak lengkap' };
   }
 
-  // Verify access: admin always; developer must be assigned
-  if (user.roleCode === 'developer') {
-    const [assignment] = await db
-      .select({ id: requestTeamAssignments.id })
-      .from(requestTeamAssignments)
-      .where(
-        and(
-          eq(requestTeamAssignments.requestId, requestId),
-          eq(requestTeamAssignments.assignedUserId, user.id),
-          isNull(requestTeamAssignments.unassignedAt)
-        )
-      )
-      .limit(1);
-    if (!assignment) {
-      return { success: false, error: 'Anda tidak ditugaskan ke request ini' };
-    }
+  // Check request exists and fetch team roles for permission check
+  const [request] = await db
+    .select({
+      id: requests.id,
+      requestType: requests.requestType,
+      teamLeaderId: requests.teamLeaderId,
+      technicalWriterId: requests.technicalWriterId,
+    })
+    .from(requests)
+    .where(eq(requests.id, requestId))
+    .limit(1);
+  if (!request) {
+    return { success: false, error: 'Request tidak ditemukan' };
+  }
+
+  // Only admin, team leader, and technical writer can upload
+  if (
+    user.roleCode === 'developer' &&
+    user.id !== request.teamLeaderId &&
+    user.id !== request.technicalWriterId
+  ) {
+    return { success: false, error: 'Hanya Team Leader, Technical Writer, dan Admin yang dapat meng-upload dokumen' };
   }
 
   // Validate file
@@ -98,16 +104,6 @@ export async function uploadRequestDocument(formData: FormData) {
   }
   if (!(FILE_UPLOAD.ALLOWED_TYPES as readonly string[]).includes(file.type)) {
     return { success: false, error: `Tipe file tidak diizinkan` };
-  }
-
-  // Check request exists
-  const [request] = await db
-    .select({ id: requests.id, requestType: requests.requestType })
-    .from(requests)
-    .where(eq(requests.id, requestId))
-    .limit(1);
-  if (!request) {
-    return { success: false, error: 'Request tidak ditemukan' };
   }
 
   // Upsert: delete existing then insert (1 file per type per request)

@@ -132,7 +132,10 @@ export default async function DeveloperRequestDetailPage({ params }: PageProps) 
                     requestId={requestId}
                     requiredDocs={requiredDocs as any}
                     uploadedDocs={uploadedDocs as any}
-                    canUpload={true}
+                    canUpload={
+                      request.teamLeaderId === session?.user?.id ||
+                      request.technicalWriterId === session?.user?.id
+                    }
                   />
                 </div>
               </TabsContent>

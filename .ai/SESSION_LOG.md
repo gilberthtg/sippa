@@ -1,5 +1,36 @@
 # SiPPA AI Session Log
 
+## 2026-10-23 — Fix: Build gagal "Export doesn't exist in target module" pada admin-requests.ts
+
+- Goal: Memperbaiki build error `Export verifyRequest doesn't exist in target module ... The module has no exports at all` yang muncul pada semua import `@/app/actions/admin-requests`.
+- Root causes:
+  - `app/actions/admin-requests.ts` (file `'use server'`) berisi re-export di akhir file: `export { updateProgress } from '@/app/actions/developer-requests'`. Di Next.js 16/Turbopack, file `'use server'` hanya boleh mengekspor fungsi async yang didefinisikan di file itu sendiri — re-export membuat modul server actions gagal dibangun sehingga seluruh ekspor modul "hilang" (module has no exports at all). Error ini muncul sejak re-export ditambahkan pada sesi "Access Control: Update Progress & Ubah ke DONE" hari ini.
+- Changes made:
+  - Hapus `export { updateProgress } from '@/app/actions/developer-requests'` dari `app/actions/admin-requests.ts` (tidak ada consumer yang meng-import `updateProgress` dari admin-requests; dialog admin memakai komponen update-progress sendiri yang meng-import dari developer-requests).
+- Tests/checks:
+  - Build: SUCCESS (`npm run build` — compiled successfully, semua 33 route ter-generate)
+  - Catatan: sebelum fix, build bersih (`rm -rf .next` + `npm run build`) juga gagal dengan error yang sama — bukan stale cache.
+- Open questions:
+  - (None)
+
+## 2026-10-23 — Access Control: Upload Dokumen Checklist Hanya untuk Admin, Team Lead, dan TW
+
+- Goal: Pada halaman detail request, hanya Admin, Team Leader (Ketua Tim), dan Technical Writer yang dapat meng-upload dokumen checklist; role lainnya hanya dapat melihat dan mengunduh dokumen.
+- Changes made:
+  - `app/(developer)/developer/requests/[id]/page.tsx`:
+    - `RequestDocumentsSection` kini menerima `canUpload` dinamis: `request.teamLeaderId === session?.user?.id || request.technicalWriterId === session?.user?.id` (sebelumnya hardcode `true`, sehingga semua developer bisa upload).
+  - `app/actions/request-documents.ts`:
+    - `uploadRequestDocument`: otorisasi server-side diperketat. Pengecekan lama "developer assigned manapun boleh upload" diganti: developer hanya boleh upload jika user adalah `teamLeaderId` atau `technicalWriterId` request terkait; admin selalu diizinkan. Non-admin/non-TL/non-TW ditolak dengan error `'Hanya Team Leader, Technical Writer, dan Admin yang dapat meng-upload dokumen'`.
+    - Query request yang mengambil data sekarang juga memilih `teamLeaderId` dan `technicalWriterId` (dipindah ke atas sebelum validasi file).
+    - Import bersih: hapus `requestTeamAssignments`, `isNull`, `users` (tidak terpakai).
+  - `app/(admin)/admin/requests/[id]/page.tsx`: tetap `canUpload={true}` (halaman admin, admin selalu boleh upload).
+  - `app/(user)/requests/[id]/page.tsx`: tetap `canUpload={false}` (user hanya lihat/unduh).
+- Tests/checks:
+  - TypeScript: PASSED (`npx tsc --noEmit`)
+  - ESLint: PASSED pada 2 file yang diubah; error `no-explicit-any` pada developer page lines 133-134 pre-existing (terverifikasi via `git stash` — sama pada HEAD)
+- Open questions:
+  - (None)
+
 ## 2026-10-23 — Access Control: Update Progress & Ubah ke DONE Hanya untuk Admin dan Team Lead
 
 - Goal: Membatasi hak akses update progress dan penyelesaian request (status DONE) pada halaman `developer/requests/[id]` dan `admin/requests/[id]` agar hanya dapat dilakukan oleh Admin dan Ketua Tim (Team Lead). Anggota developer lainnya tidak diperbolehkan.
