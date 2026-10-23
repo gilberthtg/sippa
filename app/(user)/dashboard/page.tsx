@@ -93,7 +93,7 @@ export default async function UserDashboardPage() {
         </CardContent>
       </Card>
 
-      <UserRecentActivity activities={activities} />
+      {/* <UserRecentActivity activities={activities} /> */}
     </PageContainer>
   );
 }

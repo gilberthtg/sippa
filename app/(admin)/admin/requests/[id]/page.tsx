@@ -9,10 +9,12 @@ import {
   getRequestByIdAdmin, 
   getPriorities,
 } from '@/app/actions/admin-requests';
+import { getProgressHistory } from '@/app/actions/developer-requests';
 import { getRequiredDocumentTypes, getRequestDocuments } from '@/app/actions/request-documents';
 import { RequestDetailHeader } from '@/components/requests/request-detail-header';
 import { RequestDetailInfo } from '@/components/requests/request-detail-info';
 import { RequestDetailTimeline } from '@/components/requests/request-detail-timeline';
+import { ProgressTimeline } from '@/components/requests/progress-timeline';
 // import { RequestAttachmentsList } from '@/components/requests/request-attachments-list';
 import { RequestAdminActions } from '@/components/admin/request-admin-actions';
 import { RequestDocumentsSection } from '@/components/requests/request-documents-section';
@@ -27,9 +29,10 @@ export default async function AdminRequestDetailPage({ params }: PageProps) {
   const { id } = await params;
   const requestId = parseInt(id);
 
-  const [requestResult, prioritiesResult] = await Promise.all([
+  const [requestResult, prioritiesResult, progressResult] = await Promise.all([
     getRequestByIdAdmin(requestId),
     getPriorities(),
+    getProgressHistory(requestId),
   ]);
 
   if (!requestResult.success || !requestResult.data) {
@@ -76,6 +79,7 @@ export default async function AdminRequestDetailPage({ params }: PageProps) {
           <Tabs defaultValue="informasi" className="gap-6">
             <TabsList>
               <TabsTrigger value="informasi">Informasi</TabsTrigger>
+              <TabsTrigger value="progres">Progres</TabsTrigger>
               <TabsTrigger value="dokumen">Dokumen</TabsTrigger>
               <TabsTrigger value="riwayat">Riwayat Status</TabsTrigger>
             </TabsList>
@@ -91,6 +95,16 @@ export default async function AdminRequestDetailPage({ params }: PageProps) {
                 requesterEmail={request.requesterEmail}
                 requesterPhone={request.requesterPhone}
               />
+            </TabsContent>
+
+            <TabsContent value="progres">
+              {progressResult.success && progressResult.data ? (
+                <ProgressTimeline progressHistory={progressResult.data} />
+              ) : (
+                <div className="rounded-md border p-4 text-sm text-muted-foreground text-center py-6">
+                  Belum ada riwayat progres
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="dokumen">

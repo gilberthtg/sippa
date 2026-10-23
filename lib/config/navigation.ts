@@ -66,14 +66,14 @@ export const navigationConfig: NavSection[] = [
         icon: FileText,
         roles: ['admin'],
       },
+      // {
+      //   label: 'My Assignment',
+      //   href: '/developer/assignments',
+      //   icon: ClipboardList,
+      //   roles: ['developer'],
+      // },
       {
         label: 'My Assignment',
-        href: '/developer/assignments',
-        icon: ClipboardList,
-        roles: ['developer'],
-      },
-      {
-        label: 'DevTI Request',
         href: '/developer/requests',
         icon: FileText,
         roles: ['developer'],

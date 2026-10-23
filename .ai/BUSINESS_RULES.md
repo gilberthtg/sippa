@@ -108,7 +108,8 @@
 - See "My Role" in each assignment
 - View full team composition (team leader, technical writer, peer developers)
 - Current user highlighted in team list
-- Update work progress with notes
+- Update work progress with notes (Team Lead or Admin only; peer developers cannot update)
+- Complete request / mark DONE (Team Lead or Admin only; peer developers cannot mark done)
 - Collaborate with team members
 - Receive notifications on new assignments
 
@@ -166,7 +167,7 @@ error message and never write to the database.
 | 4 | `APPROVED → ONGOING` | Admin | Team assignment (assignTeamToRequest); min 1 developer, TW must have TW role |
 | 5 | `ONGOING → ON_HOLD` | Admin or assigned team | Requires reason (min 10 chars); sets slaPausedAt |
 | 6 | `ON_HOLD → ONGOING` | Admin or assigned team | Resume; accumulates paused business-day hours |
-| 7 | `ONGOING → DONE` | Admin | Complete (completeRequest) — admin quality gate; a developer completion path also exists (discrepancy vs original decision #5, see SESSION_LOG/Open Questions) |
+| 7 | `ONGOING → DONE` | Admin or Team Lead | Complete (completeRequest) — hanya dapat dilakukan oleh Admin atau Team Lead |
 | 8 | `REJECTED → SUBMITTED` | User (requester) or Admin | Resubmission of rejected request |
 | 9 | `DONE → *(none)*` | — | DONE is FINAL, no transitions out |
 

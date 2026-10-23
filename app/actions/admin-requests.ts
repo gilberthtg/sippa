@@ -1470,3 +1470,5 @@ export async function getDeveloperRoleDistribution() {
     return { success: false, error: 'Gagal mengambil distribusi role developer' };
   }
 }
+
+export { updateProgress } from '@/app/actions/developer-requests';

@@ -39,7 +39,7 @@ export async function GET(
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    const isRequester = doc.requesterId === session.user.id;
+    const isRequester = doc.requesterId == session.user.id;
     const isAdmin = session.user.roleCode === 'admin';
     let isDeveloperAssigned = false;
 

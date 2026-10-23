@@ -47,7 +47,7 @@ async function checkRequestAssignment(requestId: number, developerId: number) {
     .limit(1);
 
   if (!request) return false;
-  return request.teamLeaderId === developerId || request.technicalWriterId === developerId;
+  return request.teamLeaderId == developerId || request.technicalWriterId == developerId;
 }
 
 export async function getDeveloperDashboardStats() {
@@ -436,9 +436,9 @@ export async function updateProgress(params: {
   progressPercent: number; 
   note: string;
 }) {
-  const authCheck = await checkDeveloperAuth();
-  if (!authCheck.authorized) {
-    return { success: false, error: authCheck.error };
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: 'Unauthorized' };
   }
 
   try {
@@ -452,33 +452,34 @@ export async function updateProgress(params: {
       return { success: false, error: 'Note minimal 10 karakter' };
     }
 
-    const isAssigned = await checkRequestAssignment(requestId, authCheck.userId!);
-    if (!isAssigned) {
-      return { success: false, error: 'Request tidak di-assign ke Anda' };
-    }
-
     const [request] = await db.select().from(requests).where(eq(requests.id, requestId)).limit(1);
     
     if (!request) {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
+    const isAdmin = session.user.roleCode === 'admin';
+    const isTeamLead = request.teamLeaderId === session.user.id;
+
+    if (!isAdmin && !isTeamLead) {
+      return { success: false, error: 'Hanya admin dan team lead yang dapat mengupdate progress' };
+    }
+
     if (request.status !== 'ongoing') {
       return { success: false, error: 'Hanya request ONGOING yang dapat diupdate progressnya' };
     }
 
-    const session = await auth();
     await db.insert(requestProgress).values({
       requestId,
       progressPercent,
       updateNote: note.trim(),
-      updatedBy: authCheck.userId!,
-      updatedByName: session?.user?.name || 'Developer',
+      updatedBy: session.user.id,
+      updatedByName: session.user.name || (isAdmin ? 'Admin' : 'Team Lead'),
     });
 
     logAudit({
-      actorUserId: authCheck.userId!,
-      actorName: session?.user?.name || 'Developer',
+      actorUserId: session.user.id,
+      actorName: session.user.name || (isAdmin ? 'Admin' : 'Team Lead'),
       module: AUDIT_MODULES.REQUESTS,
       entityType: 'request',
       entityId: String(requestId),
@@ -503,9 +504,9 @@ export async function updateProgress(params: {
 }
 
 export async function completeRequest(params: { requestId: number; finalNote: string }) {
-  const authCheck = await checkDeveloperAuth();
-  if (!authCheck.authorized) {
-    return { success: false, error: authCheck.error };
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: 'Unauthorized' };
   }
 
   try {
@@ -515,21 +516,23 @@ export async function completeRequest(params: { requestId: number; finalNote: st
       return { success: false, error: 'Final note minimal 20 karakter' };
     }
 
-    const isAssigned = await checkRequestAssignment(requestId, authCheck.userId!);
-    if (!isAssigned) {
-      return { success: false, error: 'Request tidak di-assign ke Anda' };
-    }
-
     const [request] = await db.select().from(requests).where(eq(requests.id, requestId)).limit(1);
     
     if (!request) {
       return { success: false, error: 'Request tidak ditemukan' };
     }
 
+    const isAdmin = session.user.roleCode === 'admin';
+    const isTeamLead = request.teamLeaderId === session.user.id;
+
+    if (!isAdmin && !isTeamLead) {
+      return { success: false, error: 'Hanya admin dan team lead yang dapat menyelesaikan request' };
+    }
+
     const completeValidation = validateTransitionWithContext(
       request.status as 'submitted' | 'in_review' | 'approved' | 'rejected' | 'ongoing' | 'done' | 'on_hold',
       REQUEST_STATUSES.DONE,
-      ROLES.DEVELOPER
+      isAdmin ? ROLES.ADMIN : ROLES.DEVELOPER
     );
     if (!completeValidation.valid) {
       return { success: false, error: completeValidation.error || 'Transisi status tidak valid' };
@@ -557,13 +560,12 @@ export async function completeRequest(params: { requestId: number; finalNote: st
       })
       .where(eq(requests.id, requestId));
 
-    const session = await auth();
     await db.insert(requestStatusHistories).values({
       requestId,
       fromStatus: 'ongoing',
       toStatus: 'done',
-      changedBy: authCheck.userId!,
-      changedByName: session?.user?.name || 'Developer',
+      changedBy: session.user.id,
+      changedByName: session.user.name || (isAdmin ? 'Admin' : 'Team Lead'),
       note: finalNote.trim(),
     });
 
@@ -571,13 +573,13 @@ export async function completeRequest(params: { requestId: number; finalNote: st
       requestId,
       progressPercent: 100,
       updateNote: finalNote.trim(),
-      updatedBy: authCheck.userId!,
-      updatedByName: session?.user?.name || 'Developer',
+      updatedBy: session.user.id,
+      updatedByName: session.user.name || (isAdmin ? 'Admin' : 'Team Lead'),
     });
 
     logAudit({
-      actorUserId: authCheck.userId!,
-      actorName: session?.user?.name || 'Developer',
+      actorUserId: session.user.id,
+      actorName: session.user.name || (isAdmin ? 'Admin' : 'Team Lead'),
       module: AUDIT_MODULES.REQUESTS,
       entityType: 'request',
       entityId: String(requestId),
@@ -601,15 +603,18 @@ export async function completeRequest(params: { requestId: number; finalNote: st
 }
 
 export async function getProgressHistory(requestId: number) {
-  const authCheck = await checkDeveloperAuth();
-  if (!authCheck.authorized) {
-    return { success: false, error: authCheck.error };
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: 'Unauthorized' };
   }
 
   try {
-    const isAssigned = await checkRequestAssignment(requestId, authCheck.userId!);
-    if (!isAssigned) {
-      return { success: false, error: 'Request tidak di-assign ke Anda' };
+    const isAdmin = session.user.roleCode === 'admin';
+    if (!isAdmin) {
+      const isAssigned = await checkRequestAssignment(requestId, session.user.id);
+      if (!isAssigned) {
+        return { success: false, error: 'Request tidak di-assign ke Anda' };
+      }
     }
 
     const progressHistory = await db

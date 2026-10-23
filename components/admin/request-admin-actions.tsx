@@ -9,12 +9,13 @@ import {
   ClipboardCheck, 
   CheckCircle, 
   XCircle, 
-  UserCheck,
-  Flag,
-  Users,
-  FileText,
-  User,
-  Play
+  UserCheck, 
+  Flag, 
+  Users, 
+  FileText, 
+  User, 
+  Play,
+  RefreshCw
 } from 'lucide-react';
 import { VerifyDialog } from './verify-dialog';
 import { ApproveDialog } from './approve-dialog';
@@ -23,6 +24,7 @@ import { TeamAssignmentDialog } from './team-assignment-dialog';
 import { OnHoldDialog } from './on-hold-dialog';
 import { CompleteDialog } from './complete-dialog';
 import { PrioritySelector } from './priority-selector';
+import { UpdateProgressDialog } from '@/components/developer/update-progress-dialog';
 import { REQUEST_STATUSES } from '@/lib/constants';
 import { resumeRequest } from '@/app/actions/request-hold';
 import { useRouter } from 'next/navigation';
@@ -72,6 +74,7 @@ export function RequestAdminActions({
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [holdDialogOpen, setHoldDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [updateProgressDialogOpen, setUpdateProgressDialogOpen] = useState(false);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -83,6 +86,7 @@ export function RequestAdminActions({
   const canAssign = request.status === REQUEST_STATUSES.APPROVED;
   const canHold = request.status === REQUEST_STATUSES.ONGOING;
   const canResume = request.status === REQUEST_STATUSES.ON_HOLD;
+  const canUpdateProgress = request.status === REQUEST_STATUSES.ONGOING;
   const canComplete = request.status === REQUEST_STATUSES.ONGOING;
   const isAssigned = request.status === REQUEST_STATUSES.ONGOING || 
                      request.status === REQUEST_STATUSES.ON_HOLD ||
@@ -242,6 +246,26 @@ export function RequestAdminActions({
             </>
           )}
 
+          {/* Update Progress */}
+          {canUpdateProgress && (
+            <>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Perbarui progres pengerjaan request ini.
+                </p>
+                <Button
+                  onClick={() => setUpdateProgressDialogOpen(true)}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Update Progress
+                </Button>
+              </div>
+              <Separator />
+            </>
+          )}
+
           {/* Complete Request */}
           {canComplete && (
             <>
@@ -392,6 +416,12 @@ export function RequestAdminActions({
         requestNo={request.requestNo}
         open={completeDialogOpen}
         onOpenChange={setCompleteDialogOpen}
+      />
+
+      <UpdateProgressDialog
+        requestId={request.id}
+        open={updateProgressDialogOpen}
+        onOpenChange={setUpdateProgressDialogOpen}
       />
     </>
   );

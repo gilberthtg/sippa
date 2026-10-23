@@ -1,5 +1,34 @@
 # SiPPA AI Session Log
 
+## 2026-10-23 — Access Control: Update Progress & Ubah ke DONE Hanya untuk Admin dan Team Lead
+
+- Goal: Membatasi hak akses update progress dan penyelesaian request (status DONE) pada halaman `developer/requests/[id]` dan `admin/requests/[id]` agar hanya dapat dilakukan oleh Admin dan Ketua Tim (Team Lead). Anggota developer lainnya tidak diperbolehkan.
+- Changes made:
+  - `app/actions/developer-requests.ts`:
+    - `updateProgress`: Validasi otorisasi `isAdmin = session.user.roleCode === 'admin'` atau `isTeamLead = request.teamLeaderId === session.user.id`. Developer biasa yang bukan team lead ditolak dengan error `'Hanya admin dan team lead yang dapat mengupdate progress'`.
+    - `completeRequest`: Validasi otorisasi yang sama; ditolak dengan error `'Hanya admin dan team lead yang dapat menyelesaikan request'`.
+    - `getProgressHistory`: Mengizinkan akses riwayat progress untuk admin dan developer yang ter-assign / team leader.
+  - `app/actions/admin-requests.ts`:
+    - Re-export `updateProgress` dari developer-requests agar dapat dipakai konsisten pada modul admin.
+  - `components/developer/developer-request-actions.tsx`:
+    - Tambah prop `canManage?: boolean`.
+    - Tombol "Update Progress" dan "Mark as Complete" hanya dirender jika `canManage && status === 'ongoing'`.
+    - Menampilkan pesan informatif jika user bukan Admin / Team Lead.
+  - `app/(developer)/developer/requests/[id]/page.tsx`:
+    - Hitung `canManage = request.teamLeaderId === session?.user?.id || session?.user?.roleCode === 'admin'` dan teruskan ke `DeveloperRequestActions`.
+  - `components/admin/request-admin-actions.tsx`:
+    - Tambah tombol "Update Progress" yang membuka `UpdateProgressDialog` saat request berstatus ONGOING (didukung oleh `canUpdateProgress`).
+  - `app/(admin)/admin/requests/[id]/page.tsx`:
+    - Ambil data riwayat progres via `getProgressHistory(requestId)` dan tambahkan tab "Progres" yang menampilkan `ProgressTimeline`.
+  - `__tests__/actions/progress-and-done-permissions.test.ts`:
+    - 8 unit tests memverifikasi: unauthenticated diblokir, regular developer diblokir, team lead diizinkan, admin diizinkan untuk kedua aksi (`updateProgress` dan `completeRequest`).
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Unit tests: PASSED (`npx jest __tests__/actions/progress-and-done-permissions.test.ts` — 8/8 passed)
+  - ✅ Unit tests status transitions: PASSED (`npx jest __tests__/actions/request-status-transitions.test.ts` — 75/75 passed)
+- Open questions:
+  - (None)
+
 ## 2026-10-22 — Fix: User dashboard (/dashboard) menampilkan angka hardcoded & aktivitas statis
 
 - Goal: Halaman dashboard User menampilkan kartu penghitung yang di-hardcode "0" dan blok "Recent Activity" selalu "Belum ada aktivitas". Buat fungsional: jumlah pending / berlangsung / selesai + aktivitas terbaru milik user.

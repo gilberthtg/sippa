@@ -11,19 +11,21 @@ import { CompleteRequestDialog } from './complete-request-dialog';
 interface DeveloperRequestActionsProps {
   requestId: number;
   status: string;
+  canManage?: boolean;
 }
 
 export function DeveloperRequestActions({
   requestId,
   status,
+  canManage = false,
 }: DeveloperRequestActionsProps) {
   const [startDialogOpen, setStartDialogOpen] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
 
   const canStart = false;
-  const canUpdate = status === 'ongoing';
-  const canComplete = status === 'ongoing';
+  const canUpdate = canManage && status === 'ongoing';
+  const canComplete = canManage && status === 'ongoing';
   const isCompleted = status === 'done';
   const isOnHold = status === 'on_hold';
 
@@ -84,7 +86,9 @@ export function DeveloperRequestActions({
 
           {!canStart && !canUpdate && !canComplete && (
             <div className="text-sm text-muted-foreground text-center py-4">
-              No actions available for this status
+              {status === 'ongoing' && !canManage
+                ? 'Hanya Admin dan Ketua Tim (Team Lead) yang dapat memperbarui progres dan menyelesaikan request'
+                : 'No actions available for this status'}
             </div>
           )}
         </CardContent>

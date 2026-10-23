@@ -215,7 +215,7 @@ export function RequestFormSingle() {
             <div className="flex items-center space-x-2 rounded-lg border p-4 hover:bg-muted/50">
               <RadioGroupItem value={REQUEST_TYPES.NEW_APPLICATION} id="new_app" />
               <Label htmlFor="new_app" className="flex-1 cursor-pointer">
-                <div className="font-medium">New Application</div>
+                <div className="font-medium">Pengembangan</div>
                 <div className="text-sm text-muted-foreground">
                   Pengajuan aplikasi baru yang belum pernah ada sebelumnya
                 </div>

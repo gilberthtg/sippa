@@ -142,7 +142,11 @@ export default async function DeveloperRequestDetailPage({ params }: PageProps) 
           {/* Sidebar - 1 column */}
           <div className="space-y-6">
             {/* Developer Actions */}
-            <DeveloperRequestActions requestId={requestId} status={request.status} />
+            <DeveloperRequestActions
+              requestId={requestId}
+              status={request.status}
+              canManage={request.teamLeaderId === session?.user?.id || session?.user?.roleCode === 'admin'}
+            />
             
             {/* Team Information */}
             <TeamInfoCard
