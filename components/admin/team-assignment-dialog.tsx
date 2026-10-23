@@ -36,6 +36,7 @@ import { Separator } from '@/components/ui/separator';
 interface TeamAssignmentDialogProps {
   requestId: number;
   requestNo: string;
+  priorityId: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -65,6 +66,7 @@ interface DeveloperAssignment {
 export function TeamAssignmentDialog({
   requestId,
   requestNo,
+  priorityId,
   open,
   onOpenChange,
 }: TeamAssignmentDialogProps) {
@@ -163,6 +165,11 @@ export function TeamAssignmentDialog({
 
   const handleAssign = () => {
     // Validation
+    if (!priorityId) {
+      toast.error('Priority harus diatur sebelum assign tim');
+      return;
+    }
+
     if (!devtiUrusanId) {
       toast.error('DevTI Urusan wajib dipilih');
       return;
@@ -251,7 +258,7 @@ export function TeamAssignmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="min-w-[50vw] max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserCheck className="h-5 w-5" />
@@ -317,18 +324,24 @@ export function TeamAssignmentDialog({
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {teamLeaders.map((leader) => (
-                    <SelectItem key={leader.id} value={leader.id.toString()}>
-                      <div className="flex flex-col py-1">
-                        <span className="font-medium">{leader.name}</span>
-                        <span className="text-xs text-muted-foreground">{leader.email}</span>
-                      </div>
+                  {teamLeaders.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      <span className="text-muted-foreground italic">Tidak ada user dengan role System Analyst tersedia</span>
                     </SelectItem>
-                  ))}
+                  ) : (
+                    teamLeaders.map((leader) => (
+                      <SelectItem key={leader.id} value={leader.id.toString()}>
+                        <div className="flex flex-col py-1">
+                          <span className="font-medium">{leader.name}</span>
+                          <span className="text-xs text-muted-foreground">{leader.email}</span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Ketua tim bertanggung jawab mengkoordinasikan pekerjaan
+                Hanya user dengan role System Analyst (SA) yang dapat dipilih sebagai ketua tim
               </p>
             </div>
 
@@ -380,7 +393,8 @@ export function TeamAssignmentDialog({
               </Label>
               <p className="text-sm text-muted-foreground">
                 Pilih minimal 1 developer untuk di-assign ke request ini. User yang sudah dipilih sebagai
-                Ketua Tim atau Technical Writer tidak muncul di daftar ini.
+                Ketua Tim atau Technical Writer tidak muncul di daftar ini. Role System Analyst (SA)
+                dan Technical Writer (TW) tidak tersedia untuk developer assignment.
               </p>
 
               {/* Developers grouped by role */}

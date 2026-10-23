@@ -11,6 +11,7 @@ import { RequestDetailInfo } from '@/components/requests/request-detail-info';
 import { RequestDetailTimeline } from '@/components/requests/request-detail-timeline';
 // import { RequestAttachmentsList } from '@/components/requests/request-attachments-list';
 import { RequestDocumentsSection } from '@/components/requests/request-documents-section';
+import { isDocumentEditingLocked, RequestStatus } from '@/lib/validations/status-transitions';
 import { ProgressTimeline } from '@/components/requests/progress-timeline';
 import { DeveloperRequestActions } from '@/components/developer/developer-request-actions';
 import { TeamInfoCard } from '@/components/shared/team-info-card';
@@ -134,8 +135,9 @@ export default async function DeveloperRequestDetailPage({ params }: PageProps) 
                     requiredDocs={requiredDocs as any}
                     uploadedDocs={uploadedDocs as any}
                     canUpload={
-                      request.teamLeaderId === session?.user?.id ||
-                      request.technicalWriterId === session?.user?.id
+                      !isDocumentEditingLocked(request.status as RequestStatus) &&
+                      (request.teamLeaderId === session?.user?.id ||
+                        request.technicalWriterId === session?.user?.id)
                     }
                   />
                 </div>

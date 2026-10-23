@@ -1092,6 +1092,12 @@ export async function getDevelopersByRole(roleCode?: string) {
     // Filter by role code if provided
     if (roleCode) {
       data = data.filter(dev => dev.developerRoleCode === roleCode);
+    } else {
+      // Exclude SA and TW roles from the general developer assignment list
+      // (SA users are team leader candidates, TW users are technical writers)
+      data = data.filter(
+        dev => dev.developerRoleCode !== 'SA' && dev.developerRoleCode !== 'TW'
+      );
     }
 
     return { success: true, data };
@@ -1102,10 +1108,12 @@ export async function getDevelopersByRole(roleCode?: string) {
 }
 
 /**
- * Get all users (any role) for team leader selection
+ * Get users for team leader selection (only developers with SA role)
  */
 export async function getTeamLeaderOptions() {
   try {
+    const { developerRoles } = await import('@/lib/db/schema');
+
     const data = await db
       .select({
         id: users.id,
@@ -1115,7 +1123,13 @@ export async function getTeamLeaderOptions() {
         unitId: users.unitId,
       })
       .from(users)
-      .where(eq(users.isActive, true))
+      .innerJoin(developerRoles, eq(users.developerRoleId, developerRoles.id))
+      .where(
+        and(
+          eq(users.isActive, true),
+          eq(developerRoles.code, 'SA')
+        )
+      )
       .orderBy(users.name);
 
     return { success: true, data };
@@ -1240,6 +1254,11 @@ export async function assignTeamToRequest(params: {
 
     if (!request) {
       return { success: false, error: 'Request tidak ditemukan' };
+    }
+
+    // Priority wajib diatur sebelum tim di-assign (APPROVED → ONGOING)
+    if (!request.priorityId) {
+      return { success: false, error: 'Priority harus diatur sebelum tim dapat di-assign' };
     }
 
     const assignTransitionValidation = validateTransitionWithContext(

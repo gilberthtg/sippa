@@ -9,7 +9,8 @@ import { logAudit } from '@/lib/utils/audit';
 import { AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
 import { saveFile } from '@/lib/utils/file-storage';
 import { generateStorageKey } from '@/lib/utils/file-upload';
-import { FILE_UPLOAD } from '@/lib/constants';
+import { FILE_UPLOAD, REQUEST_STATUSES } from '@/lib/constants';
+import { isDocumentEditingLocked, RequestStatus } from '@/lib/validations/status-transitions';
 
 async function checkAuth() {
   const session = await auth();
@@ -74,11 +75,12 @@ export async function uploadRequestDocument(formData: FormData) {
     return { success: false, error: 'Data tidak lengkap' };
   }
 
-  // Check request exists and fetch team roles for permission check
+  // Check request exists and fetch status + team roles for permission check
   const [request] = await db
     .select({
       id: requests.id,
       requestType: requests.requestType,
+      status: requests.status,
       teamLeaderId: requests.teamLeaderId,
       technicalWriterId: requests.technicalWriterId,
     })
@@ -87,6 +89,17 @@ export async function uploadRequestDocument(formData: FormData) {
     .limit(1);
   if (!request) {
     return { success: false, error: 'Request tidak ditemukan' };
+  }
+
+  // Document checklist is locked for final statuses (DONE/REJECTED)
+  if (isDocumentEditingLocked(request.status as RequestStatus)) {
+    return {
+      success: false,
+      error:
+        request.status === REQUEST_STATUSES.DONE
+          ? 'Tidak dapat meng-upload dokumen karena request sudah selesai (DONE)'
+          : 'Tidak dapat meng-upload dokumen karena request ditolak (REJECTED)',
+    };
   }
 
   // Only admin, team leader, and technical writer can upload
@@ -165,13 +178,31 @@ export async function deleteRequestDocument(id: number) {
   const user = await checkAdminOrDeveloper();
 
   const [doc] = await db
-    .select({ id: requestDocuments.id, requestId: requestDocuments.requestId, storageKey: requestDocuments.storageKey, uploadedBy: requestDocuments.uploadedBy })
+    .select({
+      id: requestDocuments.id,
+      requestId: requestDocuments.requestId,
+      storageKey: requestDocuments.storageKey,
+      uploadedBy: requestDocuments.uploadedBy,
+      status: requests.status,
+    })
     .from(requestDocuments)
+    .innerJoin(requests, eq(requestDocuments.requestId, requests.id))
     .where(eq(requestDocuments.id, id))
     .limit(1);
 
   if (!doc) {
     return { success: false, error: 'Dokumen tidak ditemukan' };
+  }
+
+  // Document checklist is locked for final statuses (DONE/REJECTED)
+  if (isDocumentEditingLocked(doc.status as RequestStatus)) {
+    return {
+      success: false,
+      error:
+        doc.status === REQUEST_STATUSES.DONE
+          ? 'Tidak dapat menghapus dokumen karena request sudah selesai (DONE)'
+          : 'Tidak dapat menghapus dokumen karena request ditolak (REJECTED)',
+    };
   }
 
   // Developer can only delete own uploads

@@ -18,6 +18,7 @@ import { ProgressTimeline } from '@/components/requests/progress-timeline';
 // import { RequestAttachmentsList } from '@/components/requests/request-attachments-list';
 import { RequestAdminActions } from '@/components/admin/request-admin-actions';
 import { RequestDocumentsSection } from '@/components/requests/request-documents-section';
+import { isDocumentEditingLocked, RequestStatus } from '@/lib/validations/status-transitions';
 
 interface PageProps {
   params: Promise<{
@@ -115,7 +116,7 @@ export default async function AdminRequestDetailPage({ params }: PageProps) {
                   requestId={requestId}
                   requiredDocs={requiredDocs as any}
                   uploadedDocs={uploadedDocs as any}
-                  canUpload={true}
+                  canUpload={!isDocumentEditingLocked(request.status as RequestStatus)}
                 />
               </div>
             </TabsContent>

@@ -117,6 +117,23 @@ export function isTerminalStatus(status: RequestStatus): boolean {
 }
 
 /**
+ * Statuses that lock the request document checklist (upload/delete)
+ * DONE: final status — no further edits
+ * REJECTED: request rejected — documents re-checked at resubmission
+ */
+export const DOCUMENT_LOCKED_STATUSES: readonly RequestStatus[] = [
+  REQUEST_STATUSES.DONE,
+  REQUEST_STATUSES.REJECTED,
+];
+
+/**
+ * Check if document checklist edits (upload/delete) are locked for a request status
+ */
+export function isDocumentEditingLocked(status: RequestStatus): boolean {
+  return DOCUMENT_LOCKED_STATUSES.includes(status);
+}
+
+/**
  * Get all possible next statuses from a given status
  */
 export function getNextStatuses(status: RequestStatus): readonly RequestStatus[] {

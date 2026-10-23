@@ -1,5 +1,67 @@
 # SiPPA AI Session Log
 
+## 2026-10-24 — Assignment: Team Lead hanya SA; developer assignment excludes SA/TW
+
+- Goal: Pada dialog assign tim (`components/admin/team-assignment-dialog.tsx`): (1) seleksi Ketua Tim hanya boleh menampilkan user dengan developer role "SA" (System Analyst); (2) daftar developer assignment tidak menampilkan user ber-role "SA" atau "TW". Konfirmasi user via pilihan: team lead = "restrict strictly" (hanya SA), developer = "show all but filter" (buang SA/TW dari checkbox).
+- Changes made:
+  - `app/actions/admin-requests.ts`:
+    - `getTeamLeaderOptions()`: kini INNER JOIN `developer_roles` + filter `developerRoles.code = 'SA'` (users aktif) — sebelumnya mengembalikan semua user aktif. Satu-satunya consumer adalah dialog assign tim, jadi aman.
+    - `getDevelopersByRole()`: jika `roleCode` TIDAK diberikan (path daftar developer umum), tambah filter in-memory exclude `developerRoleCode !== 'SA' && !== 'TW'` di samping filter roleCode existing — path `getTechnicalWriters()` (roleCode='TW') tidak terpengaruh karena menerima roleCode eksplisit.
+  - `components/admin/team-assignment-dialog.tsx`:
+    - Dropdown Ketua Tim: empty state "Tidak ada user dengan role System Analyst tersedia" (konsisten dengan empty state TW) + hint diganti "Hanya user dengan role System Analyst (SA) yang dapat dipilih sebagai ketua tim".
+    - Hint section Assign Developers ditambah: role SA dan TW tidak tersedia untuk developer assignment.
+    - Tidak ada perubahan logika state/preview/submission — filtering terjadi di server actions.
+- Files changed: app/actions/admin-requests.ts, components/admin/team-assignment-dialog.tsx, .ai/BUSINESS_RULES.md, .ai/DECISIONS.md (ADR-0022), .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ ESLint kedua file diubah: hanya 4 issue pre-existing terdokumentasi (`approvedNotAssignedResult` unused, `DeveloperAssignment` unused, 2× `react-hooks/set-state-in-effect` di dialog) — tidak ada issue baru
+  - ✅ Jest: 211 passed / 0 failed (baseline sama dengan sesi ADR-0021; tidak ada test yang menyentuh `getTeamLeaderOptions`/`getDevelopersByRole`)
+  - Tidak ada test baru — filtering dilakukan di server actions yang tidak punya coverage test langsung (hanya dipakai UI dialog)
+- Open questions:
+  - (None) — catatan: validasi server-side `assignTeamToRequest` belum memvalidasi bahwa `teamLeaderId` memiliki role SA / developer assignment bukan SA/TW; UI sudah menyaring, tapi bypass API langsung masih memungkinkan nilai non-SA/non-TW (mengikuti behavior sebelumnya, bukan regresi sesi ini).
+- Next recommended step: Manual test — buka Assign Tim pada request APPROVED: (1) dropdown Ketua Tim hanya memuat user SA; (2) checkbox developer hanya menampilkan BE/FE/QA/DM (tanpa grup SA/TW); (3) dropdown TW tetap hanya TW; (4) assign berhasil → ONGOING.
+
+## 2026-10-24 — Workflow: Priority wajib diatur sebelum assign tim (APPROVED → ONGOING)
+
+- Goal: Permintaan user — setelah request di-approve admin, status hanya boleh naik ke ONGOING (via assign tim) setelah field Priority terisi. User konfirmasi: (1) Priority WAJIB (block assignment), (2) tombol "Assign Tim" di-disable sampai priority diatur.
+- Root cause: Tidak ada validasi — admin bisa assign tim pada request APPROVED yang priority_id-nya masih NULL, sehingga request masuk ONGOING tanpa SLA target (target_sla_hours hanya di-set saat setPriority).
+- Changes made:
+  - `app/actions/admin-requests.ts` (`assignTeamToRequest`): server-side check `request.priorityId` setelah lookup request, sebelum `validateTransitionWithContext` → return "Priority harus diatur sebelum tim dapat di-assign" tanpa tulis DB (defense in depth).
+  - `components/admin/request-admin-actions.tsx`: tombol "Assign Tim" `disabled={!hasPriority}` (hasPriority = priorityId !== null/undefined); hint inline "Atur Priority terlebih dahulu sebelum assign tim." saat belum diatur; pass `priorityId` ke `TeamAssignmentDialog`.
+  - `components/admin/team-assignment-dialog.tsx`: prop baru `priorityId: number | null` + validasi pertama di `handleAssign` ("Priority harus diatur sebelum assign tim").
+  - `__tests__/actions/request-admin-workflows.test.ts`: `baseRequest` default `priorityId: 1`; test baru "blocks assignment when priority is not set". PERBAIKAN MOCK STALE (pre-existing dari ADR-0020): queue `units` → `devteamUnits` (10 baris `queueSelect` + import + unitRow name + expected error 'Unit tidak ditemukan' → 'DevTI Urusan tidak ditemukan') — memperbaiki 10 test gagal pre-existing di suite ini (baseline git HEAD: 10 failed, terverifikasi via git stash).
+- Files changed: app/actions/admin-requests.ts, components/admin/request-admin-actions.tsx, components/admin/team-assignment-dialog.tsx, __tests__/actions/request-admin-workflows.test.ts, .ai/BUSINESS_RULES.md, .ai/DECISIONS.md (ADR-0021), .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ ESLint: hanya issue pre-existing (require-import di test helper jest.mock, unused vars dev2/isTerminal/DeveloperAssignment/approvedNotAssignedResult, set-state-in-effect lama di dialog) — tidak ada issue baru dari sesi ini
+  - ✅ Jest: 211 passed / 0 failed / 6 suites (sebelum: 201 passed / 10 failed; +1 test baru)
+  - No schema change (priority_id sudah nullable, tetap NOT NULL secara logika saat ONGOING)
+- Open questions:
+  - (None) — priority_id tetap nullable di DB untuk status pre-approval; validasi hanya mengunci jalur APPROVED → ONGOING.
+- Next recommended step: Manual test — pada request APPROVED tanpa priority: tombol "Assign Tim" disabled + hint tampil; set priority via PrioritySelector → tombol aktif; assign berhasil → ONGOING. Bypass via invoke langsung server action tanpa priority → ditolak dengan pesan validasi.
+
+## 2026-10-24 — Security: Dokumen checklist (upload/delete) dikunci untuk request DONE/REJECTED
+
+- Goal: Fix laporan — pada admin request detail (`app/(admin)/admin/requests/[id]/page.tsx`) dan developer request detail, admin/developer masih dapat upload & hapus dokumen walaupun status request sudah selesai/ditutup (DONE/REJECTED). Per aturan workflow (BUSINESS_RULES Status Flow), DONE/REJECTED adalah status final-locked; akses daripada leak tidak boleh.
+- Root cause: `uploadRequestDocument`/`deleteRequestDocument` (`app/actions/request-documents.ts`) hanya memvalidasi role (admin / Team Leader / TW) — tidak ada pengecekan status request; admin page bahkan hardcode `canUpload={true}`.
+- Changes made:
+  - `lib/validations/status-transitions.ts`: tambah `DOCUMENT_LOCKED_STATUSES` (DONE, REJECTED) + `isDocumentEditingLocked(status)` — single source of truth untuk status lock check.
+  - `app/actions/request-documents.ts`:
+    - `uploadRequestDocument`: select request kini mengambil `status`; server-side lock check DONE/REJECTED (return error, tidak menulis DB).
+    - `deleteRequestDocument`: select dokumen kini innerJoin ke `requests` untuk mendapatkan `status`; server-side lock check DONE/REJECTED sama.
+    - Pesan error: "Tidak dapat meng-upload/menghapus dokumen karena request sudah selesai (DONE)" / "... request ditolak (REJECTED)".
+  - `app/(admin)/admin/requests/[id]/page.tsx`: `canUpload` tidak lagi hardcode `true` → `!isDocumentEditingLocked(request.status)`.
+  - `app/(developer)/developer/requests/[id]/page.tsx`: `canUpload` ditambah gate `!isDocumentEditingLocked(request.status)` di atas role TL/TW check.
+- Files changed: lib/validations/status-transitions.ts, app/actions/request-documents.ts, app/(admin)/admin/requests/[id]/page.tsx, app/(developer)/developer/requests/[id]/page.tsx, .ai/BUSINESS_RULES.md, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ ESLint: tidak ada issue baru — 37 error / 55 warning tersisa semuanya pre-existing (as-any casts lama, useEffect lint, dll; bukan file sesi ini)
+  - ✅ Jest: 201 passed / 9 failed — 9 failure request-admin-workflows IDENTIK dengan baseline pre-existing (git stash-verified clean tree tanpa sesi ini juga 9 failed pada test yang sama; action `assignTeamToRequest` tidak tersentuh sesi ini)
+- Open questions:
+  - (None) — REJECTED ikut dikunci untuk admin/developer karena request harus resubmit oleh requester; user-path upload (`uploadRequestDocumentForUser`) tidak diubah (scope fix hanya admin/developer detail pages).
+- Next recommended step: Manual test — pada request DONE & REJECTED, tombol Upload/Hapus hilang di tab Dokumen (admin & developer); invoke server action langsung → ditolak dengan pesan status lock.
+
+
 ## 2026-10-23 — UI: Nilai hari di tabel Detail SLA & sheet Excel "Detail SLA" dibulatkan ke atas (int)
 
 - Goal: Tindak lanjut sesi konversi jam → hari kerja. Konfirmasi user: nilai hari TIDAK boleh format float; gunakan bilangan bulat dibulatkan ke atas.

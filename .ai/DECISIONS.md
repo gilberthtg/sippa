@@ -201,3 +201,20 @@ Format:
 - Decision: `requests.devti_urusan_id` FK moved from `units` to `devteam_units`. Admin team-assignment dialog, `assignTeamToRequest` validation, request detail fetch (admin + developer) and seed data now use `devteam_units` (via new `getDevteamUnits()` action); `units` remains the requester organizational unit master. Values not present in `devteam_units` are set to NULL by migration 0005 (column is NULLABLE; no invented units→urusan mapping).
 - Reason: DevTI Urusan is a DevTI-specific urusan master (`URUSAN PENGEMBANGAN ...`), not an organizational unit of the requester; reusing `units` conflated the two masters (completes the plan from the devteam_units master-data session).
 - Impact: Migration `db/migrations/0005_devti_urusan_to_devteam_units.sql` (forward-only; FK constraint name differs per environment — drizzle-kit name used locally). `lib/db/schema/requests.ts` now imports `devteam_units`. Seed requests carry `devtiUrusanId` cycling 1-3.
+
+## ADR-0021 — Priority required before APPROVED → ONGOING (team assignment)
+- Status: Confirmed
+- Date: 2026-10-24
+- Decision: A request must have Priority set (requests.priority_id NOT NULL) before an admin can assign a team and transition status to ONGOING. Enforced at three layers per confirmed option:
+  1. **UI nudge:** `request-admin-actions.tsx` — "Assign Tim" button is disabled while `priorityId` is null (APPROVED status), with inline hint "Atur Priority terlebih dahulu sebelum assign tim."
+  2. **Dialog validation:** `team-assignment-dialog.tsx` receives `priorityId` prop and rejects submission first ("Priority harus diatur sebelum assign tim").
+  3. **Server-side:** `assignTeamToRequest` (app/actions/admin-requests.ts) checks `request.priorityId` after the request lookup and before the transition validation; returns "Priority harus diatur sebelum tim dapat di-assign" without writing to DB.
+- Reason: Priority drives SLA policy selection (target business days) and reporting; an ONGOING request without priority has no SLA target. User confirmed: priority is required (block assignment) and the button must be disabled until set.
+- Impact: No schema change (priority_id already nullable). request-admin-workflows.test.ts: `baseRequest` sets `priorityId: 1`; new test asserts the null-priority block. Mock fixtures updated to queue `devteamUnits` (stale from ADR-0020) and expect 'DevTI Urusan tidak ditemukan' — this repaired 10 pre-existing failing tests in the suite (baseline was 10 failed at HEAD before both changes).
+
+## ADR-0022 — Team Leader restricted to SA role; developer assignment excludes SA/TW
+- Status: Confirmed
+- Date: 2026-10-24
+- Decision: In the admin team-assignment flow: (1) Team Leader selection is strictly restricted to users with `developer_role_code = 'SA'` (System Analyst) — previously any active user was eligible; (2) the developer assignment list excludes roles SA and TW (SA users are team-leader candidates, TW users are the technical writer).
+- Reason: Stakeholder-confirmed clarification (user chose "restrict strictly" for team lead and "show all but filter non-SA/non-TW" for developers). SA = requirements analysis/design role, natural team-lead candidate; TW is already dedicated to the Technical Writer field (BUSINESS_RULES Team Assignment Rules), so offering SA/TW in the developer multi-select was redundant.
+- Impact: `getTeamLeaderOptions()` (app/actions/admin-requests.ts) now inner-joins `developer_roles` filtered to code = 'SA' (active users only); `getDevelopersByRole()` without `roleCode` excludes SA/TW (filter applied in-memory alongside existing roleCode filter — `getTechnicalWriters()` path with `roleCode='TW'` is unaffected). UI hints + empty state updated in `components/admin/team-assignment-dialog.tsx`. No DB/schema change; server-side `assignTeamToRequest` validation unchanged (TW role + min-1-developer rules already enforced).

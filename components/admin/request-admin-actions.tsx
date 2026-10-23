@@ -84,6 +84,7 @@ export function RequestAdminActions({
     request.status === REQUEST_STATUSES.APPROVED || 
     request.status === REQUEST_STATUSES.ONGOING;
   const canAssign = request.status === REQUEST_STATUSES.APPROVED;
+  const hasPriority = request.priorityId !== null && request.priorityId !== undefined;
   const canHold = request.status === REQUEST_STATUSES.ONGOING;
   const canResume = request.status === REQUEST_STATUSES.ON_HOLD;
   const canUpdateProgress = request.status === REQUEST_STATUSES.ONGOING;
@@ -196,10 +197,16 @@ export function RequestAdminActions({
                   onClick={() => setAssignDialogOpen(true)}
                   className="w-full"
                   variant="default"
+                  disabled={!hasPriority}
                 >
                   <UserCheck className="mr-2 h-4 w-4" />
                   Assign Tim
                 </Button>
+                {!hasPriority && (
+                  <p className="text-xs text-destructive">
+                    Atur Priority terlebih dahulu sebelum assign tim.
+                  </p>
+                )}
               </div>
               <Separator />
             </>
@@ -407,6 +414,7 @@ export function RequestAdminActions({
       <TeamAssignmentDialog
         requestId={request.id}
         requestNo={request.requestNo}
+        priorityId={request.priorityId}
         open={assignDialogOpen}
         onOpenChange={setAssignDialogOpen}
       />

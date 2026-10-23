@@ -85,9 +85,9 @@
 - Set priority (High, Medium, Low)
 - Set DevTI Urusan (division handling request)
 - **Assign team:**
-  - Select Team Leader (any user)
+  - Select Team Leader (must have developer_role = SA)
   - Select Technical Writer (must have developer_role = TW)
-  - Select multiple Developers with specific roles (SA, BE, FE, QA, DM)
+  - Select multiple Developers with specific roles (BE, FE, QA, DM)
 - View developer workload before assignment
 - Edit permitted request data
 - View Laptri (quarterly reports) with developer role distribution
@@ -98,7 +98,8 @@
 **Assignment Rules:**
 - Minimum 1 developer required
 - Technical Writer MUST have developer_role = TW (validated)
-- Team Leader can be any user (USER, ADMIN, or DEVELOPER)
+- Team Leader MUST have developer_role = SA (System Analyst) (validated, ADR-0022)
+- Developer assignments exclude SA and TW roles (SA → team leader, TW → technical writer)
 - Typical assignment: 3-5 developers with different roles
 - Can view developer workload before assigning
 
@@ -164,7 +165,7 @@ error message and never write to the database.
 | 1 | `SUBMITTED → IN_REVIEW` | Admin | Verify completeness (verifyRequest) |
 | 2 | `IN_REVIEW → APPROVED` | Admin | Approve (approveRequest); NEW_APPLICATION auto-creates application master |
 | 3 | `IN_REVIEW → REJECTED` | Admin | Requires reason (rejectRequest); stored in rejectionNote |
-| 4 | `APPROVED → ONGOING` | Admin | Team assignment (assignTeamToRequest); min 1 developer, TW must have TW role |
+| 4 | `APPROVED → ONGOING` | Admin | Team assignment (assignTeamToRequest); min 1 developer, TW must have TW role; **priority wajib diatur dulu (priority_id NOT NULL)** — server-side validation + "Assign Tim" button disabled until priority set |
 | 5 | `ONGOING → ON_HOLD` | Admin or assigned team | Requires reason (min 10 chars); sets slaPausedAt |
 | 6 | `ON_HOLD → ONGOING` | Admin or assigned team | Resume; accumulates paused business-day hours |
 | 7 | `ONGOING → DONE` | Admin or Team Lead | Complete (completeRequest) — hanya dapat dilakukan oleh Admin atau Team Lead |
@@ -225,9 +226,9 @@ Defined in `sla_policies` table:
 ## Team Assignment Rules
 
 ### Team Leader
-- Can be any user (USER, ADMIN, or DEVELOPER role)
+- **MUST** have `developer_role = SA` (System Analyst) (ADR-0022)
 - Serves as project coordinator/liaison
-- Selected by admin from all users dropdown
+- Selected by admin from filtered dropdown (only shows SA users)
 - Not required to have specific permissions
 - Optional field (can be NULL)
 
@@ -243,7 +244,7 @@ Defined in `sla_policies` table:
 - **Typical:** 3-5 developers with different roles
 - Each assignment specifies:
   - assigned_user_id (the developer)
-  - developer_role_id (role in this request: SA, BE, FE, QA, DM)
+  - developer_role_id (role in this request: BE, FE, QA, DM — SA and TW are not assignable, ADR-0022)
   - assigned_by (admin who made assignment)
   - assigned_at (timestamp)
   - notes (optional assignment notes)
@@ -259,17 +260,17 @@ Defined in `sla_policies` table:
 
 ### Assignment Process
 1. Admin approves request
-2. Admin clicks "Assign Team"
-3. Admin fills assignment form:
+2. Admin sets Priority (required — assignment is blocked until priority is set)
+3. Admin clicks "Assign Team"
+4. Admin fills assignment form:
    - DevTI Urusan (dropdown: from devteam_units master)
-   - Team Leader (dropdown: all users)
+   - Team Leader (dropdown: only SA role)
    - Technical Writer (dropdown: only TW role)
    - Developers (multi-select with role badges)
-   - Priority (if not already set)
-4. Admin submits assignment
-5. Entries created in `request_team_assignments`
-6. Request status → ONGOING
-7. Notifications sent to:
+5. Admin submits assignment
+6. Entries created in `request_team_assignments`
+7. Request status → ONGOING
+8. Notifications sent to:
    - All assigned developers
    - Technical writer
    - Team leader
@@ -407,6 +408,7 @@ plus team leader and technical writer (even if those are not regular developers)
 - Only Admin, Team Leader of the request, and Technical Writer of the request can upload/delete documents on the request detail page document checklist
 - Everyone else (requester, peer developers) can only view and download documents
 - Enforced in UI (`canUpload` prop on `RequestDocumentsSection`) and server-side (`uploadRequestDocument` rejects developers that are not Team Leader or TW of the request)
+- **Status lock:** upload/delete is blocked when the request status is DONE (final) or REJECTED — enforced server-side in `uploadRequestDocument`/`deleteRequestDocument` (via `isDocumentEditingLocked()` in `lib/validations/status-transitions.ts`) and in the UI (`canUpload` prop on admin/developer detail pages). Ongoing work statuses (SUBMITTED, IN_REVIEW, APPROVED, ONGOING, ON_HOLD) allow document edits.
 
 ## Deferred Requirements (v1.1+)
 
