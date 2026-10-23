@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import { SLAFilters } from '@/components/reports/sla-filters';
-import { SLASummary } from '@/components/reports/sla-summary';
-import { SLAChart } from '@/components/reports/sla-chart';
-import { SLAMonthlyTrend } from '@/components/reports/sla-monthly-trend';
-import { SLATable } from '@/components/reports/sla-table';
-import { DeveloperRoleSLAMetrics } from '@/components/reports/developer-role-sla-metrics';
-import { exportSLAToExcel } from '@/lib/utils/report-export';
-import { toast } from 'sonner';
+import { useRouter, useSearchParams } from "next/navigation";
+import { SLAFilters } from "@/components/reports/sla-filters";
+import { SLASummary } from "@/components/reports/sla-summary";
+import { SLAChart } from "@/components/reports/sla-chart";
+import { SLAMonthlyTrend } from "@/components/reports/sla-monthly-trend";
+import { SLATable } from "@/components/reports/sla-table";
+import { DeveloperRoleSLAMetrics } from "@/components/reports/developer-role-sla-metrics";
+import { exportSLAToExcel } from "@/lib/utils/report-export";
+import { toast } from "sonner";
 
 interface SLARequest {
   id: number;
@@ -37,8 +37,19 @@ interface SLASummary {
   slaExceededCount: number;
   achievementRate: number;
   avgCompletionByType: { new_application: number; rfc: number };
-  avgCompletionByPriority: { low: number; medium: number; high: number; critical: number };
-  monthlyTrend: Array<{ month: string; total: number; met: number; exceeded: number; rate: number }>;
+  avgCompletionByPriority: {
+    low: number;
+    medium: number;
+    high: number;
+    critical: number;
+  };
+  monthlyTrend: Array<{
+    month: string;
+    total: number;
+    met: number;
+    exceeded: number;
+    rate: number;
+  }>;
   developerRoleSLAMetrics: DeveloperRoleSLAMetric[];
 }
 
@@ -71,16 +82,16 @@ export function SLAClient({
 
   const handleYearChange = (year: number) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('year', year.toString());
+    params.set("year", year.toString());
     router.push(`?${params.toString()}`);
   };
 
   const handleRequestTypeChange = (type?: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (type) {
-      params.set('type', type);
+      params.set("type", type);
     } else {
-      params.delete('type');
+      params.delete("type");
     }
     router.push(`?${params.toString()}`);
   };
@@ -88,9 +99,9 @@ export function SLAClient({
   const handlePriorityChange = (priorityId?: number) => {
     const params = new URLSearchParams(searchParams.toString());
     if (priorityId) {
-      params.set('priority', priorityId.toString());
+      params.set("priority", priorityId.toString());
     } else {
-      params.delete('priority');
+      params.delete("priority");
     }
     router.push(`?${params.toString()}`);
   };
@@ -98,9 +109,9 @@ export function SLAClient({
   const handleSLAStatusChange = (status?: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (status) {
-      params.set('status', status);
+      params.set("status", status);
     } else {
-      params.delete('status');
+      params.delete("status");
     }
     router.push(`?${params.toString()}`);
   };
@@ -113,9 +124,9 @@ export function SLAClient({
         priorityId: initialPriorityId,
         slaStatus: initialSLAStatus,
       });
-      toast.success('Laporan SLA berhasil diekspor ke Excel');
+      toast.success("Laporan SLA berhasil diekspor ke Excel");
     } catch (error) {
-      toast.error('Gagal mengekspor laporan');
+      toast.error("Gagal mengekspor laporan");
       console.error(error);
     }
   };
@@ -134,24 +145,24 @@ export function SLAClient({
         onExport={handleExport}
       />
 
-      <SLASummary
-        totalRequests={summary.totalRequests}
-        slaMetCount={summary.slaMetCount}
-        slaExceededCount={summary.slaExceededCount}
-        achievementRate={summary.achievementRate}
-        avgCompletionByType={summary.avgCompletionByType}
-        avgCompletionByPriority={summary.avgCompletionByPriority}
-      />
-
       <div className="grid gap-6 lg:grid-cols-2">
         <SLAChart
           slaMetCount={summary.slaMetCount}
           slaExceededCount={summary.slaExceededCount}
         />
-        <SLAMonthlyTrend monthlyTrend={summary.monthlyTrend} />
+        <SLASummary
+          totalRequests={summary.totalRequests}
+          slaMetCount={summary.slaMetCount}
+          slaExceededCount={summary.slaExceededCount}
+          achievementRate={summary.achievementRate}
+          avgCompletionByType={summary.avgCompletionByType}
+          avgCompletionByPriority={summary.avgCompletionByPriority}
+        />
+
+        {/* <SLAMonthlyTrend monthlyTrend={summary.monthlyTrend} /> */}
       </div>
 
-      <DeveloperRoleSLAMetrics metrics={summary.developerRoleSLAMetrics} />
+      {/* <DeveloperRoleSLAMetrics metrics={summary.developerRoleSLAMetrics} /> */}
 
       <SLATable requests={reportData.requests} />
     </div>

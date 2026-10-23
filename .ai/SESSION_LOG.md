@@ -1,5 +1,18 @@
 # SiPPA AI Session Log
 
+## 2026-10-23 — UI: Ganti LaptriMonthlyTrend menjadi pie chart komposisi tipe permintaan
+
+- Goal: Pada halaman laporan Laptri (`/admin/reports/laptri`), hapus chart "Tren Bulanan" (`LaptriMonthlyTrend`) dan ganti dengan pie chart komposisi total New Application vs RFC (data `summary.typeBreakdown` yang sudah tersedia).
+- Changes made:
+  - Komponen baru `components/reports/laptri-type-breakdown.tsx`: Card "Komposisi Tipe Permintaan" berisi `PieChart` dari `lib/utils/chart-adapter.tsx`, data `[Pengembangan (new_application), RFC]` — label mengikuti terminologi pada `laptri-summary.tsx` (Pengembangan / RFC).
+  - `app/(admin)/admin/reports/laptri/laptri-client.tsx`: import `LaptriMonthlyTrend` diganti `LaptriTypeBreakdown`; penggunaan `<LaptriMonthlyTrend monthlyTrend={...} />` di grid diganti `<LaptriTypeBreakdown typeBreakdown={summary.typeBreakdown} />`. Komponen `laptri-monthly-trend.tsx` dan field `summary.monthlyTrend` tidak dihapus (masih dipakai export Excel `report-export.tsx`, verifikasi lanjut saat refactor berikutnya).
+- Files changed: components/reports/laptri-type-breakdown.tsx (baru), app/(admin)/admin/reports/laptri/laptri-client.tsx, .ai/SESSION_LOG.md
+- Tests/checks:
+  - TypeScript: PASSED (`npx tsc --noEmit`, tidak ada error terkait laptri)
+  - ESLint: 0 error pada kedua file; 1 warning pre-existing (`DeveloperRoleMetrics` unused karena masih dikomentari)
+- Open questions:
+  - [NEEDS_DECISION]: Apakah komponen `laptri-monthly-trend.tsx` dan field `monthlyTrend` pada summary masih diperlukan (mis. untuk export Excel), atau boleh dihapus total beserta query-nya di `page.tsx`?
+
 ## 2026-10-23 — Feature: Tampilkan Unit Pemohon pada daftar & detail request (user/admin/developer)
 
 - Goal: Menampilkan informasi unit pemohon pada halaman daftar request (`/requests`, `/admin/requests`, `/developer/requests`) dan pada header detail request (`/requests/[id]`, `/admin/requests/[id]`, `/developer/requests/[id]`) — di header ditempatkan pada baris tersendiri tepat di bawah judul. Konfirmasi user: kolom daftar diletakkan sebelum kolom Pemohon; unit tampil pada baris sendiri di bawah judul.

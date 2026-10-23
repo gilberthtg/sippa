@@ -20,8 +20,8 @@ export function SLASummary({
   avgCompletionByPriority,
 }: SLASummaryProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <Card>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+      <Card className="md:col-span-2">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Permintaan</CardTitle>
           <FileText className="h-4 w-4 text-muted-foreground" />
@@ -32,9 +32,9 @@ export function SLASummary({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="md:col-span-2">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">SLA Terpenuhi</CardTitle>
+          <CardTitle className="text-sm font-medium">Tercapai</CardTitle>
           <CheckCircle className="h-4 w-4 text-green-600" />
         </CardHeader>
         <CardContent>
@@ -45,9 +45,9 @@ export function SLASummary({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="md:col-span-2">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">SLA Terlampaui</CardTitle>
+          <CardTitle className="text-sm font-medium">Tidak Tercapai</CardTitle>
           <XCircle className="h-4 w-4 text-red-600" />
         </CardHeader>
         <CardContent>
@@ -58,7 +58,7 @@ export function SLASummary({
         </CardContent>
       </Card>
 
-      <Card className="md:col-span-2">
+      {/* <Card className="md:col-span-2">
         <CardHeader>
           <CardTitle className="text-sm font-medium">Rata-rata Waktu Penyelesaian (jam)</CardTitle>
         </CardHeader>
@@ -74,9 +74,9 @@ export function SLASummary({
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle className="text-sm font-medium">Per Prioritas (jam)</CardTitle>
         </CardHeader>
@@ -100,7 +100,7 @@ export function SLASummary({
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 }

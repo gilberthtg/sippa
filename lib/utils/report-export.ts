@@ -182,8 +182,8 @@ export function exportSLAToExcel(
     [''],
     ['Ringkasan:'],
     ['Total Permintaan', summary.totalRequests],
-    ['SLA Terpenuhi', `${summary.slaMetCount} (${((summary.slaMetCount / summary.totalRequests) * 100).toFixed(1)}%)`],
-    ['SLA Terlampaui', `${summary.slaExceededCount} (${((summary.slaExceededCount / summary.totalRequests) * 100).toFixed(1)}%)`],
+    ['Tercapai', `${summary.slaMetCount} (${((summary.slaMetCount / summary.totalRequests) * 100).toFixed(1)}%)`],
+    ['Tidak Tercapai', `${summary.slaExceededCount} (${((summary.slaExceededCount / summary.totalRequests) * 100).toFixed(1)}%)`],
     ['Tingkat Pencapaian', `${summary.achievementRate.toFixed(1)}%`],
     [''],
     ['Rata-rata Waktu Penyelesaian (jam):'],
@@ -201,7 +201,7 @@ export function exportSLAToExcel(
   XLSX.utils.book_append_sheet(wb, ws1, 'Ringkasan');
 
   const trendData = [
-    ['Bulan', 'Total', 'Terpenuhi', 'Terlampaui', 'Tingkat (%)'],
+    ['Bulan', 'Total', 'Tercapai', 'Tidak Tercapai', 'Tingkat (%)'],
     ...summary.monthlyTrend.map((item) => [
       item.month,
       item.total,
@@ -253,7 +253,7 @@ export function exportSLAToExcel(
       req.targetSlaHours && req.actualDurationHours
         ? (req.actualDurationHours - req.targetSlaHours).toFixed(1)
         : 'N/A',
-      req.slaMet ? 'Terpenuhi' : 'Terlampaui',
+      req.slaMet ? 'Tercapai' : 'Tidak Tercapai',
       req.achievementRate.toFixed(1),
     ]),
   ];

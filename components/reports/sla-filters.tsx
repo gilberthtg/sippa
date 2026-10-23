@@ -111,7 +111,7 @@ export function SLAFilters({
         <Select value={slaStatus || 'all'} onValueChange={(val) => onSLAStatusChange(val === 'all' ? undefined : (val || undefined))}>
           <SelectTrigger className="w-40">
             <SelectValue>
-              {!slaStatus || slaStatus === 'all' ? 'Semua' : slaStatus === 'met' ? 'Terpenuhi' : 'Terlampaui'}
+              {!slaStatus || slaStatus === 'all' ? 'Semua' : slaStatus === 'met' ? 'Tercapai' : 'Tidak Tercapai'}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -120,13 +120,13 @@ export function SLAFilters({
             </SelectItem>
             <SelectItem value="met">
               <div className="flex flex-col py-1">
-                <span className="font-medium">Terpenuhi</span>
+                <span className="font-medium">Tercapai</span>
                 <span className="text-xs text-muted-foreground">Selesai dalam target SLA</span>
               </div>
             </SelectItem>
             <SelectItem value="exceeded">
               <div className="flex flex-col py-1">
-                <span className="font-medium">Terlampaui</span>
+                <span className="font-medium">Tidak Tercapai</span>
                 <span className="text-xs text-muted-foreground">Melebihi target SLA</span>
               </div>
             </SelectItem>

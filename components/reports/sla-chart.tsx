@@ -10,8 +10,8 @@ interface SLAChartProps {
 
 export function SLAChart({ slaMetCount, slaExceededCount }: SLAChartProps) {
   const data = [
-    { label: 'Terpenuhi', value: slaMetCount, color: '#16a34a' },
-    { label: 'Terlampaui', value: slaExceededCount, color: '#ef4444' },
+    { label: 'Tercapai', value: slaMetCount, color: '#16a34a' },
+    { label: 'Tidak Tercapai', value: slaExceededCount, color: '#ef4444' },
   ];
 
   const total = slaMetCount + slaExceededCount;

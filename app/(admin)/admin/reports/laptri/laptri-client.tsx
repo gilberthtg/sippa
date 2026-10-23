@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { LaptriFilters } from '@/components/reports/laptri-filters';
 import { LaptriSummary } from '@/components/reports/laptri-summary';
 import { LaptriChart } from '@/components/reports/laptri-chart';
-import { LaptriMonthlyTrend } from '@/components/reports/laptri-monthly-trend';
+import { LaptriTypeBreakdown } from '@/components/reports/laptri-type-breakdown';
 import { LaptriTable } from '@/components/reports/laptri-table';
 import { DeveloperRoleMetrics } from '@/components/reports/developer-role-metrics';
 import { exportLaptriToExcel } from '@/lib/utils/report-export';
@@ -116,7 +116,7 @@ export function LaptriClient({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <LaptriChart quarterCounts={summary.quarterCounts} />
-        <LaptriMonthlyTrend monthlyTrend={summary.monthlyTrend} />
+        <LaptriTypeBreakdown typeBreakdown={summary.typeBreakdown} />
       </div>
 
       {/* <DeveloperRoleMetrics metrics={summary.developerRoleMetrics} /> */}
