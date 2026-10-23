@@ -13,6 +13,7 @@ interface Request {
   requestNo: string;
   requestType: string;
   title: string;
+  unitName: string | null;
   status: string;
   priorityId: number | null;
   submittedAt: Date;

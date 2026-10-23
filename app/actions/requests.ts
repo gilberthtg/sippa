@@ -2,7 +2,7 @@
 
 import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
-import { requests, requestStatusHistories, requestAttachments, requestApplications, requestDocuments, documentTypes } from '@/lib/db/schema';
+import { requests, requestStatusHistories, requestAttachments, requestApplications, requestDocuments, documentTypes, units } from '@/lib/db/schema';
 import { createRequestSchema } from '@/lib/validations/request';
 import { generateRequestNumber } from '@/lib/utils/request-number';
 import { generateStorageKey } from '@/lib/utils/file-upload';
@@ -10,7 +10,7 @@ import { saveFile } from '@/lib/utils/file-storage';
 import { validateVersionProgression } from '@/lib/utils/version';
 import { REQUEST_STATUSES, FILE_UPLOAD, AUDIT_MODULES, AUDIT_ACTIONS, ROLES } from '@/lib/constants';
 import { validateTransitionWithContext } from '@/lib/validations/status-transitions';
-import { eq, and, desc, or, like, sql } from 'drizzle-orm';
+import { eq, and, desc, or, like, sql, getTableColumns } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { logAudit } from '@/lib/utils/audit';
 import { notifyRequestSubmitted } from '@/lib/notifications/templates';
@@ -301,8 +301,12 @@ export async function getRequestsByUserId(params?: {
     }
 
     const data = await db
-      .select()
+      .select({
+        ...getTableColumns(requests),
+        unitName: units.name,
+      })
       .from(requests)
+      .leftJoin(units, eq(requests.requesterUnitId, units.id))
       .where(whereConditions)
       .orderBy(desc(requests.submittedAt))
       .limit(limit)
@@ -363,8 +367,12 @@ export async function getRequestById(id: number) {
     }
 
     const [request] = await db
-      .select()
+      .select({
+        ...getTableColumns(requests),
+        unitName: units.name,
+      })
       .from(requests)
+      .leftJoin(units, eq(requests.requesterUnitId, units.id))
       .where(eq(requests.id, id))
       .limit(1);
 

@@ -14,6 +14,7 @@ interface Request {
   requestType: 'new_application' | 'rfc';
   title: string;
   requesterName: string;
+  unitName: string | null;
   status: string;
   priorityId: number | null;
   submittedAt: Date;

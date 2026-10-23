@@ -15,6 +15,7 @@ interface Request {
   requestNo: string;
   requestType: string;
   title: string;
+  unitName: string | null;
   status: string;
   priorityId: number | null;
   submittedAt: Date;
@@ -54,6 +55,7 @@ export function RequestTable({ requests }: RequestTableProps) {
             <TableHead>No. Request</TableHead>
             <TableHead>Tipe</TableHead>
             <TableHead>Judul</TableHead>
+            <TableHead>Unit</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Prioritas</TableHead>
             <TableHead>Tanggal</TableHead>
@@ -70,6 +72,11 @@ export function RequestTable({ requests }: RequestTableProps) {
                 </Badge>
               </TableCell>
               <TableCell className="max-w-xs truncate">{request.title}</TableCell>
+              <TableCell>
+                <div className="max-w-[200px] truncate text-sm text-muted-foreground">
+                  {request.unitName || '-'}
+                </div>
+              </TableCell>
               <TableCell>
                 <StatusBadge status={request.status} />
               </TableCell>

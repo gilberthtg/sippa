@@ -69,6 +69,7 @@ export default async function AdminRequestDetailPage({ params }: PageProps) {
           <RequestDetailHeader
             requestNo={request.requestNo}
             title={request.title}
+            unitName={request.unitName}
             requestType={request.requestType}
             status={request.status}
             priorityId={request.priorityId}

@@ -22,6 +22,7 @@ interface Request {
   requestType: 'new_application' | 'rfc';
   title: string;
   requesterName: string;
+  unitName: string | null;
   status: string;
   priorityId: number | null;
   submittedAt: Date;
@@ -81,6 +82,7 @@ export function AdminRequestTable({
             </TableHead>
             <TableHead>Tipe</TableHead>
             <TableHead>Judul</TableHead>
+            <TableHead>Unit</TableHead>
             <TableHead>Pemohon</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Priority</TableHead>
@@ -112,6 +114,11 @@ export function AdminRequestTable({
               <TableCell>
                 <div className="max-w-md">
                   <p className="truncate font-medium">{request.title}</p>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="max-w-[200px] truncate text-sm text-muted-foreground">
+                  {request.unitName || '-'}
                 </div>
               </TableCell>
               <TableCell>

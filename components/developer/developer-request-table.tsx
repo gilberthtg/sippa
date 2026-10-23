@@ -94,6 +94,7 @@ export function DeveloperRequestTable({ requests, pagination }: DeveloperRequest
                   <TableHead>Type</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>My Role</TableHead>
+                  <TableHead>Unit</TableHead>
                   <TableHead>Requester</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Priority</TableHead>
@@ -127,10 +128,12 @@ export function DeveloperRequestTable({ requests, pagination }: DeveloperRequest
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">
-                          <div className="font-medium">{request.requesterName || '-'}</div>
-                          <div className="text-muted-foreground">{request.unitName || '-'}</div>
+                        <div className="max-w-[200px] truncate text-sm text-muted-foreground">
+                          {request.unitName || '-'}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{request.requesterName || '-'}</span>
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={request.status} />

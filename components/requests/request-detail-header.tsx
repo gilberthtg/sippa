@@ -3,7 +3,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Building2 } from 'lucide-react';
 import { StatusBadge } from '@/components/requests/status-badge';
 import { PriorityBadge } from '@/components/requests/priority-badge';
 import { useState } from 'react';
@@ -12,6 +12,7 @@ import { REQUEST_TYPES } from '@/lib/constants';
 interface RequestDetailHeaderProps {
   requestNo: string;
   title: string;
+  unitName?: string | null;
   status: string;
   priorityId: number | null;
   requestType: string;
@@ -22,6 +23,7 @@ interface RequestDetailHeaderProps {
 export function RequestDetailHeader({
   requestNo,
   title,
+  unitName,
   status,
   priorityId,
   requestType,
@@ -56,8 +58,14 @@ export function RequestDetailHeader({
         <div className="flex flex-col gap-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-2xl mb-2">{title}</CardTitle>
-              <div className="flex items-center gap-2 flex-wrap">
+              <CardTitle className="text-2xl">{title}</CardTitle>
+              {unitName && (
+                <div className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Building2 className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{unitName}</span>
+                </div>
+              )}
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
                 <span className="text-sm text-muted-foreground font-mono">{requestNo}</span>
                 <Button
                   variant="ghost"

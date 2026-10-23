@@ -65,6 +65,7 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
         <RequestDetailHeader
           requestNo={request.requestNo}
           title={request.title}
+          unitName={request.unitName}
           status={request.status}
           priorityId={request.priorityId}
           requestType={request.requestType}

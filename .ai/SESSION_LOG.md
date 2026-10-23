@@ -1,5 +1,31 @@
 # SiPPA AI Session Log
 
+## 2026-10-23 — Feature: Tampilkan Unit Pemohon pada daftar & detail request (user/admin/developer)
+
+- Goal: Menampilkan informasi unit pemohon pada halaman daftar request (`/requests`, `/admin/requests`, `/developer/requests`) dan pada header detail request (`/requests/[id]`, `/admin/requests/[id]`, `/developer/requests/[id]`) — di header ditempatkan pada baris tersendiri tepat di bawah judul. Konfirmasi user: kolom daftar diletakkan sebelum kolom Pemohon; unit tampil pada baris sendiri di bawah judul.
+- Changes made:
+  - `app/actions/requests.ts`:
+    - `getRequestsByUserId` & `getRequestById`: select diubah dari `select().from(requests)` menjadi `select({ ...getTableColumns(requests), unitName: units.name })` + `leftJoin(units, requesterUnitId = units.id)`.
+  - `app/actions/admin-requests.ts`:
+    - Pattern sama (getTableColumns + leftJoin units) pada `getAllRequests` & `getRequestByIdAdmin` — data detail kini membawa `unitName` tanpa query tambahan.
+  - `components/requests/request-detail-header.tsx`:
+    - Prop baru opsional `unitName?: string | null`; dirender sebagai baris tersendiri di bawah CardTitle (ikon Building2 + nama unit, muted); margin requestNo row diubah ke `mt-2` untuk menjaga spacing; hidden gracefully jika unit kosong.
+  - Daftar request (kolom baru "Unit", nilai fallback "-"):
+    - `components/requests/request-table.tsx` + `request-list-client.tsx`: kolom Unit setelah Judul (tabel user tidak punya kolom Pemohon), interface Request + `unitName`.
+    - `components/admin/admin-request-table.tsx` + `admin-request-list-client.tsx`: kolom Unit antara Judul dan Pemohon, interface Request + `unitName`.
+    - `components/developer/developer-request-table.tsx`: kolom Unit persis sebelum kolom Requester; sub-line unit di bawah nama pemohon dihapus agar tidak duplikasi (list query developer sudah lama fetch `unitName`).
+  - Detail pages: `app/(user)/requests/[id]/page.tsx`, `app/(admin)/admin/requests/[id]/page.tsx`, `app/(developer)/developer/requests/[id]/page.tsx` — meneruskan `unitName={request.unitName}` ke `RequestDetailHeader`.
+- Files changed: app/actions/requests.ts, app/actions/admin-requests.ts, components/requests/request-detail-header.tsx, components/requests/request-table.tsx, components/requests/request-list-client.tsx, components/admin/admin-request-table.tsx, components/admin/admin-request-list-client.tsx, components/developer/developer-request-table.tsx, app/(user)/requests/[id]/page.tsx, app/(admin)/admin/requests/[id]/page.tsx, app/(developer)/developer/requests/[id]/page.tsx, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Build: SUCCESS (`npm run build`)
+  - ✅ Jest: 201 passed / 9 failed — 9 failure (request-admin-workflows) terverifikasi pre-existing via git stash baseline: hasil identik 9 failed pada HEAD tanpa perubahan (fungsi yang diuji tidak tersentuh perubahan ini)
+  - ✅ ESLint: 11 masalah pada 11 file — semuanya pre-existing (baseline stash: errors sama persis; error `react-hooks/set-state-in-effect` pada request-list-client hanya bergeser 1 baris karena interface bertambah 1 field; `no-explicit-any` & unused-vars sudah didokumentasikan di sesi sebelumnya)
+  - ✅ DB smoke test: query drizzle baru (pattern identik getTableColumns + leftJoin units) dijalankan ke DB lokal via `npx tsx` (script sementara, sudah dihapus) — seluruh baris resolve `unitName` dengan benar (contoh: DIREKTORAT SUMBER DAYA MANUSIA); 8 request total; 0 orphan `requester_unit_id`
+- Open questions:
+  - (None)
+- Next recommended step: Manual test per role: buka ketiga halaman daftar & tiga halaman detail untuk memastikan posisi kolom Unit dan baris unit di bawah judul tampil sesuai harapan.
+
 ## 2026-10-23 — Fix: Build gagal "Export doesn't exist in target module" pada admin-requests.ts
 
 - Goal: Memperbaiki build error `Export verifyRequest doesn't exist in target module ... The module has no exports at all` yang muncul pada semua import `@/app/actions/admin-requests`.

@@ -15,7 +15,7 @@ import {
 } from '@/lib/db/schema';
 import { REQUEST_STATUSES, ROLES, AUDIT_MODULES, AUDIT_ACTIONS } from '@/lib/constants';
 import { validateTransitionWithContext } from '@/lib/validations/status-transitions';
-import { eq, and, desc, or, like, sql, gte, lte, inArray, isNull } from 'drizzle-orm';
+import { eq, and, desc, or, like, sql, gte, lte, inArray, isNull, getTableColumns } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { logAudit } from '@/lib/utils/audit';
 import { notifyRequestApproved, notifyRequestRejected, notifyDeveloperAssigned, notifyRequestCompleted, notifyRequestInReview } from '@/lib/notifications/templates';
@@ -117,8 +117,12 @@ export async function getAllRequests(params?: {
     }
 
     const data = await db
-      .select()
+      .select({
+        ...getTableColumns(requests),
+        unitName: units.name,
+      })
       .from(requests)
+      .leftJoin(units, eq(requests.requesterUnitId, units.id))
       .where(whereClause)
       .orderBy(orderByClause)
       .limit(limit)
@@ -272,8 +276,12 @@ export async function getRequestByIdAdmin(id: number) {
     }
 
     const [request] = await db
-      .select()
+      .select({
+        ...getTableColumns(requests),
+        unitName: units.name,
+      })
       .from(requests)
+      .leftJoin(units, eq(requests.requesterUnitId, units.id))
       .where(eq(requests.id, id))
       .limit(1);
 
