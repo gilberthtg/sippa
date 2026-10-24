@@ -112,7 +112,7 @@ export function AdminRequestFilters({
         <DropdownMenuTrigger>
           <Button variant="outline" size="sm">
             <Filter className="h-4 w-4 mr-2" />
-            Priority
+            Prioritas
             {priorityFilter.length > 0 && (
               <Badge variant="secondary" className="ml-2">
                 {priorityFilter.length}

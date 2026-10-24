@@ -1467,7 +1467,7 @@ export async function getDeveloperRoleDistribution() {
         roleId: developerRoles.id,
         roleCode: developerRoles.code,
         roleName: developerRoles.name,
-        activeRequests: sql<number>`COUNT(DISTINCT ${requestTeamAssignments.requestId})`,
+        activeRequests: sql<number>`COUNT(DISTINCT ${requests.id})`,
       })
       .from(developerRoles)
       .leftJoin(
@@ -1481,13 +1481,12 @@ export async function getDeveloperRoleDistribution() {
         requests,
         and(
           eq(requests.id, requestTeamAssignments.requestId),
-          inArray(requests.status, ['ongoing'])
+          eq(requests.status, REQUEST_STATUSES.ONGOING)
         )
       )
       .where(eq(developerRoles.isActive, true))
       .groupBy(developerRoles.id, developerRoles.code, developerRoles.name)
       .orderBy(developerRoles.sortOrder);
-
     return {
       success: true,
       data: distribution,

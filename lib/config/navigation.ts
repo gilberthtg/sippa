@@ -73,7 +73,7 @@ export const navigationConfig: NavSection[] = [
       //   roles: ['developer'],
       // },
       {
-        label: 'My Assignment',
+        label: 'DevTI Request',
         href: '/developer/requests',
         icon: FileText,
         roles: ['developer'],

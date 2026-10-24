@@ -31,11 +31,13 @@ interface Pagination {
 interface DeveloperRequestListClientProps {
   initialData: Request[];
   pagination: Pagination;
+  priorities?: Array<{ id: number; name: string }>;
 }
 
 export function DeveloperRequestListClient({
   initialData,
   pagination,
+  priorities,
 }: DeveloperRequestListClientProps) {
   return (
     <div className="space-y-4">
@@ -43,7 +45,7 @@ export function DeveloperRequestListClient({
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <DeveloperRequestFilters />
+            <DeveloperRequestFilters priorities={priorities} />
             <DeveloperRequestSearch />
           </div>
         </CardContent>

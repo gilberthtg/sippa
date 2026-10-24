@@ -84,11 +84,11 @@ export function SLAPolicyTable({ policies, onEdit, pagination }: Props) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Request Type</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>Target (Business Days)</TableHead>
-              <TableHead>Effective From</TableHead>
-              <TableHead>Effective To</TableHead>
+              <TableHead>Jenis Permintaan</TableHead>
+              <TableHead>Prioritas</TableHead>
+              <TableHead>Target (Hari Kerja)</TableHead>
+              <TableHead>Berlaku Mulai</TableHead>
+              <TableHead>Berlaku Sampai</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>

@@ -90,17 +90,17 @@ export function DeveloperRequestTable({ requests, pagination }: DeveloperRequest
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Request No</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>My Role</TableHead>
+                  <TableHead>No. Request</TableHead>
+                  <TableHead>Tipe</TableHead>
+                  <TableHead>Judul</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Unit</TableHead>
-                  <TableHead>Requester</TableHead>
+                  <TableHead>Pemohon</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Priority</TableHead>
+                  <TableHead>Prioritas</TableHead>
                   <TableHead>SLA</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Diajukan</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -114,7 +114,7 @@ export function DeveloperRequestTable({ requests, pagination }: DeveloperRequest
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {request.requestType === 'new_application' ? 'New App' : 'RFC'}
+                          {request.requestType === 'new_application' ? 'Pengembangan' : 'RFC'}
                         </Badge>
                       </TableCell>
                       <TableCell className="max-w-xs truncate">

@@ -19,12 +19,14 @@ interface PrioritySelectorProps {
   requestId: number;
   currentPriorityId: number | null;
   priorities: Array<{ id: number; code: string; name: string }>;
+  status?: string;
 }
 
 export function PrioritySelector({
   requestId,
   currentPriorityId,
   priorities,
+  status,
 }: PrioritySelectorProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -32,10 +34,11 @@ export function PrioritySelector({
     currentPriorityId?.toString() || ''
   );
 
+  const isLocked = status?.toLowerCase() === 'ongoing';
   const selectedPriority = priorities.find(p => p.id.toString() === selectedPriorityId);
 
   const handlePriorityChange = () => {
-    if (!selectedPriorityId || selectedPriorityId === currentPriorityId?.toString()) {
+    if (isLocked || !selectedPriorityId || selectedPriorityId === currentPriorityId?.toString()) {
       return;
     }
 
@@ -61,7 +64,7 @@ export function PrioritySelector({
         <Select
           value={selectedPriorityId}
           onValueChange={(val) => setSelectedPriorityId(val || '')}
-          disabled={isPending}
+          disabled={isPending || isLocked}
         >
           <SelectTrigger id="priority" className="w-full">
             <SelectValue placeholder="Pilih priority">
@@ -79,9 +82,14 @@ export function PrioritySelector({
             ))}
           </SelectContent>
         </Select>
+        {isLocked && (
+          <p className="text-xs text-muted-foreground">
+            Priority tidak dapat diubah setelah request berjalan (ongoing).
+          </p>
+        )}
       </div>
 
-      {hasChanged && (
+      {!isLocked && hasChanged && (
         <Button
           onClick={handlePriorityChange}
           disabled={isPending}

@@ -52,7 +52,7 @@ export function DeveloperRoleDistributionWidget({ distribution }: DeveloperRoleD
             <p className="text-sm">Belum ada assignment developer</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-6">
             {distribution.map((role) => {
               const Icon = roleIcons[role.roleCode] || Users;
               const colors = roleColors[role.roleCode] || roleColors.SA;
@@ -82,32 +82,32 @@ export function DeveloperRoleDistributionWidget({ distribution }: DeveloperRoleD
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold">{activeCount}</p>
-                      {totalActiveRequests > 0 && (
+                      {/* {totalActiveRequests > 0 && (
                         <p className="text-xs text-muted-foreground">{percentage}%</p>
-                      )}
+                      )} */}
                     </div>
                   </div>
                   {/* Progress bar */}
-                  {totalActiveRequests > 0 && (
+                  {/* {totalActiveRequests > 0 && (
                     <div className="w-full bg-muted rounded-full h-2">
                       <div
                         className={`h-2 rounded-full transition-all ${colors.bg}`}
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
-                  )}
+                  )} */}
                 </div>
               );
             })}
 
-            {totalActiveRequests > 0 && (
+            {/* {totalActiveRequests > 0 && (
               <div className="pt-3 mt-3 border-t">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">Total Request Aktif</span>
                   <span className="font-bold text-lg">{totalActiveRequests}</span>
                 </div>
               </div>
-            )}
+            )} */}
           </div>
         )}
       </CardContent>

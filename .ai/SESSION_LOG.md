@@ -1,5 +1,61 @@
 # SiPPA AI Session Log
 
+## 2026-10-24 — Fix: Perhitungan activeRequests pada getDeveloperRoleDistribution
+
+- Goal: Memperbaiki jumlah `activeRequests` pada `getDeveloperRoleDistribution` di `app/actions/admin-requests.ts` agar hanya menghitung request yang berstatus `ongoing`.
+- Root cause: Penggunaan `COUNT(DISTINCT requestTeamAssignments.requestId)` pada LEFT JOIN menyebabkan `requestId` dari assignments tetap terhitung meskipun join `requests` tidak match (karena status bukan ongoing / null di sisi requests).
+- Changes made:
+  - `app/actions/admin-requests.ts`:
+    - Mengubah agregasi menjadi `COUNT(DISTINCT requests.id)`. Jika join tidak match, `requests.id` adalah `NULL`, dan `COUNT(DISTINCT NULL)` menghasilkan `0`.
+    - Menggunakan konstanta `REQUEST_STATUSES.ONGOING`.
+- Files changed: app/actions/admin-requests.ts, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Jest: 121 passed (all actions tests)
+- Open questions:
+  - (None)
+
+
+## 2026-10-24 — Feature: Developer Request Filters mengambil data prioritas dari tabel master priorities
+
+- Goal: Pada `components/developer/developer-request-filters.tsx`, opsi prioritas yang sebelumnya hardcoded dan tidak sesuai (1: Critical, 2: High, 3: Medium, 4: Low) diubah untuk mengambil data dinamis dari tabel master `priorities`.
+- Changes made:
+  - `components/developer/developer-request-filters.tsx`:
+    - Menghapus array hardcoded `PRIORITY_OPTIONS`.
+    - Menambahkan interface `PriorityItem` dan prop opsional `priorities?: PriorityItem[]`.
+    - Menambahkan `useEffect` yang memanggil `getPriorities()` jika prop `priorities` tidak diteruskan dari parent.
+    - Menghasilkan `priorityOptions` dinamis dari tabel `priorities` (id & name) dan menggunakannya pada dropdown filter serta badge active filters.
+  - `components/developer/developer-request-list-client.tsx`:
+    - Menambahkan prop opsional `priorities?: Array<{ id: number; name: string }>` dan meneruskannya ke `DeveloperRequestFilters`.
+  - `app/(developer)/developer/requests/page.tsx`:
+    - Memanggil `getPriorities()` bersamaan dengan `getAssignedRequests()` via `Promise.all` dan meneruskan data prioritas aktif ke `DeveloperRequestListClient`.
+- Files changed: components/developer/developer-request-filters.tsx, components/developer/developer-request-list-client.tsx, app/(developer)/developer/requests/page.tsx, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ ESLint: PASSED (0 error, 0 warning)
+  - ✅ Jest: 211 passed / 0 failed (all 6 suites)
+  - ✅ Build: SUCCESS (`npm run build`)
+- Open questions:
+  - (None)
+
+## 2026-10-24 — UI: Priority terkunci saat status request 'ongoing'
+
+- Goal: Pada `components/admin/priority-selector.tsx`, priority tidak boleh dapat diubah setelah status request bernilai 'ongoing'.
+- Changes made:
+  - `components/admin/priority-selector.tsx`:
+    - Prop baru `status?: string` pada `PrioritySelectorProps`.
+    - Dropdown `<Select>` di-disable saat `isPending || isLocked` (`isLocked = status?.toLowerCase() === 'ongoing'`).
+    - Guard `isLocked` di `handlePriorityChange` dan tombol simpan tidak dirender saat terkunci.
+    - Menampilkan teks helper: "Priority tidak dapat diubah setelah request berjalan (ongoing)."
+  - `components/admin/request-admin-actions.tsx`:
+    - Meneruskan `status={request.status}` ke `PrioritySelector`.
+- Files changed: components/admin/priority-selector.tsx, components/admin/request-admin-actions.tsx, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+  - ✅ Jest: 211 passed / 0 failed (all 6 suites)
+- Open questions:
+  - (None)
+
 ## 2026-10-24 — Assignment: Team Lead hanya SA; developer assignment excludes SA/TW
 
 - Goal: Pada dialog assign tim (`components/admin/team-assignment-dialog.tsx`): (1) seleksi Ketua Tim hanya boleh menampilkan user dengan developer role "SA" (System Analyst); (2) daftar developer assignment tidak menampilkan user ber-role "SA" atau "TW". Konfirmasi user via pilihan: team lead = "restrict strictly" (hanya SA), developer = "show all but filter" (buang SA/TW dari checkbox).

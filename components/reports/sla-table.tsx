@@ -78,7 +78,7 @@ export function SLATable({ requests }: SLATableProps) {
                     </TableCell>
                     <TableCell>
                       <Badge variant={request.requestType === 'new_application' ? 'default' : 'secondary'}>
-                        {request.requestType === 'new_application' ? 'New App' : 'RFC'}
+                        {request.requestType === 'new_application' ? 'Pengembangan' : 'RFC'}
                       </Badge>
                     </TableCell>
                     <TableCell>

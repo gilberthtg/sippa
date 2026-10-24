@@ -65,7 +65,7 @@ export function RecentActivityWidget({ activities }: RecentActivityWidgetProps) 
         <CardTitle className="text-lg">Aktivitas Terbaru</CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[500px] pr-4">
+        <ScrollArea className="h-[400px] pr-4">
           <div className="space-y-4">
             {activities.map((activity) => (
               <Link

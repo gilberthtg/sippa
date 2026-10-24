@@ -1,6 +1,7 @@
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { getAssignedRequests } from '@/app/actions/developer-requests';
+import { getPriorities } from '@/app/actions/admin-requests';
 import { DeveloperRequestListClient } from '@/components/developer/developer-request-list-client';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -29,18 +30,23 @@ export default async function DeveloperRequestsPage({
   const search = params.search || undefined;
   const page = params.page ? parseInt(params.page) : 1;
 
-  const result = await getAssignedRequests({
-    status,
-    priorityId,
-    requestType,
-    search,
-    page,
-    limit: 20,
-  });
+  const [result, prioritiesResult] = await Promise.all([
+    getAssignedRequests({
+      status,
+      priorityId,
+      requestType,
+      search,
+      page,
+      limit: 20,
+    }),
+    getPriorities(),
+  ]);
 
   if (!result.success) {
     redirect('/login');
   }
+
+  const priorities = prioritiesResult.success && prioritiesResult.data ? prioritiesResult.data : [];
 
   return (
     <PageContainer>
@@ -53,6 +59,7 @@ export default async function DeveloperRequestsPage({
         <DeveloperRequestListClient
           initialData={result.data || []}
           pagination={result.pagination!}
+          priorities={priorities}
         />
       </Suspense>
     </PageContainer>

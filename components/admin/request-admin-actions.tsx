@@ -180,6 +180,7 @@ export function RequestAdminActions({
                   requestId={request.id}
                   currentPriorityId={request.priorityId}
                   priorities={priorities}
+                  status={request.status}
                 />
               </div>
               <Separator />

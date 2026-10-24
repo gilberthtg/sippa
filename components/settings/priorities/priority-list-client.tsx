@@ -95,7 +95,7 @@ export function PriorityListClient({ initialData }: Props) {
         </div>
         <Button onClick={() => setCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Priority
+          Tambah Prioritas
         </Button>
       </div>
 

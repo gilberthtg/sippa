@@ -36,7 +36,7 @@ export function RequestTable({ requests }: RequestTableProps) {
   }
 
   const getRequestTypeLabel = (type: string) => {
-    return type === REQUEST_TYPES.NEW_APPLICATION ? 'New App' : 'RFC';
+    return type === REQUEST_TYPES.NEW_APPLICATION ? 'Pengembangan' : 'RFC';
   };
 
   const formatDate = (date: Date) => {

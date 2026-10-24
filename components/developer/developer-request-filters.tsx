@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Select,
@@ -12,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { STATUS_LABELS } from '@/lib/constants';
+import { getPriorities } from '@/app/actions/admin-requests';
 
 const STATUS_OPTIONS = [
   { value: 'ongoing', label: STATUS_LABELS['ongoing'] },
@@ -19,21 +21,47 @@ const STATUS_OPTIONS = [
   { value: 'done', label: STATUS_LABELS['done'] },
 ];
 
-const PRIORITY_OPTIONS = [
-  { value: '1', label: 'Critical' },
-  { value: '2', label: 'High' },
-  { value: '3', label: 'Medium' },
-  { value: '4', label: 'Low' },
-];
-
 const TYPE_OPTIONS = [
   { value: 'new_application', label: 'Pengembangan' },
   { value: 'rfc', label: 'RFC' },
 ];
 
-export function DeveloperRequestFilters() {
+export interface PriorityItem {
+  id: number;
+  name: string;
+}
+
+interface DeveloperRequestFiltersProps {
+  priorities?: PriorityItem[];
+}
+
+export function DeveloperRequestFilters({ priorities: initialPriorities }: DeveloperRequestFiltersProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const [fetchedPriorities, setFetchedPriorities] = useState<PriorityItem[]>([]);
+
+  useEffect(() => {
+    if (initialPriorities && initialPriorities.length > 0) return;
+
+    let isMounted = true;
+    getPriorities().then((res) => {
+      if (isMounted && res.success && res.data) {
+        setFetchedPriorities(res.data.map((p) => ({ id: p.id, name: p.name })));
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [initialPriorities]);
+
+  const priorities = initialPriorities && initialPriorities.length > 0 ? initialPriorities : fetchedPriorities;
+
+  const priorityOptions = priorities.map((p) => ({
+    value: String(p.id),
+    label: p.name,
+  }));
 
   const currentStatus = searchParams.get('status')?.split(',') || [];
   const currentPriority = searchParams.get('priorityId')?.split(',') || [];
@@ -95,11 +123,11 @@ export function DeveloperRequestFilters() {
       <Select onValueChange={(value) => updateFilter('priorityId', value as string)}>
         <SelectTrigger className="w-[160px]">
           <SelectValue placeholder="Priority">
-            Priority
+            Prioritas
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {PRIORITY_OPTIONS.map((option) => (
+          {priorityOptions.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               <span className="font-medium">{option.label}</span>
             </SelectItem>
@@ -111,7 +139,7 @@ export function DeveloperRequestFilters() {
       <Select onValueChange={(value) => updateFilter('requestType', value as string)}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Request Type">
-            Request Type
+            Request Tipe
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
@@ -160,7 +188,7 @@ export function DeveloperRequestFilters() {
             const priorityStr = String(priority);
             return (
               <Badge key={priorityStr} variant="secondary" className="gap-1">
-                {PRIORITY_OPTIONS.find((o) => o.value === priorityStr)?.label}
+                {priorityOptions.find((o) => o.value === priorityStr)?.label || `Prioritas ${priorityStr}`}
                 <X
                   className="h-3 w-3 cursor-pointer"
                   onClick={() => updateFilter('priorityId', priorityStr)}
