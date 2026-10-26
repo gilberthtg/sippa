@@ -104,9 +104,9 @@ export async function uploadRequestDocument(formData: FormData) {
 
   // Only admin, team leader, and technical writer can upload
   if (
-    user.roleCode === 'developer' &&
-    user.id !== request.teamLeaderId &&
-    user.id !== request.technicalWriterId
+    (user.roleCode === 'developer' &&
+    user.id != request.teamLeaderId &&
+    user.id != request.technicalWriterId) || user.roleCode == 'admin'
   ) {
     return { success: false, error: 'Hanya Team Leader, Technical Writer, dan Admin yang dapat meng-upload dokumen' };
   }

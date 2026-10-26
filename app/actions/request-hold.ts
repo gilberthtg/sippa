@@ -35,7 +35,7 @@ async function checkPauseAuth(requestId: number) {
     // Also allow team leader / technical writer
     if (!isAssigned) {
       const [req] = await db.select({ teamLeaderId: requests.teamLeaderId, technicalWriterId: requests.technicalWriterId }).from(requests).where(eq(requests.id, requestId)).limit(1);
-      if (req && (req.teamLeaderId === session.user.id || req.technicalWriterId === session.user.id)) {
+      if (req && (req.teamLeaderId == session.user.id || req.technicalWriterId == session.user.id)) {
         isAssigned = true;
       }
     }

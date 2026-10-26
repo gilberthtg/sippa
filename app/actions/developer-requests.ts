@@ -459,7 +459,7 @@ export async function updateProgress(params: {
     }
 
     const isAdmin = session.user.roleCode === 'admin';
-    const isTeamLead = request.teamLeaderId === session.user.id;
+    const isTeamLead = request.teamLeaderId == session.user.id;
 
     if (!isAdmin && !isTeamLead) {
       return { success: false, error: 'Hanya admin dan team lead yang dapat mengupdate progress' };
@@ -523,7 +523,7 @@ export async function completeRequest(params: { requestId: number; finalNote: st
     }
 
     const isAdmin = session.user.roleCode === 'admin';
-    const isTeamLead = request.teamLeaderId === session.user.id;
+    const isTeamLead = request.teamLeaderId == session.user.id;
 
     if (!isAdmin && !isTeamLead) {
       return { success: false, error: 'Hanya admin dan team lead yang dapat menyelesaikan request' };
