@@ -2,7 +2,7 @@
 
 import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
-import { requests, requestStatusHistories, requestAttachments, requestApplications, requestDocuments, documentTypes, units } from '@/lib/db/schema';
+import { requests, requestStatusHistories, requestAttachments, requestApplications, requestDocuments, documentTypes, units, users } from '@/lib/db/schema';
 import { createRequestSchema } from '@/lib/validations/request';
 import { generateRequestNumber } from '@/lib/utils/request-number';
 import { generateStorageKey } from '@/lib/utils/file-upload';
@@ -303,9 +303,12 @@ export async function getRequestsByUserId(params?: {
     const data = await db
       .select({
         ...getTableColumns(requests),
+        requesterName: sql<string>`COALESCE(${users.name}, ${requests.requesterName})`,
+        requesterEmail: sql<string>`COALESCE(${users.email}, ${requests.requesterEmail})`,
         unitName: units.name,
       })
       .from(requests)
+      .leftJoin(users, eq(requests.requesterId, users.id))
       .leftJoin(units, eq(requests.requesterUnitId, units.id))
       .where(whereConditions)
       .orderBy(desc(requests.submittedAt))
@@ -369,9 +372,12 @@ export async function getRequestById(id: number) {
     const [request] = await db
       .select({
         ...getTableColumns(requests),
+        requesterName: sql<string>`COALESCE(${users.name}, ${requests.requesterName})`,
+        requesterEmail: sql<string>`COALESCE(${users.email}, ${requests.requesterEmail})`,
         unitName: units.name,
       })
       .from(requests)
+      .leftJoin(users, eq(requests.requesterId, users.id))
       .leftJoin(units, eq(requests.requesterUnitId, units.id))
       .where(eq(requests.id, id))
       .limit(1);

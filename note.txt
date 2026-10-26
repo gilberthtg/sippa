@@ -1,2 +1,0 @@
-- update progress sa sama admin
-- update dokument tw, sa admin  else role lain cuman liat

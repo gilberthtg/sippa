@@ -32,6 +32,7 @@ import {
   Info,
   AlertCircle,
 } from 'lucide-react';
+import { userInfo } from 'os';
 
 interface Application {
   id: number;

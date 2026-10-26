@@ -1,5 +1,70 @@
 # SiPPA AI Session Log
 
+## 2026-10-26 — Update: Ambil Informasi Pemohon dari Tabel Users dengan Fallback ke Requests
+
+- Goal: Memastikan nama dan email pemohon pada list/detail request (user, developer, admin) serta laporan Laptri diambil dari tabel `users` secara dinamis, dan fallback ke kolom `requests` jika user tidak ditemukan (misal: user telah dihapus/arsip).
+- Changes made:
+  - `app/actions/requests.ts`:
+    - `getRequestsByUserId`: Tambahkan `LEFT JOIN users` dan `COALESCE(users.name, requests.requesterName)`, `COALESCE(users.email, requests.requesterEmail)`.
+    - `getRequestById`: Tambahkan `LEFT JOIN users` dan `COALESCE` untuk `requesterName` & `requesterEmail`.
+  - `app/actions/admin-requests.ts`:
+    - `getAllRequests`: Tambahkan `LEFT JOIN users` dan `COALESCE` untuk `requesterName` & `requesterEmail`.
+    - `getRequestByIdAdmin`: Tambahkan `LEFT JOIN users` dan `COALESCE` untuk `requesterName` & `requesterEmail`.
+  - `app/actions/developer-requests.ts`:
+    - `getAssignedRequests`: Gunakan `COALESCE(users.name, requests.requesterName)` pada `requesterName`.
+    - `getRequestByIdDeveloper`: Gunakan `COALESCE` untuk `requesterName` dan `requesterEmail`.
+  - `app/actions/reports.ts`:
+    - `getLaptriData`: Tambahkan `LEFT JOIN users` dan `COALESCE(users.name, requests.requesterName)`.
+- Verification:
+  - Typecheck: `npx tsc --noEmit` lulus tanpa error.
+- Open questions:
+  - (None)
+
+## 2026-10-26 — Feature: Pagination pada LaptriTable dan SLATable
+
+- Goal: Menambahkan pagination client-side (25 item/halaman) dengan tombol navigasi angka dan Prev/Next pada tabel Laporan Triwulan (`LaptriTable`) dan Laporan SLA (`SLATable`).
+- Changes made:
+  - `components/ui/pagination.tsx`: Dibuat komponen `Pagination` reusable dengan nomor halaman dinamis, tombol Prev/Next, dan info counter total data.
+  - `components/reports/laptri-table.tsx`: Ditambahkan pagination lokal (25 baris per halaman) menggunakan `useState` & `useMemo` dengan safe bounds check.
+  - `components/reports/sla-table.tsx`: Ditambahkan pagination lokal serupa (25 baris per halaman).
+- Verification:
+  - Typecheck: `npx tsc --noEmit` lolos tanpa error.
+  - ESLint: File yang dimodifikasi bersih tanpa error.
+- Open questions:
+  - (None)
+
+
+- Goal: Memperbaiki filter prioritas pada laporan SLA (`sla-filters.tsx`) yang sebelumnya di-hardcode agar mengambil data secara dinamis dari tabel `priorities`.
+- Changes made:
+  - `app/(admin)/admin/reports/sla/page.tsx`: Mengambil daftar prioritas aktif via `getPriorities()` dari `app/actions/admin-requests.ts` dan meneruskannya ke `SLAClient`.
+  - `app/(admin)/admin/reports/sla/sla-client.tsx`: Menerima prop `priorities` dan meneruskannya ke `SLAFilters`.
+  - `components/reports/sla-filters.tsx`: Menerima prop `priorities` dan merender pilihan dropdown secara dinamis dari database alih-alih nilai hardcode (1: Low, 2: Medium, 3: High).
+- Verification:
+  - Typecheck: `npx tsc --noEmit` lulus tanpa error.
+  - ESLint: File yang dimodifikasi bersih tanpa error lint.
+- Open questions:
+  - (None)
+
+## 2026-10-26 — Data Seed: Script SQL Data Permintaan PRD (Q1-Q4 2026)
+
+- Goal: Membuat script SQL komprehensif untuk memasukkan data ke tabel `request_applications`, `requests`, `request_team_assignments`, `request_status_histories`, dan `request_progress`.
+- Business requirements:
+  - Menggunakan 10 Aplikasi Universitas sesuai PRD.
+  - Total 43 requests terdistribusi triwulan (Q1: 20, Q2: 10, Q3: 5, Q4: 8).
+  - Menggabungkan tipe `new_application` (22) dan `rfc` (21).
+  - SLA: 80% tercapai (34 requests), 20% melampaui (9 requests).
+  - Menyelaraskan seluruh foreign key dengan master data: users (1 Admin, 1 SA/TL, 2 TW, 8 Devs), devteam_units, units, priorities, developer_roles.
+- Files created:
+  - `scripts/generate-prd-seed.js`: Generator script yang menyusun data SQL secara deterministik dan terverifikasi.
+  - `db/seeds/003_quarterly_requests_prd.sql`: File SQL berisi seluruh query INSERT untuk 5 tabel target.
+- Tests/checks:
+  - ✅ Eksekusi script SQL di MySQL: PASSED (32 applications, 43 requests, 258 assignments, 217 status histories, 86 progress updates).
+  - ✅ Verifikasi data triwulan: PASSED (Q1: 20, Q2: 10, Q3: 5, Q4: 8, total SLA met 34/43).
+  - ✅ Jest unit tests: PASSED (90/90 passed).
+- Open questions:
+  - (None)
+
+
 ## 2026-10-26 — Fix: Server Actions Body Size Limit (Error 413)
 
 - Goal: Memperbaiki error `Body exceeded 1 MB limit (statusCode: 413)` saat upload dokumen request via Server Action.

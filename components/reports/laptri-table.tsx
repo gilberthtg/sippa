@@ -1,8 +1,10 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Pagination } from '@/components/ui/pagination';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -22,7 +24,18 @@ interface LaptriTableProps {
   requests: LaptriRequest[];
 }
 
+const PAGE_SIZE = 25;
+
 export function LaptriTable({ requests }: LaptriTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(requests.length / PAGE_SIZE);
+  const safePage = Math.min(currentPage, Math.max(1, totalPages));
+  const paginatedRequests = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return requests.slice(start, start + PAGE_SIZE);
+  }, [requests, safePage]);
+
   if (requests.length === 0) {
     return (
       <Card>
@@ -58,7 +71,7 @@ export function LaptriTable({ requests }: LaptriTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests.map((request) => (
+              {paginatedRequests.map((request) => (
                 <TableRow key={request.id}>
                   <TableCell>
                     <Link
@@ -89,6 +102,13 @@ export function LaptriTable({ requests }: LaptriTableProps) {
             </TableBody>
           </Table>
         </div>
+        <Pagination
+          currentPage={safePage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={requests.length}
+          pageSize={PAGE_SIZE}
+        />
       </CardContent>
     </Card>
   );

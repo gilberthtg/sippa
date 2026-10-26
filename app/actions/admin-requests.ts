@@ -119,9 +119,12 @@ export async function getAllRequests(params?: {
     const data = await db
       .select({
         ...getTableColumns(requests),
+        requesterName: sql<string>`COALESCE(${users.name}, ${requests.requesterName})`,
+        requesterEmail: sql<string>`COALESCE(${users.email}, ${requests.requesterEmail})`,
         unitName: units.name,
       })
       .from(requests)
+      .leftJoin(users, eq(requests.requesterId, users.id))
       .leftJoin(units, eq(requests.requesterUnitId, units.id))
       .where(whereClause)
       .orderBy(orderByClause)
@@ -278,9 +281,12 @@ export async function getRequestByIdAdmin(id: number) {
     const [request] = await db
       .select({
         ...getTableColumns(requests),
+        requesterName: sql<string>`COALESCE(${users.name}, ${requests.requesterName})`,
+        requesterEmail: sql<string>`COALESCE(${users.email}, ${requests.requesterEmail})`,
         unitName: units.name,
       })
       .from(requests)
+      .leftJoin(users, eq(requests.requesterId, users.id))
       .leftJoin(units, eq(requests.requesterUnitId, units.id))
       .where(eq(requests.id, id))
       .limit(1);

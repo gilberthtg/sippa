@@ -1,6 +1,7 @@
 import { PageContainer } from '@/components/layout/page-container';
 import { PageHeader } from '@/components/layout/page-header';
 import { getSLAReport, getSLASummary } from '@/app/actions/reports';
+import { getPriorities } from '@/app/actions/admin-requests';
 import { SLAClient } from './sla-client';
 
 interface SLAPageProps {
@@ -22,10 +23,13 @@ export default async function SLAPage({ searchParams }: SLAPageProps) {
   const slaStatus = params.status as 'met' | 'exceeded' | undefined;
   const page = params.page ? parseInt(params.page) : 1;
 
-  const [reportData, summary] = await Promise.all([
+  const [reportData, summary, prioritiesResult] = await Promise.all([
     getSLAReport({ year, requestType, priorityId, slaStatus, page }),
     getSLASummary({ year, requestType, priorityId, slaStatus }),
+    getPriorities(),
   ]);
+
+  const priorities = prioritiesResult.success && prioritiesResult.data ? prioritiesResult.data : [];
 
   return (
     <PageContainer>
@@ -41,6 +45,7 @@ export default async function SLAPage({ searchParams }: SLAPageProps) {
         initialSLAStatus={slaStatus}
         reportData={reportData}
         summary={summary}
+        priorities={priorities}
       />
     </PageContainer>
   );

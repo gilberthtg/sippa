@@ -9,6 +9,7 @@ interface SLAFiltersProps {
   requestType?: string;
   priorityId?: number;
   slaStatus?: string;
+  priorities?: Array<{ id: number; name: string }>;
   onYearChange: (year: number) => void;
   onRequestTypeChange: (type?: string) => void;
   onPriorityChange: (priorityId?: number) => void;
@@ -21,6 +22,7 @@ export function SLAFilters({
   requestType,
   priorityId,
   slaStatus,
+  priorities = [],
   onYearChange,
   onRequestTypeChange,
   onPriorityChange,
@@ -29,6 +31,8 @@ export function SLAFilters({
 }: SLAFiltersProps) {
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
+
+  const selectedPriority = priorities.find((p) => p.id === priorityId);
 
   return (
     <div className="flex flex-wrap items-center gap-4">
@@ -83,25 +87,18 @@ export function SLAFilters({
         <Select value={priorityId?.toString() || 'all'} onValueChange={(val) => onPriorityChange(val === 'all' ? undefined : (val ? parseInt(val) : undefined))}>
           <SelectTrigger className="w-40">
             <SelectValue>
-              {!priorityId || priorityId.toString() === 'all' ? 'Semua' : priorityId === 1 ? 'Low' : priorityId === 2 ? 'Medium' : priorityId === 3 ? 'High' : 'Critical'}
+              {!priorityId || priorityId.toString() === 'all' ? 'Semua' : (selectedPriority?.name || 'Semua')}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">
               <span className="font-medium">Semua</span>
             </SelectItem>
-            <SelectItem value="1">
-              <span className="font-medium">Low</span>
-            </SelectItem>
-            <SelectItem value="2">
-              <span className="font-medium">Medium</span>
-            </SelectItem>
-            <SelectItem value="3">
-              <span className="font-medium">High</span>
-            </SelectItem>
-            <SelectItem value="4">
-              <span className="font-medium">Critical</span>
-            </SelectItem>
+            {priorities.map((priority) => (
+              <SelectItem key={priority.id} value={priority.id.toString()}>
+                <span className="font-medium">{priority.name}</span>
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

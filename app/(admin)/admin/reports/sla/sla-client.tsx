@@ -70,6 +70,7 @@ interface SLAClientProps {
   initialSLAStatus?: string;
   reportData: SLAReportData;
   summary: SLASummary;
+  priorities?: Array<{ id: number; name: string }>;
 }
 
 export function SLAClient({
@@ -79,6 +80,7 @@ export function SLAClient({
   initialSLAStatus,
   reportData,
   summary,
+  priorities = [],
 }: SLAClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -141,6 +143,7 @@ export function SLAClient({
         requestType={initialRequestType}
         priorityId={initialPriorityId}
         slaStatus={initialSLAStatus}
+        priorities={priorities}
         onYearChange={handleYearChange}
         onRequestTypeChange={handleRequestTypeChange}
         onPriorityChange={handlePriorityChange}

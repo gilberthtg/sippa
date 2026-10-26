@@ -2,7 +2,7 @@
 
 import { auth } from '@/lib/auth/config';
 import { db } from '@/lib/db';
-import { requests, priorities, units, requestTeamAssignments, developerRoles, slaPolicies } from '@/lib/db/schema';
+import { requests, priorities, units, users, requestTeamAssignments, developerRoles, slaPolicies } from '@/lib/db/schema';
 import { eq, and, gte, lte, sql, isNull } from 'drizzle-orm';
 import { getQuarterFromDate, calculateAchievementRate, generateMonthlyTrend } from '@/lib/utils/report-calculations';
 
@@ -89,7 +89,7 @@ export async function getLaptriData(filters: {
       title: requests.title,
       priorityId: requests.priorityId,
       priorityName: priorities.name,
-      requesterName: requests.requesterName,
+      requesterName: sql<string>`COALESCE(${users.name}, ${requests.requesterName})`,
       requesterUnitId: requests.requesterUnitId,
       unitName: units.name,
       completedAt: requests.completedAt,
@@ -97,6 +97,7 @@ export async function getLaptriData(filters: {
     })
     .from(requests)
     .leftJoin(priorities, eq(requests.priorityId, priorities.id))
+    .leftJoin(users, eq(requests.requesterId, users.id))
     .leftJoin(units, eq(requests.requesterUnitId, units.id))
     .where(and(...conditions))
     .orderBy(sql`${requests.completedAt} DESC`);
