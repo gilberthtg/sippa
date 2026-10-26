@@ -218,3 +218,11 @@ Format:
 - Decision: In the admin team-assignment flow: (1) Team Leader selection is strictly restricted to users with `developer_role_code = 'SA'` (System Analyst) — previously any active user was eligible; (2) the developer assignment list excludes roles SA and TW (SA users are team-leader candidates, TW users are the technical writer).
 - Reason: Stakeholder-confirmed clarification (user chose "restrict strictly" for team lead and "show all but filter non-SA/non-TW" for developers). SA = requirements analysis/design role, natural team-lead candidate; TW is already dedicated to the Technical Writer field (BUSINESS_RULES Team Assignment Rules), so offering SA/TW in the developer multi-select was redundant.
 - Impact: `getTeamLeaderOptions()` (app/actions/admin-requests.ts) now inner-joins `developer_roles` filtered to code = 'SA' (active users only); `getDevelopersByRole()` without `roleCode` excludes SA/TW (filter applied in-memory alongside existing roleCode filter — `getTechnicalWriters()` path with `roleCode='TW'` is unaffected). UI hints + empty state updated in `components/admin/team-assignment-dialog.tsx`. No DB/schema change; server-side `assignTeamToRequest` validation unchanged (TW role + min-1-developer rules already enforced).
+
+## ADR-0023 — Server Actions Body Size Limit
+- Status: Confirmed
+- Date: 2026-10-26
+- Decision: Configure Next.js Server Actions `bodySizeLimit: '15mb'` in `next.config.ts`.
+- Reason: Default Next.js body size limit for Server Actions is 1MB. Document upload action (`uploadRequestDocument`) accepts files up to 10MB (`FILE_UPLOAD.MAX_FILE_SIZE`). A 15MB limit accommodates the 10MB payload plus multipart boundary and metadata overhead.
+- Impact: Resolves 413 error (Body exceeded 1 MB limit) on document uploads.
+

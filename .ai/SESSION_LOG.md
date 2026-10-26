@@ -1,5 +1,19 @@
 # SiPPA AI Session Log
 
+## 2026-10-26 — Fix: Server Actions Body Size Limit (Error 413)
+
+- Goal: Memperbaiki error `Body exceeded 1 MB limit (statusCode: 413)` saat upload dokumen request via Server Action.
+- Root cause: Default limit payload Server Action di Next.js adalah 1 MB, sedangkan batasan upload file aplikasi (`FILE_UPLOAD.MAX_FILE_SIZE`) adalah 10 MB.
+- Changes made:
+  - `next.config.ts`: Menambahkan `experimental.serverActions.bodySizeLimit: '15mb'` untuk mengakomodasi file upload hingga 10 MB beserta overhead multipart form data.
+  - `.ai/DECISIONS.md`: Menambahkan ADR-0023.
+- Files changed: next.config.ts, .ai/DECISIONS.md, .ai/SESSION_LOG.md
+- Tests/checks:
+  - ✅ TypeScript: PASSED (`npx tsc --noEmit`)
+- Open questions:
+  - (None)
+
+
 ## 2026-10-24 — Fix: Perhitungan activeRequests pada getDeveloperRoleDistribution
 
 - Goal: Memperbaiki jumlah `activeRequests` pada `getDeveloperRoleDistribution` di `app/actions/admin-requests.ts` agar hanya menghitung request yang berstatus `ongoing`.

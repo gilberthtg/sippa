@@ -122,7 +122,7 @@ export function isTerminalStatus(status: RequestStatus): boolean {
  * REJECTED: request rejected — documents re-checked at resubmission
  */
 export const DOCUMENT_LOCKED_STATUSES: readonly RequestStatus[] = [
-  REQUEST_STATUSES.DONE,
+  // REQUEST_STATUSES.DONE,
   REQUEST_STATUSES.REJECTED,
 ];
 

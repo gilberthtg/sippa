@@ -206,7 +206,7 @@ export async function deleteRequestDocument(id: number) {
   }
 
   // Developer can only delete own uploads
-  if (user.roleCode === 'developer' && doc.uploadedBy !== user.id) {
+  if (user.roleCode === 'developer' && doc.uploadedBy != user.id) {
     return { success: false, error: 'Anda tidak bisa menghapus dokumen yang di-upload orang lain' };
   }
 

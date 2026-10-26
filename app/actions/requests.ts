@@ -384,8 +384,8 @@ export async function getRequestById(id: number) {
     const requesterId = Number(request.requesterId);
     const userId = Number(session.user.id);
     
-    if (requesterId !== userId) {
-      console.log('Access denied:', { requesterId, userId, match: requesterId === userId });
+    if (requesterId != userId) {
+      console.log('Access denied:', { requesterId, userId, match: requesterId == userId });
       return { success: false, error: 'Anda tidak memiliki akses ke request ini' };
     }
 
