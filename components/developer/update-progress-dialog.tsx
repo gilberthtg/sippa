@@ -74,7 +74,7 @@ export function UpdateProgressDialog({
         reset();
         router.refresh();
       } else {
-        toast.error(result.error || 'Gagal mengupdate progress');
+        toast.error(result.error || 'Gagal update progress');
       }
     } catch {
       toast.error('Terjadi kesalahan');

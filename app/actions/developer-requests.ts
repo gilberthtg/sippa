@@ -462,7 +462,7 @@ export async function updateProgress(params: {
     const isTeamLead = request.teamLeaderId == session.user.id;
 
     if (!isAdmin && !isTeamLead) {
-      return { success: false, error: 'Hanya admin dan team lead yang dapat mengupdate progress' };
+      return { success: false, error: 'Hanya admin dan team lead yang dapat update progress' };
     }
 
     if (request.status !== 'ongoing') {
@@ -499,7 +499,7 @@ export async function updateProgress(params: {
     return { success: true, message: 'Progress berhasil diupdate' };
   } catch (error) {
     console.error('Update progress error:', error);
-    return { success: false, error: 'Gagal mengupdate progress' };
+    return { success: false, error: 'Gagal update progress' };
   }
 }
 

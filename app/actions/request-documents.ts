@@ -97,8 +97,8 @@ export async function uploadRequestDocument(formData: FormData) {
       success: false,
       error:
         request.status === REQUEST_STATUSES.DONE
-          ? 'Tidak dapat meng-upload dokumen karena request sudah selesai (DONE)'
-          : 'Tidak dapat meng-upload dokumen karena request ditolak (REJECTED)',
+          ? 'Tidak dapat upload dokumen karena request sudah selesai (DONE)'
+          : 'Tidak dapat upload dokumen karena request ditolak (REJECTED)',
     };
   }
 
@@ -108,7 +108,7 @@ export async function uploadRequestDocument(formData: FormData) {
     user.id != request.teamLeaderId &&
     user.id != request.technicalWriterId) || user.roleCode == 'admin'
   ) {
-    return { success: false, error: 'Hanya Team Leader, Technical Writer, dan Admin yang dapat meng-upload dokumen' };
+    return { success: false, error: 'Hanya Team Leader, Technical Writer, dan Admin yang dapat upload dokumen' };
   }
 
   // Validate file

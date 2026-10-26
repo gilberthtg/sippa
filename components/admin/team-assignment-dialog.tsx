@@ -223,7 +223,7 @@ export function TeamAssignmentDialog({
         handleClose();
         router.refresh();
       } else {
-        toast.error(result.error || 'Gagal meng-assign tim');
+        toast.error(result.error || 'Gagal assign tim');
       }
     });
   };

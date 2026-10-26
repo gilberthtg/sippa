@@ -958,7 +958,7 @@ export async function assignRequest(params: {
     return { success: true };
   } catch (error) {
     console.error('Assign request error:', error);
-    return { success: false, error: 'Gagal meng-assign request' };
+    return { success: false, error: 'Gagal assign request' };
   }
 }
 
@@ -1444,7 +1444,7 @@ export async function assignTeamToRequest(params: {
     return { success: true };
   } catch (error) {
     console.error('Assign team to request error:', error);
-    return { success: false, error: 'Gagal meng-assign tim ke request' };
+    return { success: false, error: 'Gagal assign tim ke request' };
   }
 }
 
