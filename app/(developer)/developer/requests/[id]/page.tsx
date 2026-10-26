@@ -136,8 +136,8 @@ export default async function DeveloperRequestDetailPage({ params }: PageProps) 
                     uploadedDocs={uploadedDocs as any}
                     canUpload={
                       !isDocumentEditingLocked(request.status as RequestStatus) &&
-                      (request.teamLeaderId === session?.user?.id ||
-                        request.technicalWriterId === session?.user?.id)
+                      (request.teamLeaderId == session?.user?.id ||
+                        request.technicalWriterId == session?.user?.id)
                     }
                   />
                 </div>
@@ -151,7 +151,7 @@ export default async function DeveloperRequestDetailPage({ params }: PageProps) 
             <DeveloperRequestActions
               requestId={requestId}
               status={request.status}
-              canManage={request.teamLeaderId === session?.user?.id || session?.user?.roleCode === 'admin'}
+              canManage={request.teamLeaderId == session?.user?.id || session?.user?.roleCode === 'admin'}
             />
             
             {/* Team Information */}
