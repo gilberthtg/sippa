@@ -88,6 +88,7 @@ export function SLAClient({
   const handleYearChange = (year: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("year", year.toString());
+    params.delete("page");
     router.push(`?${params.toString()}`);
   };
 
@@ -98,6 +99,7 @@ export function SLAClient({
     } else {
       params.delete("type");
     }
+    params.delete("page");
     router.push(`?${params.toString()}`);
   };
 
@@ -108,6 +110,7 @@ export function SLAClient({
     } else {
       params.delete("priority");
     }
+    params.delete("page");
     router.push(`?${params.toString()}`);
   };
 
@@ -117,6 +120,17 @@ export function SLAClient({
       params.set("status", status);
     } else {
       params.delete("status");
+    }
+    params.delete("page");
+    router.push(`?${params.toString()}`);
+  };
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (page > 1) {
+      params.set("page", page.toString());
+    } else {
+      params.delete("page");
     }
     router.push(`?${params.toString()}`);
   };
@@ -169,7 +183,14 @@ export function SLAClient({
 
       {/* <DeveloperRoleSLAMetrics metrics={summary.developerRoleSLAMetrics} /> */}
 
-      <SLATable requests={reportData.requests} />
+      <SLATable
+        requests={reportData.requests}
+        currentPage={reportData.page}
+        totalPages={Math.ceil(reportData.total / reportData.limit)}
+        totalItems={reportData.total}
+        pageSize={reportData.limit}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 }

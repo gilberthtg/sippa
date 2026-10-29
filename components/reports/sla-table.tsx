@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,19 +20,21 @@ interface SLARequest {
 
 interface SLATableProps {
   requests: SLARequest[];
+  currentPage?: number;
+  totalPages?: number;
+  totalItems?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
 }
 
-const PAGE_SIZE = 25;
-
-export function SLATable({ requests }: SLATableProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const totalPages = Math.ceil(requests.length / PAGE_SIZE);
-  const safePage = Math.min(currentPage, Math.max(1, totalPages));
-  const paginatedRequests = useMemo(() => {
-    const start = (safePage - 1) * PAGE_SIZE;
-    return requests.slice(start, start + PAGE_SIZE);
-  }, [requests, safePage]);
+export function SLATable({
+  requests,
+  currentPage = 1,
+  totalPages = 1,
+  totalItems,
+  pageSize = 20,
+  onPageChange,
+}: SLATableProps) {
 
   if (requests.length === 0) {
     return (
@@ -71,7 +72,7 @@ export function SLATable({ requests }: SLATableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedRequests.map((request) => {
+              {requests.map((request) => {
                 const targetDays = request.targetSlaHours !== null ? request.targetSlaHours / 24 : null;
                 const actualDays = request.actualDurationHours !== null ? request.actualDurationHours / 24 : null;
                 const difference =
@@ -136,13 +137,15 @@ export function SLATable({ requests }: SLATableProps) {
             </TableBody>
           </Table>
         </div>
-        <Pagination
-          currentPage={safePage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          totalItems={requests.length}
-          pageSize={PAGE_SIZE}
-        />
+        {onPageChange && totalPages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            totalItems={totalItems ?? requests.length}
+            pageSize={pageSize}
+          />
+        )}
       </CardContent>
     </Card>
   );

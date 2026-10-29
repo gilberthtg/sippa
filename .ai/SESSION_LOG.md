@@ -1,5 +1,16 @@
 # SiPPA AI Session Log
 
+## 2026-10-27 — Fix: Server-side Pagination pada Halaman Laporan SLA
+
+- Goal: Memperbaiki pagination pada tabel laporan SLA (`/admin/reports/sla`) yang sebelumnya tidak berfungsi karena data sudah dipaginasi di server (`getSLAReport`), namun komponen client melakukan slicing lokal pada subset data yang parsial dan mengabaikan parameter URL `page`.
+- Changes made:
+  - `components/reports/sla-table.tsx`: Mengubah `SLATable` dari slicing array lokal (`useState`/`useMemo`) menjadi penerima prop pagination (`currentPage`, `totalPages`, `totalItems`, `pageSize`, `onPageChange`) yang langsung merender data dari server.
+  - `app/(admin)/admin/reports/sla/sla-client.tsx`: Menambahkan handler `handlePageChange` yang memperbarui query param `page` di URL via `router.push`, me-reset parameter `page` saat filter lain (tahun, tipe, prioritas, status) berubah, dan meneruskan prop pagination yang sesuai ke `SLATable`.
+- Verification:
+  - Typecheck: `npx tsc --noEmit` lulus tanpa error.
+- Open questions:
+  - (None)
+
 ## 2026-10-26 — Update: Ambil Informasi Pemohon dari Tabel Users dengan Fallback ke Requests
 
 - Goal: Memastikan nama dan email pemohon pada list/detail request (user, developer, admin) serta laporan Laptri diambil dari tabel `users` secara dinamis, dan fallback ke kolom `requests` jika user tidak ditemukan (misal: user telah dihapus/arsip).
@@ -49,20 +60,24 @@
 
 - Goal: Membuat script SQL komprehensif untuk memasukkan data ke tabel `request_applications`, `requests`, `request_team_assignments`, `request_status_histories`, dan `request_progress`.
 - Business requirements:
-  - Menggunakan 10 Aplikasi Universitas sesuai PRD.
-  - Total 43 requests terdistribusi triwulan (Q1: 20, Q2: 10, Q3: 5, Q4: 8).
-  - Menggabungkan tipe `new_application` (22) dan `rfc` (21).
-  - SLA: 80% tercapai (34 requests), 20% melampaui (9 requests).
+  - Menggunakan 10 Aplikasi Universitas sesuai PRD (ID 11–20) + 10 aplikasi baru dari New App (ID 21–30).
+  - Total 28 requests terdistribusi triwulan:
+    - Q1: 14 requests (8 new_application, 6 rfc) — 13 tercapai, 1 new_application melampaui (ID 301)
+    - Q2: 7 requests (1 new_application, 6 rfc) — 6 tercapai, 1 rfc melampaui (ID 316)
+    - Q3: 3 requests (0 new_application, 3 rfc) — 3 tercapai, 0 melampaui
+    - Q4: 4 requests (1 new_application, 3 rfc) — 4 tercapai, 0 melampaui
+  - SLA: 26 tercapai (92.9%), 2 melampaui (7.1%):
+    - 1 `new_application` di Q1
+    - 1 `rfc` di Q2
+  - Alur langsung tanpa status tahanan (`on_hold`).
   - Menyelaraskan seluruh foreign key dengan master data: users (1 Admin, 1 SA/TL, 2 TW, 8 Devs), devteam_units, units, priorities, developer_roles.
 - Files created:
-  - `scripts/generate-prd-seed.js`: Generator script yang menyusun data SQL secara deterministik dan terverifikasi.
+  - `scripts/generate-prd-seed.js`: Generator script yang menyusun data SQL secara deterministik.
   - `db/seeds/003_quarterly_requests_prd.sql`: File SQL berisi seluruh query INSERT untuk 5 tabel target.
 - Tests/checks:
-  - ✅ Eksekusi script SQL di MySQL: PASSED (32 applications, 43 requests, 258 assignments, 217 status histories, 86 progress updates).
-  - ✅ Verifikasi data triwulan: PASSED (Q1: 20, Q2: 10, Q3: 5, Q4: 8, total SLA met 34/43).
-  - ✅ Jest unit tests: PASSED (90/90 passed).
-- Open questions:
-  - (None)
+  - ✅ Eksekusi script SQL di MySQL: PASSED (20 applications, 28 requests, 168 assignments, 140 status histories, 56 progress updates).
+  - ✅ Verifikasi data triwulan: PASSED (Q1: 14, Q2: 7, Q3: 3, Q4: 4, SLA met 26, SLA exceeded 2).
+
 
 
 ## 2026-10-26 — Fix: Server Actions Body Size Limit (Error 413)
