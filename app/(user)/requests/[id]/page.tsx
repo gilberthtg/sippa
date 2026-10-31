@@ -6,10 +6,12 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { getRequestById } from '@/app/actions/requests';
+import { getProgressHistory } from '@/app/actions/developer-requests';
 import { getRequiredDocumentTypes, getRequestDocuments } from '@/app/actions/request-documents';
 import { RequestDetailHeader } from '@/components/requests/request-detail-header';
 import { RequestDetailInfo } from '@/components/requests/request-detail-info';
 import { RequestDetailTimeline } from '@/components/requests/request-detail-timeline';
+import { ProgressTimeline } from '@/components/requests/progress-timeline';
 // import { RequestAttachmentsList } from '@/components/requests/request-attachments-list';
 import { RequestDocumentsSection } from '@/components/requests/request-documents-section';
 
@@ -45,9 +47,10 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   const request = result.data;
 
   const requestType = request.requestType as 'new_application' | 'rfc';
-  const [requiredDocs, uploadedDocs] = await Promise.all([
+  const [requiredDocs, uploadedDocs, progressResult] = await Promise.all([
     getRequiredDocumentTypes(requestType).catch(() => []),
     getRequestDocuments(requestId).catch(() => []),
+    getProgressHistory(requestId).catch(() => ({ success: false as const, error: 'Gagal mengambil riwayat progress' })),
   ]);
 
   return (
@@ -76,6 +79,7 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
         <Tabs defaultValue="informasi" className="gap-6">
           <TabsList>
             <TabsTrigger value="informasi">Informasi</TabsTrigger>
+            <TabsTrigger value="progres">Progres</TabsTrigger>
             <TabsTrigger value="dokumen">Dokumen</TabsTrigger>
             <TabsTrigger value="riwayat">Riwayat Status</TabsTrigger>
           </TabsList>
@@ -91,6 +95,16 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
               requesterEmail={request.requesterEmail}
               requesterPhone={request.requesterPhone}
             />
+          </TabsContent>
+
+          <TabsContent value="progres">
+            {progressResult.success && progressResult.data ? (
+              <ProgressTimeline progressHistory={progressResult.data} />
+            ) : (
+              <div className="rounded-md border p-4 text-sm text-muted-foreground text-center py-6">
+                Belum ada riwayat progres
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="dokumen">

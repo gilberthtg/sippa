@@ -462,7 +462,7 @@ export async function updateProgress(params: {
     const isTeamLead = request.teamLeaderId == session.user.id;
 
     if (!isAdmin && !isTeamLead) {
-      return { success: false, error: 'Hanya admin dan team lead yang dapat update progress' };
+      return { success: false, error: 'Hanya admin dan team lead yang dapat mengupdate progress' };
     }
 
     if (request.status !== 'ongoing') {
@@ -613,7 +613,16 @@ export async function getProgressHistory(requestId: number) {
     if (!isAdmin) {
       const isAssigned = await checkRequestAssignment(requestId, session.user.id);
       if (!isAssigned) {
-        return { success: false, error: 'Request tidak di-assign ke Anda' };
+        // Izinkan juga pemohon request untuk melihat riwayat progress
+        const [requestRecord] = await db
+          .select({ requesterId: requests.requesterId })
+          .from(requests)
+          .where(eq(requests.id, requestId))
+          .limit(1);
+
+        if (!requestRecord || requestRecord.requesterId != session.user.id) {
+          return { success: false, error: 'Akses ditolak' };
+        }
       }
     }
 

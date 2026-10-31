@@ -1,5 +1,22 @@
 # SiPPA AI Session Log
 
+## 2026-10-31 — Feature: Tambah Tab Progres (Progress Timeline) pada Detail Request Role User
+
+- Goal: Menambahkan tab Progress Timeline pada halaman detail request pemohon (`app/(user)/requests/[id]/page.tsx`), konsisten dengan halaman admin dan developer.
+- Changes made:
+  - `app/actions/developer-requests.ts`:
+    - Mengizinkan requester (`requests.requesterId === session.user.id`) mengakses `getProgressHistory(requestId)` selain admin dan developer yang di-assign.
+    - Menyelaraskan pesan error validasi update progress dengan test suite.
+  - `app/(user)/requests/[id]/page.tsx`:
+    - Mengambil data riwayat progres via `getProgressHistory(requestId)`.
+    - Menambahkan trigger tab `progres` ("Progres") dan konten `ProgressTimeline`.
+- Verification:
+  - Typecheck: `npx tsc --noEmit` lulus tanpa error.
+  - Test: `npm test -- __tests__/actions/progress-and-done-permissions.test.ts` lulus (8/8 passed).
+- Open questions:
+  - (None)
+
+
 ## 2026-10-27 — Fix: Server-side Pagination pada Halaman Laporan SLA
 
 - Goal: Memperbaiki pagination pada tabel laporan SLA (`/admin/reports/sla`) yang sebelumnya tidak berfungsi karena data sudah dipaginasi di server (`getSLAReport`), namun komponen client melakukan slicing lokal pada subset data yang parsial dan mengabaikan parameter URL `page`.
